@@ -14,6 +14,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { useRouter } from "next/navigation";
+import { Calendar, Vote, Users, MessageCircle } from "lucide-react";
 
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
@@ -448,10 +449,19 @@ export default function Dashboard() {
 
       {/* MENU */}
       <div className="fixed bottom-0 left-0 right-0 bg-black flex justify-around py-3">
-        <button onClick={() => setTab("events")}>📅</button>
-        <button onClick={() => setTab("proposition")}>🗳 Propositions</button>
-        <button onClick={() => setTab("members")}>👥</button>
-        <button onClick={() => setTab("chat")}>💬</button>
+        <button onClick={() => setTab("events")} className="flex flex-col items-center">
+          <Calendar size={24} />
+        </button>
+        <button onClick={() => setTab("proposition")} className="flex flex-col items-center">
+          <Vote size={24} />
+          <span className="text-xs">Propositions</span>
+        </button>
+        <button onClick={() => setTab("members")} className="flex flex-col items-center">
+          <Users size={24} />
+        </button>
+        <button onClick={() => setTab("chat")} className="flex flex-col items-center">
+          <MessageCircle size={24} />
+        </button>
       </div>
 
     </main>
