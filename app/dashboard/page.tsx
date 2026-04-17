@@ -9,6 +9,8 @@ import {
   onSnapshot,
   query,
   orderBy,
+  where,
+  getDocs,
   doc,
   setDoc,
   deleteDoc,
@@ -28,6 +30,13 @@ export default function Dashboard() {
   const [typingUsers, setTypingUsers] = useState<any[]>([]);
   const [chatReadAt, setChatReadAt] = useState<Date | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [chatView, setChatView] = useState<"chat" | "evolution">("chat");
+  const [evolutionRequests, setEvolutionRequests] = useState<any[]>([]);
+  const [evolutionReplies, setEvolutionReplies] = useState<any[]>([]);
+  const [selectedEvolutionId, setSelectedEvolutionId] = useState<string | null>(null);
+  const [newEvolutionTitle, setNewEvolutionTitle] = useState("");
+  const [newEvolutionBody, setNewEvolutionBody] = useState("");
+  const [evolutionReplyInput, setEvolutionReplyInput] = useState("");
   const [onlineMembersCount, setOnlineMembersCount] = useState(1);
   const [infoPairIndex, setInfoPairIndex] = useState(0);
   const [isInfoFading, setIsInfoFading] = useState(false);
@@ -289,11 +298,45 @@ export default function Dashboard() {
   }, [tab, chatMessages.length]);
 
   useEffect(() => {
+    if (tab === "chat") {
+      setChatView("chat");
+    }
+  }, [tab]);
+
+  useEffect(() => {
     if (tab !== "chat") return;
     const el = chatScrollRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
   }, [tab, chatMessages.length]);
+
+  useEffect(() => {
+    const firestore = getFirestore();
+    if (!firestore) return;
+
+    const q = query(collection(firestore, "evolutionRequests"), orderBy("createdAt", "desc"));
+    return onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setEvolutionRequests(data);
+      if (data.length === 0) {
+        setSelectedEvolutionId(null);
+        return;
+      }
+      if (!selectedEvolutionId || !data.some((item: any) => item.id === selectedEvolutionId)) {
+        setSelectedEvolutionId(data[0].id);
+      }
+    });
+  }, [selectedEvolutionId]);
+
+  useEffect(() => {
+    const firestore = getFirestore();
+    if (!firestore) return;
+
+    const q = query(collection(firestore, "evolutionReplies"), orderBy("createdAt", "asc"));
+    return onSnapshot(q, (snapshot) => {
+      setEvolutionReplies(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+  }, []);
 
   const logout = async () => {
     const auth = getAuth();
@@ -555,6 +598,52 @@ export default function Dashboard() {
     await deleteDoc(doc(firestore, "chat", messageId));
   };
 
+  const createEvolutionRequest = async () => {
+    if (!user?.email || !newEvolutionTitle.trim() || !newEvolutionBody.trim()) return;
+    const firestore = getFirestore();
+    if (!firestore) return;
+
+    const created = await addDoc(collection(firestore, "evolutionRequests"), {
+      title: newEvolutionTitle.trim(),
+      body: newEvolutionBody.trim(),
+      createdBy: user.email,
+      createdAt: serverTimestamp(),
+    });
+
+    setNewEvolutionTitle("");
+    setNewEvolutionBody("");
+    setSelectedEvolutionId(created.id);
+  };
+
+  const sendEvolutionReply = async () => {
+    if (!user?.email || !selectedEvolutionId || !evolutionReplyInput.trim()) return;
+    const firestore = getFirestore();
+    if (!firestore) return;
+
+    await addDoc(collection(firestore, "evolutionReplies"), {
+      requestId: selectedEvolutionId,
+      text: evolutionReplyInput.trim(),
+      user: user.email,
+      createdAt: serverTimestamp(),
+    });
+
+    setEvolutionReplyInput("");
+  };
+
+  const deleteEvolutionRequest = async (requestId: string) => {
+    if (userRole !== "admin" && userRole !== "superAdmin") return;
+    const firestore = getFirestore();
+    if (!firestore) return;
+
+    await deleteDoc(doc(firestore, "evolutionRequests", requestId));
+    const repliesSnap = await getDocs(query(collection(firestore, "evolutionReplies"), where("requestId", "==", requestId)));
+    await Promise.all(repliesSnap.docs.map((replyDoc) => deleteDoc(replyDoc.ref)));
+
+    if (selectedEvolutionId === requestId) {
+      setSelectedEvolutionId(null);
+    }
+  };
+
   const getPseudo = (email: string) =>
     members.find((m) => m.email === email)?.pseudo || email;
 
@@ -612,22 +701,47 @@ export default function Dashboard() {
   const otherOnlineCount = Math.max(onlineMembersCount - 1, 0);
 
   const infoItems = [
-    upcomingEvents.length > 0 ? `${upcomingEvents.length} partie${upcomingEvents.length > 1 ? "s" : ""} a venir` : null,
-    pendingForMeCount > 0 ? `${pendingForMeCount} proposition${pendingForMeCount > 1 ? "s" : ""} en attente de ta reponse` : null,
-    mentionCount > 0 ? `${mentionCount} message${mentionCount > 1 ? "s" : ""} avec @toi` : null,
-    unreadCount > 0 ? `${unreadCount} message${unreadCount > 1 ? "s" : ""} non lu${unreadCount > 1 ? "s" : ""}` : null,
-    otherOnlineCount > 0 ? `${otherOnlineCount} membre${otherOnlineCount > 1 ? "s" : ""} en ligne` : null,
-  ].filter(Boolean) as string[];
+    upcomingEvents.length > 0
+      ? {
+          source: upcomingEvents.length > 1 ? "Parties" : "Partie",
+          text: `${upcomingEvents.length} date${upcomingEvents.length > 1 ? "s" : ""} a venir`,
+        }
+      : null,
+    pendingForMeCount > 0
+      ? {
+          source: pendingForMeCount > 1 ? "Propositions" : "Proposition",
+          text: `${pendingForMeCount} en attente`,
+        }
+      : null,
+    mentionCount > 0
+      ? {
+          source: "Chat",
+          text: `${mentionCount} mention${mentionCount > 1 ? "s" : ""} @`,
+        }
+      : null,
+    unreadCount > 0
+      ? {
+          source: "Chat",
+          text: `${unreadCount} non lu${unreadCount > 1 ? "s" : ""}`,
+        }
+      : null,
+    otherOnlineCount > 0
+      ? {
+          source: "Participants",
+          text: `${otherOnlineCount} en ligne`,
+        }
+      : null,
+  ].filter(Boolean) as Array<{ source: string; text: string }>;
 
   const normalizedInfoIndex = infoItems.length === 0 ? 0 : infoPairIndex % infoItems.length;
-  const currentInfoLine = infoItems[normalizedInfoIndex] || "";
+  const currentInfoLine = infoItems[normalizedInfoIndex] || null;
 
   const navItems = [
     { key: "events", label: "Parties", icon: CalendarDays },
     { key: "proposition", label: "Propositions", icon: ClipboardList },
     { key: "chat", label: "Chat", icon: MessageCircle },
     { key: "results", label: "Resultats", icon: Trophy },
-    { key: "members", label: "Participants", icon: Users },
+    { key: "members", label: "Pilotes", icon: Users },
   ];
 
   useEffect(() => {
@@ -717,16 +831,17 @@ export default function Dashboard() {
             <img
               src="https://cdn.discordapp.com/attachments/1068885680568148019/1494439845198696489/FD.png?ex=69e29d10&is=69e14b90&hm=fdeba7a50be29eb581e84c0690762d2cf5da649aeb5f6735349f8b6ddbc0ffb9&"
               alt="Formula D"
-              className="h-14 w-auto object-contain shrink-0"
+              className="h-7 sm:h-14 w-auto object-contain shrink-0"
             />
 
-            <div className="info-laser-border h-14 flex-1 min-w-0 max-w-[640px] bg-[#010d1e] px-3 sm:px-4 flex items-center overflow-hidden">
+            <div className="info-laser-border h-14 flex-1 min-w-0 max-w-[640px] bg-[#010d1e] px-3 sm:px-4 flex items-start sm:items-center overflow-hidden py-1 sm:py-0">
               {infoItems.length === 0 ? (
                 <p className="text-[11px] sm:text-xs uppercase tracking-[0.14em] text-gray-500">Aucune info urgente</p>
               ) : (
                 <div className={`w-full transition-opacity duration-300 ${isInfoFading ? "opacity-0" : "opacity-100"}`}>
-                  <p className="truncate text-[11px] sm:text-xs uppercase tracking-[0.14em] text-gray-200 leading-5">
-                    <span className="text-[#d31f28] mr-2">Info</span>{currentInfoLine}
+                  <p className="text-[11px] sm:text-xs uppercase tracking-[0.14em] text-gray-200 leading-4 whitespace-normal break-words">
+                    <span className="text-[#d31f28] mr-2">{currentInfoLine?.source}</span>
+                    {currentInfoLine?.text}
                   </p>
                 </div>
               )}
@@ -737,7 +852,7 @@ export default function Dashboard() {
             <div className="relative w-fit">
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="w-14 h-14 rounded-3xl p-[2px] bg-black transition"
+                className="w-7 h-7 sm:w-14 sm:h-14 rounded-2xl sm:rounded-3xl p-[2px] bg-black transition"
               >
                 <div className="w-full h-full rounded-[1.35rem] overflow-hidden bg-[#d31f28] [transform:translateZ(0)] [-webkit-mask-image:-webkit-radial-gradient(white,black)] [mask-image:radial-gradient(white,black)] flex items-center justify-center">
                   {profile.avatar ? (
@@ -747,14 +862,14 @@ export default function Dashboard() {
                       style={{ backgroundImage: `url("${profile.avatar}")` }}
                     />
                   ) : (
-                    <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-6 h-6 sm:w-12 sm:h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                     </svg>
                   )}
                 </div>
               </button>
-              <div className="absolute bottom-0 right-0 bg-white rounded-full p-1.5 flex items-center justify-center border-2 border-[#000e22]">
-                <svg className="w-3.5 h-3.5 text-[#d31f28]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="absolute bottom-0.5 right-0.5 sm:bottom-1 sm:right-1 p-0.5 flex items-center justify-center pointer-events-none">
+                <svg className="w-2 h-2 sm:w-3 sm:h-3 text-white/85 mix-blend-difference" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
               </div>
@@ -856,7 +971,7 @@ export default function Dashboard() {
                 <p className="text-xs font-black uppercase tracking-[0.25em] text-gray-400">
                   {tab === "events" && <>Parties a venir — <span className="text-[#d31f28]">{nextEventDays !== null ? `J-${nextEventDays}` : "—"}</span></>}
                   {tab === "proposition" && <>Propositions de dates</>}
-                  {tab === "chat" && <>Chat equipe</>}
+                  {tab === "chat" && <>Chat</>}
                   {tab === "results" && <>Resultats</>}
                   {tab === "members" && <>Participants</>}
                 </p>
@@ -1164,152 +1279,289 @@ export default function Dashboard() {
 
             {tab === "chat" && (
               <div className="space-y-4">
-                <div ref={chatScrollRef} className="border border-white/10 bg-[#010d1e] p-4 sm:p-6 max-h-[50vh] sm:max-h-[44vh] overflow-y-auto">
-                  {chatMessages.length === 0 ? (
-                    <p className="text-xs uppercase tracking-widest text-gray-500">Pas encore de messages. Lancez la discussion.</p>
-                  ) : (
-                    chatMessages
-                      .filter((m) => !m.parentId)
-                      .map((m) => {
-                        const replies = chatMessages.filter((r) => r.parentId === m.id);
-                        return (
-                          <div key={m.id} className="mb-4 border-l-2 border-white/10 pl-3">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <p className="text-[11px] uppercase tracking-[0.15em] text-gray-500 mb-1">
-                                  {getPseudo(m.user)} · {formatChatTime(m.createdAt)}
-                                  {m.editedAt ? " · modifie" : ""}
-                                </p>
-                                <p className="text-gray-200 text-sm">{renderTextWithMentions(m.text || "")}</p>
-                              </div>
-                              <div className="flex items-center gap-2 flex-wrap justify-end">
-                                <button
-                                  onClick={() => setReplyToMessageId(m.id)}
-                                  className="text-[10px] uppercase tracking-widest text-gray-500 hover:text-white transition"
-                                >
-                                  Repondre
-                                </button>
-                                {isChatManager && (
-                                  <>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setChatView("chat")}
+                    className={`border px-3 py-2 text-[11px] font-black uppercase tracking-[0.2em] transition ${chatView === "chat" ? "border-[#d31f28] bg-[#d31f28]/20 text-white" : "border-white/20 text-gray-300 hover:text-white"}`}
+                  >
+                    Chat
+                  </button>
+                  <button
+                    onClick={() => setChatView("evolution")}
+                    className={`border px-3 py-2 text-[11px] font-black uppercase tracking-[0.2em] transition ${chatView === "evolution" ? "border-[#d31f28] bg-[#d31f28]/20 text-white" : "border-white/20 text-gray-300 hover:text-white"}`}
+                  >
+                    Evolution Appli
+                  </button>
+                </div>
+
+                {chatView === "chat" && (
+                  <>
+                    <div ref={chatScrollRef} className="border border-white/10 bg-[#010d1e] p-4 sm:p-6 max-h-[50vh] sm:max-h-[44vh] overflow-y-auto">
+                      {chatMessages.length === 0 ? (
+                        <p className="text-xs uppercase tracking-widest text-gray-500">Pas encore de messages. Lancez la discussion.</p>
+                      ) : (
+                        chatMessages
+                          .filter((m) => !m.parentId)
+                          .map((m) => {
+                            const replies = chatMessages.filter((r) => r.parentId === m.id);
+                            return (
+                              <div key={m.id} className="mb-4 border-l-2 border-white/10 pl-3">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div>
+                                    <p className="text-[11px] uppercase tracking-[0.15em] text-gray-500 mb-1">
+                                      {getPseudo(m.user)} · {formatChatTime(m.createdAt)}
+                                      {m.editedAt ? " · modifie" : ""}
+                                    </p>
+                                    <p className="text-gray-200 text-sm">{renderTextWithMentions(m.text || "")}</p>
+                                  </div>
+                                  <div className="flex items-center gap-2 flex-wrap justify-end">
                                     <button
-                                      onClick={() => startEditMessage(m)}
+                                      onClick={() => setReplyToMessageId(m.id)}
                                       className="text-[10px] uppercase tracking-widest text-gray-500 hover:text-white transition"
                                     >
-                                      Editer
+                                      Repondre
                                     </button>
-                                    <button
-                                      onClick={() => removeMessage(m.id)}
-                                      className="text-[10px] uppercase tracking-widest text-[#d31f28] hover:text-[#ff4c55] transition"
-                                    >
-                                      Supprimer
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-
-                            {replies.length > 0 && (
-                              <div className="mt-3 ml-3 space-y-2 border-l border-white/10 pl-3">
-                                {replies.map((reply) => (
-                                  <div key={reply.id} className="bg-black/30 border border-white/10 px-3 py-2">
-                                    <p className="text-[10px] uppercase tracking-[0.15em] text-gray-500 mb-1">
-                                      {getPseudo(reply.user)} · {formatChatTime(reply.createdAt)}
-                                      {reply.editedAt ? " · modifie" : ""}
-                                    </p>
-                                    <p className="text-sm text-gray-200">{renderTextWithMentions(reply.text || "")}</p>
                                     {isChatManager && (
-                                      <div className="mt-2 flex items-center gap-3">
+                                      <>
                                         <button
-                                          onClick={() => startEditMessage(reply)}
+                                          onClick={() => startEditMessage(m)}
                                           className="text-[10px] uppercase tracking-widest text-gray-500 hover:text-white transition"
                                         >
                                           Editer
                                         </button>
                                         <button
-                                          onClick={() => removeMessage(reply.id)}
+                                          onClick={() => removeMessage(m.id)}
                                           className="text-[10px] uppercase tracking-widest text-[#d31f28] hover:text-[#ff4c55] transition"
                                         >
                                           Supprimer
                                         </button>
-                                      </div>
+                                      </>
                                     )}
+                                  </div>
+                                </div>
+
+                                {replies.length > 0 && (
+                                  <div className="mt-3 ml-3 space-y-2 border-l border-white/10 pl-3">
+                                    {replies.map((reply) => (
+                                      <div key={reply.id} className="bg-black/30 border border-white/10 px-3 py-2">
+                                        <p className="text-[10px] uppercase tracking-[0.15em] text-gray-500 mb-1">
+                                          {getPseudo(reply.user)} · {formatChatTime(reply.createdAt)}
+                                          {reply.editedAt ? " · modifie" : ""}
+                                        </p>
+                                        <p className="text-sm text-gray-200">{renderTextWithMentions(reply.text || "")}</p>
+                                        {isChatManager && (
+                                          <div className="mt-2 flex items-center gap-3">
+                                            <button
+                                              onClick={() => startEditMessage(reply)}
+                                              className="text-[10px] uppercase tracking-widest text-gray-500 hover:text-white transition"
+                                            >
+                                              Editer
+                                            </button>
+                                            <button
+                                              onClick={() => removeMessage(reply.id)}
+                                              className="text-[10px] uppercase tracking-widest text-[#d31f28] hover:text-[#ff4c55] transition"
+                                            >
+                                              Supprimer
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })
+                      )}
+                    </div>
+
+                    {formatTypingLabel() && (
+                      <p className="text-[11px] text-gray-500 uppercase tracking-widest">{formatTypingLabel()}</p>
+                    )}
+
+                    {replyToMessageId && (
+                      <div className="border border-[#d31f28]/40 bg-[#d31f28]/10 px-4 py-3 flex items-center justify-between gap-3">
+                        <p className="text-xs uppercase tracking-widest text-gray-300">Reponse en fil active</p>
+                        <button
+                          onClick={() => setReplyToMessageId(null)}
+                          className="text-[10px] uppercase tracking-widest text-gray-400 hover:text-white transition"
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    )}
+
+                    {editingMessageId && isChatManager && (
+                      <div className="border border-white/20 bg-black/30 p-3 space-y-3">
+                        <p className="text-xs uppercase tracking-widest text-gray-400">Edition du message</p>
+                        <input
+                          value={editingMessageText}
+                          onChange={(e) => setEditingMessageText(e.target.value)}
+                          className="w-full border border-white/20 bg-transparent px-4 py-2 text-white text-sm outline-none focus:border-[#d31f28] transition"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              setEditingMessageId(null);
+                              setEditingMessageText("");
+                            }}
+                            className="border border-white/20 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:text-white"
+                          >
+                            Annuler
+                          </button>
+                          <button
+                            onClick={saveEditedMessage}
+                            className="bg-[#d31f28] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-[#b81d23]"
+                          >
+                            Sauvegarder
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <input
+                        value={chatInput}
+                        onChange={(e) => {
+                          setChatInput(e.target.value);
+                          setTypingStatus(e.target.value.trim().length > 0);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            sendChat();
+                          }
+                        }}
+                        className="flex-1 border border-white/20 bg-transparent px-5 py-3 text-white text-sm outline-none focus:border-[#d31f28] transition"
+                        placeholder="Ecrire un message... (utilisez @pseudo)"
+                      />
+                      <button
+                        onClick={sendChat}
+                        className="w-full sm:w-auto bg-[#d31f28] px-8 py-3 text-xs font-black uppercase tracking-[0.2em] text-white hover:bg-[#b81d23] transition"
+                      >
+                        Envoyer
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {chatView === "evolution" && (
+                  <div className="grid gap-4 lg:grid-cols-[minmax(0,320px)_1fr]">
+                    <div className="space-y-4">
+                      <div className="border border-white/10 bg-black/30 p-4 space-y-3">
+                        <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400">Nouvelle demande</p>
+                        <input
+                          value={newEvolutionTitle}
+                          onChange={(e) => setNewEvolutionTitle(e.target.value)}
+                          className="w-full border border-white/20 bg-transparent px-3 py-2 text-white text-sm outline-none focus:border-[#d31f28] transition"
+                          placeholder="Titre"
+                        />
+                        <textarea
+                          value={newEvolutionBody}
+                          onChange={(e) => setNewEvolutionBody(e.target.value)}
+                          className="w-full min-h-28 border border-white/20 bg-transparent px-3 py-2 text-white text-sm outline-none focus:border-[#d31f28] transition"
+                          placeholder="Detaille ta demande d'evolution..."
+                        />
+                        <button
+                          onClick={createEvolutionRequest}
+                          className="w-full bg-[#d31f28] px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-white hover:bg-[#b81d23] transition"
+                        >
+                          Ouvrir une demande
+                        </button>
+                      </div>
+
+                      <div className="border border-white/10 bg-black/30 max-h-[45vh] overflow-y-auto">
+                        {evolutionRequests.length === 0 ? (
+                          <p className="p-4 text-[11px] uppercase tracking-widest text-gray-500">Aucune demande.</p>
+                        ) : (
+                          evolutionRequests.map((request: any) => {
+                            const replyCount = evolutionReplies.filter((r: any) => r.requestId === request.id).length;
+                            const exchangeCount = replyCount + 1;
+                            const selected = selectedEvolutionId === request.id;
+                            return (
+                              <button
+                                key={request.id}
+                                onClick={() => setSelectedEvolutionId(request.id)}
+                                className={`w-full text-left px-4 py-3 border-b border-white/10 transition ${selected ? "bg-[#d31f28]/15" : "hover:bg-white/5"}`}
+                              >
+                                <p className="text-sm font-semibold text-white truncate">{request.title}</p>
+                                <p className="text-[10px] uppercase tracking-widest text-gray-500 mt-1">{exchangeCount} echange{exchangeCount > 1 ? "s" : ""}</p>
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="border border-white/10 bg-black/30 p-4 space-y-4 min-h-[240px]">
+                      {selectedEvolutionId ? (
+                        (() => {
+                          const currentRequest = evolutionRequests.find((r: any) => r.id === selectedEvolutionId);
+                          const replies = evolutionReplies.filter((r: any) => r.requestId === selectedEvolutionId);
+                          if (!currentRequest) {
+                            return <p className="text-[11px] uppercase tracking-widest text-gray-500">Selectionne une demande.</p>;
+                          }
+
+                          return (
+                            <>
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <p className="text-xs uppercase tracking-[0.2em] text-[#d31f28]">Demande</p>
+                                  <h3 className="text-lg font-black text-white mt-1">{currentRequest.title}</h3>
+                                  <p className="text-[11px] uppercase tracking-widest text-gray-500 mt-1">{getPseudo(currentRequest.createdBy)} · {formatChatTime(currentRequest.createdAt)}</p>
+                                </div>
+                                {(userRole === "admin" || userRole === "superAdmin") && (
+                                  <button
+                                    onClick={() => deleteEvolutionRequest(currentRequest.id)}
+                                    className="border border-[#d31f28]/50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-[#ff5b63] hover:bg-[#d31f28]/10"
+                                  >
+                                    Supprimer
+                                  </button>
+                                )}
+                              </div>
+
+                              <div className="border border-white/10 bg-[#010d1e] p-3">
+                                <p className="text-sm text-gray-200 whitespace-pre-wrap">{currentRequest.body}</p>
+                              </div>
+
+                              <div className="space-y-2 max-h-[32vh] overflow-y-auto pr-1">
+                                {replies.map((reply: any) => (
+                                  <div key={reply.id} className="border border-white/10 bg-[#010d1e] px-3 py-2">
+                                    <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-1">{getPseudo(reply.user)} · {formatChatTime(reply.createdAt)}</p>
+                                    <p className="text-sm text-gray-200 whitespace-pre-wrap">{reply.text}</p>
                                   </div>
                                 ))}
                               </div>
-                            )}
-                          </div>
-                        );
-                      })
-                  )}
-                </div>
 
-                {formatTypingLabel() && (
-                  <p className="text-[11px] text-gray-500 uppercase tracking-widest">{formatTypingLabel()}</p>
-                )}
-
-                {replyToMessageId && (
-                  <div className="border border-[#d31f28]/40 bg-[#d31f28]/10 px-4 py-3 flex items-center justify-between gap-3">
-                    <p className="text-xs uppercase tracking-widest text-gray-300">Reponse en fil active</p>
-                    <button
-                      onClick={() => setReplyToMessageId(null)}
-                      className="text-[10px] uppercase tracking-widest text-gray-400 hover:text-white transition"
-                    >
-                      Annuler
-                    </button>
-                  </div>
-                )}
-
-                {editingMessageId && isChatManager && (
-                  <div className="border border-white/20 bg-black/30 p-3 space-y-3">
-                    <p className="text-xs uppercase tracking-widest text-gray-400">Edition du message</p>
-                    <input
-                      value={editingMessageText}
-                      onChange={(e) => setEditingMessageText(e.target.value)}
-                      className="w-full border border-white/20 bg-transparent px-4 py-2 text-white text-sm outline-none focus:border-[#d31f28] transition"
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          setEditingMessageId(null);
-                          setEditingMessageText("");
-                        }}
-                        className="border border-white/20 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:text-white"
-                      >
-                        Annuler
-                      </button>
-                      <button
-                        onClick={saveEditedMessage}
-                        className="bg-[#d31f28] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-[#b81d23]"
-                      >
-                        Sauvegarder
-                      </button>
+                              <div className="flex gap-2">
+                                <input
+                                  value={evolutionReplyInput}
+                                  onChange={(e) => setEvolutionReplyInput(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.preventDefault();
+                                      sendEvolutionReply();
+                                    }
+                                  }}
+                                  className="flex-1 border border-white/20 bg-transparent px-4 py-2 text-white text-sm outline-none focus:border-[#d31f28] transition"
+                                  placeholder="Repondre a cette demande..."
+                                />
+                                <button
+                                  onClick={sendEvolutionReply}
+                                  className="bg-[#d31f28] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-[#b81d23]"
+                                >
+                                  Repondre
+                                </button>
+                              </div>
+                            </>
+                          );
+                        })()
+                      ) : (
+                        <p className="text-[11px] uppercase tracking-widest text-gray-500">Selectionne une demande dans la liste.</p>
+                      )}
                     </div>
                   </div>
                 )}
-
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <input
-                    value={chatInput}
-                    onChange={(e) => {
-                      setChatInput(e.target.value);
-                      setTypingStatus(e.target.value.trim().length > 0);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        sendChat();
-                      }
-                    }}
-                    className="flex-1 border border-white/20 bg-transparent px-5 py-3 text-white text-sm outline-none focus:border-[#d31f28] transition"
-                    placeholder="Ecrire un message... (utilisez @pseudo)"
-                  />
-                  <button
-                    onClick={sendChat}
-                    className="w-full sm:w-auto bg-[#d31f28] px-8 py-3 text-xs font-black uppercase tracking-[0.2em] text-white hover:bg-[#b81d23] transition"
-                  >
-                    Envoyer
-                  </button>
-                </div>
               </div>
             )}
           </section>
