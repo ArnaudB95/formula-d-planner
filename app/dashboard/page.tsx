@@ -619,22 +619,22 @@ export default function Dashboard() {
     <main className="min-h-screen bg-[#000e22] text-white">
       {/* F1 top accent bar */}
       <div className="h-1 w-full bg-[#d31f28]" />
-      <div className="mx-auto max-w-7xl px-6 py-8">
-        <header className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between relative">
-          <div className="max-w-3xl">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+        <header className="flex items-start justify-between gap-4 sm:gap-6 xl:items-start xl:justify-between">
+          <div className="max-w-3xl pr-2">
             <img
               src="https://cdn.discordapp.com/attachments/1068885680568148019/1494439845198696489/FD.png?ex=69e29d10&is=69e14b90&hm=fdeba7a50be29eb581e84c0690762d2cf5da649aeb5f6735349f8b6ddbc0ffb9&"
               alt="Formula D"
-              className="h-14 w-auto mb-4 object-contain"
+              className="h-12 sm:h-14 w-auto mb-4 object-contain"
             />
-            <p className="text-xs font-bold tracking-[0.4em] text-[#d31f28] uppercase mb-2">Formula D</p>
-            <h1 className="text-5xl sm:text-6xl font-black tracking-[-0.02em] leading-none uppercase">
+            <p className="text-[11px] sm:text-xs font-bold tracking-[0.28em] sm:tracking-[0.4em] text-[#d31f28] uppercase mb-2">Formula D</p>
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-[-0.02em] leading-[0.95] uppercase">
               PLANIFIEZ VOS <br />
               <span className="text-[#d31f28]">PARTIES</span>
             </h1>
           </div>
 
-          <div className="absolute top-0 right-6 xl:static xl:ml-auto">
+          <div className="shrink-0 self-start xl:ml-auto">
             <div className="relative w-fit">
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -660,7 +660,7 @@ export default function Dashboard() {
                 </svg>
               </div>
               {isMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-80 bg-[#001122] border border-white/20 rounded-lg shadow-xl z-50">
+                <div className="absolute right-0 top-full mt-2 w-[min(20rem,calc(100vw-2rem))] bg-[#001122] border border-white/20 rounded-lg shadow-xl z-50">
                   <div className="p-4">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-12 h-12 bg-[#d31f28] rounded-3xl flex items-center justify-center overflow-hidden [transform:translateZ(0)] [-webkit-mask-image:-webkit-radial-gradient(white,black)] [mask-image:radial-gradient(white,black)]">
@@ -750,7 +750,8 @@ export default function Dashboard() {
         </header>
 
         {/* F1 NAV TABS */}
-        <div className="mt-10 flex border-b border-white/10">
+        <div className="mt-8 sm:mt-10 -mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto border-b border-white/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex min-w-max">
           {[
             { key: "events", label: "Courses", value: `${upcomingEvents.length} validés` },
             { key: "proposition", label: "Propositions", value: `${pendingEvents.length} en attente` },
@@ -760,7 +761,7 @@ export default function Dashboard() {
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`relative px-6 py-4 text-xs font-black uppercase tracking-[0.2em] transition-colors ${
+              className={`relative shrink-0 px-4 sm:px-6 py-3 sm:py-4 text-[11px] sm:text-xs font-black uppercase tracking-[0.14em] sm:tracking-[0.2em] transition-colors ${
                 tab === t.key
                   ? "text-white"
                   : "text-gray-500 hover:text-gray-300"
@@ -773,10 +774,11 @@ export default function Dashboard() {
               )}
             </button>
           ))}
+          </div>
         </div>
 
         <div className="mt-6">
-          <section className="border border-white/10 bg-[#010d1e] p-6">
+          <section className="border border-white/10 bg-[#010d1e] p-4 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3 pb-5 border-b border-white/10 mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-1 h-8 bg-[#d31f28]" />
@@ -798,29 +800,29 @@ export default function Dashboard() {
                     const waiting = members.filter((m) => !eventVotes[m.email]);
 
                     return (
-                      <div key={event.id} className="border-l-4 border-[#d31f28] bg-white/5 border border-white/10 p-6">
+                      <div key={event.id} className="border-l-4 border-[#d31f28] bg-white/5 border border-white/10 p-4 sm:p-6">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <div>
                             <p className="text-xs text-gray-500 uppercase tracking-[0.3em] font-bold">Session validée</p>
                             <h3 className="text-xl font-black uppercase text-white mt-1">{event.title}</h3>
                           </div>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex w-full sm:w-auto flex-wrap gap-2">
                             <button
                               onClick={() => vote(event.id, "present")}
-                              className="bg-[#409b48] px-5 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-[#37853e] transition"
+                              className="flex-1 sm:flex-none text-center bg-[#409b48] px-5 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-[#37853e] transition"
                             >
                               Présent
                             </button>
                             <button
                               onClick={() => vote(event.id, "absent")}
-                              className="bg-[#d31f28] px-5 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-[#b81d23] transition"
+                              className="flex-1 sm:flex-none text-center bg-[#d31f28] px-5 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-[#b81d23] transition"
                             >
                               Absent
                             </button>
                             {(userRole === "admin" || userRole === "superAdmin") && (
                               <button
                                 onClick={() => deleteEvent(event)}
-                                className="border border-white/20 bg-transparent px-5 py-2 text-xs font-black uppercase tracking-widest text-gray-400 hover:text-white hover:border-white transition"
+                                className="flex-1 sm:flex-none text-center border border-white/20 bg-transparent px-5 py-2 text-xs font-black uppercase tracking-widest text-gray-400 hover:text-white hover:border-white transition"
                               >
                                 Supprimer
                               </button>
@@ -850,10 +852,10 @@ export default function Dashboard() {
 
             {tab === "proposition" && (
               <div className="space-y-6">
-                <div className="border border-white/10 bg-[#010d1e] p-6">
+                <div className="border border-white/10 bg-[#010d1e] p-4 sm:p-6">
                   <p className="text-xs font-black uppercase tracking-[0.3em] text-gray-500 mb-4">Nouvelle proposition</p>
                   
-                  <div className="bg-white/5 p-6">
+                  <div className="bg-white/5 p-4 sm:p-6">
                     <div className="flex items-center justify-between mb-6">
                       <button
                         onClick={handlePrevMonth}
@@ -937,29 +939,29 @@ export default function Dashboard() {
                     const waiting = members.filter((m) => !eventVotes[m.email]);
 
                     return (
-                      <div key={event.id} className="border-l-4 border-yellow-500 bg-white/5 border border-white/10 p-6">
+                      <div key={event.id} className="border-l-4 border-yellow-500 bg-white/5 border border-white/10 p-4 sm:p-6">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <div>
                             <p className="text-xs text-yellow-500 uppercase tracking-[0.3em] font-black">Vote en cours</p>
                             <h3 className="text-xl font-black uppercase text-white mt-1">{event.title}</h3>
                           </div>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex w-full sm:w-auto flex-wrap gap-2">
                             <button
                               onClick={() => vote(event.id, "present")}
-                              className="bg-[#409b48] px-5 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-[#37853e] transition"
+                              className="flex-1 sm:flex-none text-center bg-[#409b48] px-5 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-[#37853e] transition"
                             >
                               Présent
                             </button>
                             <button
                               onClick={() => vote(event.id, "absent")}
-                              className="bg-[#d31f28] px-5 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-[#b81d23] transition"
+                              className="flex-1 sm:flex-none text-center bg-[#d31f28] px-5 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-[#b81d23] transition"
                             >
                               Absent
                             </button>
                             {canManageProposition(event) && (
                               <button
                                 onClick={() => validateEvent(event)}
-                                className="border border-yellow-500 px-5 py-2 text-xs font-black uppercase tracking-widest text-yellow-400 hover:bg-yellow-500/10 transition"
+                                className="flex-1 sm:flex-none text-center border border-yellow-500 px-5 py-2 text-xs font-black uppercase tracking-widest text-yellow-400 hover:bg-yellow-500/10 transition"
                               >
                                 Valider
                               </button>
@@ -967,7 +969,7 @@ export default function Dashboard() {
                             {canManageProposition(event) && (
                               <button
                                 onClick={() => deleteEvent(event)}
-                                className="border border-white/20 px-5 py-2 text-xs font-black uppercase tracking-widest text-gray-400 hover:text-white hover:border-white transition"
+                                className="flex-1 sm:flex-none text-center border border-white/20 px-5 py-2 text-xs font-black uppercase tracking-widest text-gray-400 hover:text-white hover:border-white transition"
                               >
                                 Supprimer
                               </button>
@@ -1018,7 +1020,7 @@ export default function Dashboard() {
                           setIsEditingMember(true);
                         }
                       }}
-                      className={`border border-white/10 bg-[#010d1e] px-6 py-4 flex items-center gap-5 ${userRole === "superAdmin" ? "cursor-pointer hover:bg-white/5 transition" : ""}`}
+                      className={`border border-white/10 bg-[#010d1e] px-4 sm:px-6 py-4 flex items-start sm:items-center gap-3 sm:gap-5 ${userRole === "superAdmin" ? "cursor-pointer hover:bg-white/5 transition" : ""}`}
                     >
                       {/* avatar */}
                       <div className="w-12 h-12 bg-[#d31f28] flex-shrink-0 flex items-center justify-center overflow-hidden">
@@ -1078,7 +1080,7 @@ export default function Dashboard() {
 
             {tab === "chat" && (
               <div className="space-y-4">
-                <div className="border border-white/10 bg-[#010d1e] p-6 max-h-[44vh] overflow-y-auto">
+                <div className="border border-white/10 bg-[#010d1e] p-4 sm:p-6 max-h-[50vh] sm:max-h-[44vh] overflow-y-auto">
                   {chatMessages.length === 0 ? (
                     <p className="text-xs uppercase tracking-widest text-gray-500">Pas encore de messages. Lancez la discussion.</p>
                   ) : (
@@ -1201,7 +1203,7 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <input
                     value={chatInput}
                     onChange={(e) => {
@@ -1219,7 +1221,7 @@ export default function Dashboard() {
                   />
                   <button
                     onClick={sendChat}
-                    className="bg-[#d31f28] px-8 py-3 text-xs font-black uppercase tracking-[0.2em] text-white hover:bg-[#b81d23] transition"
+                    className="w-full sm:w-auto bg-[#d31f28] px-8 py-3 text-xs font-black uppercase tracking-[0.2em] text-white hover:bg-[#b81d23] transition"
                   >
                     Envoyer
                   </button>

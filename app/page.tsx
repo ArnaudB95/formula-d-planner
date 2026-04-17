@@ -2,20 +2,43 @@
 
 import { useEffect, useState } from "react";
 import { getAuth, getProvider } from "@/lib/firebase";
-import { signInWithPopup, onAuthStateChanged } from "firebase/auth";
+import {
+  browserLocalPersistence,
+  getRedirectResult,
+  onAuthStateChanged,
+  setPersistence,
+  signInWithRedirect,
+} from "firebase/auth";
 import { useRouter } from "next/navigation";
 
 export default function Landing() {
-  const [user, setUser] = useState<any>(null);
   const router = useRouter();
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
   useEffect(() => {
     const auth = getAuth();
     if (!auth) return;
 
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
+    // Consume redirect result on mobile to expose auth errors instead of failing silently.
+    getRedirectResult(auth).catch((error: any) => {
+      console.error("Erreur retour connexion Google :", error);
 
+      if (error?.code === "auth/unauthorized-domain") {
+        alert(
+          "Connexion Google bloquée : domaine/IP non autorisé. Ajoute 192.168.1.152 dans Firebase Console > Authentication > Settings > Authorized domains."
+        );
+        return;
+      }
+
+      if (error?.code === "auth/network-request-failed") {
+        alert("Échec réseau pendant la connexion Google. Vérifie que le téléphone et le PC sont sur le même Wi-Fi.");
+        return;
+      }
+
+      alert(`Échec du retour Google : ${error?.code || error?.message || error}`);
+    });
+
+    const unsub = onAuthStateChanged(auth, (u) => {
       if (u) {
         router.push("/dashboard");
       }
@@ -32,59 +55,54 @@ export default function Landing() {
     }
 
     try {
-      await signInWithPopup(auth, getProvider());
+      setIsSigningIn(true);
+      await setPersistence(auth, browserLocalPersistence);
+      await signInWithRedirect(auth, getProvider());
+      return;
     } catch (error: any) {
       console.error("Erreur de connexion Google :", error);
+
+      if (error?.code === "auth/unauthorized-domain") {
+        alert(
+          "Domaine non autorisé pour Google Auth. Ajoute ce domaine/IP dans Firebase Console > Authentication > Settings > Authorized domains, puis recharge la page."
+        );
+        return;
+      }
+
       alert(`Échec de la connexion Google : ${error.code || error.message || error}`);
+    } finally {
+      setIsSigningIn(false);
     }
   };
 
   return (
-    <main className="min-h-screen bg-[#000e22] text-white flex flex-col">
-      <div className="p-6 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-2xl bg-[#d31f28] flex items-center justify-center font-bold tracking-[0.2em] text-sm">
-          FD
+    <main className="min-h-screen bg-[#000e22] text-white">
+      <div className="h-1 w-full bg-[#d31f28]" />
+
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+        <div className="max-w-3xl">
+          <img
+            src="https://cdn.discordapp.com/attachments/1068885680568148019/1494439845198696489/FD.png?ex=69e29d10&is=69e14b90&hm=fdeba7a50be29eb581e84c0690762d2cf5da649aeb5f6735349f8b6ddbc0ffb9&"
+            alt="Formula D"
+            className="h-12 sm:h-14 w-auto mb-4 object-contain"
+          />
+          <p className="text-[11px] sm:text-xs font-bold tracking-[0.28em] sm:tracking-[0.4em] text-[#d31f28] uppercase mb-2">Formula D</p>
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-[-0.02em] leading-[0.95] uppercase">
+            PLANIFIEZ VOS <br />
+            <span className="text-[#d31f28]">PARTIES</span>
+          </h1>
         </div>
-        <span className="font-semibold uppercase tracking-[0.2em] text-white/90">Formula D</span>
-      </div>
-
-      <div className="flex-1 flex flex-col justify-center px-6 py-8 lg:px-10">
-
-        <h1 className="text-5xl sm:text-6xl font-black leading-tight tracking-[-0.03em]">
-          PLANIFIEZ VOS <br />
-          <span className="text-[#d31f28]">PARTIES DE FORMULA D</span>
-        </h1>
-
-        <p className="max-w-2xl text-gray-400 text-lg leading-8 mt-5">
-          Sondages, chat et gestion d’équipe pour vos sessions Formula D.
-        </p>
 
         <button
           onClick={login}
-          className="mt-10 w-full max-w-2xl rounded-3xl bg-[#d31f28] py-4 text-base font-semibold uppercase tracking-[0.12em] text-white shadow-[0_25px_90px_rgba(211,31,40,0.18)] transition hover:bg-[#d31f28]"
+          disabled={isSigningIn}
+          className="mt-8 sm:mt-10 w-full max-w-2xl bg-[#d31f28] px-6 py-4 sm:py-5 text-xs sm:text-base font-black uppercase tracking-[0.18em] sm:tracking-[0.3em] text-white shadow-[0_25px_90px_rgba(211,31,40,0.2)] transition hover:bg-[#b81d23]"
         >
-          <span className="inline-flex items-center justify-center gap-3">
-            <span className="text-xl">G</span>
-            CONNEXION GOOGLE
+          <span className="inline-flex items-center justify-center gap-3 sm:gap-4">
+            <span className="text-xl leading-none">G</span>
+            {isSigningIn ? "CONNEXION..." : "CONNEXION GOOGLE"}
           </span>
         </button>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-white/10 px-6 py-6">
-        <div className="rounded-3xl border border-white/5 bg-white/5 p-6 text-center shadow-xl shadow-black/20">
-          <div className="text-[#d31f28] text-2xl mb-4">📊</div>
-          <p className="text-xs uppercase tracking-[0.3em] text-gray-400">SONDAGES</p>
-        </div>
-
-        <div className="rounded-3xl border border-white/5 bg-white/5 p-6 text-center shadow-xl shadow-black/20">
-          <div className="text-[#d31f28] text-2xl mb-4">💬</div>
-          <p className="text-xs uppercase tracking-[0.3em] text-gray-400">CHAT</p>
-        </div>
-
-        <div className="rounded-3xl border border-white/5 bg-white/5 p-6 text-center shadow-xl shadow-black/20">
-          <div className="text-[#d31f28] text-2xl mb-4">👥</div>
-          <p className="text-xs uppercase tracking-[0.3em] text-gray-400">ÉQUIPES</p>
-        </div>
       </div>
     </main>
   );
