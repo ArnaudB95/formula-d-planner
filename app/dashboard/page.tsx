@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getAuth, getFirestore } from "@/lib/firebase";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import {
@@ -16,9 +16,10 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { useRouter } from "next/navigation";
-import { Calendar, Vote, Users, MessageCircle, Settings } from "lucide-react";
+import { CalendarDays, ClipboardList, MessageCircle, Trophy, Users } from "lucide-react";
 
 export default function Dashboard() {
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const [user, setUser] = useState<any>(null);
   const [events, setEvents] = useState<any[]>([]);
   const [members, setMembers] = useState<any[]>([]);
@@ -27,6 +28,9 @@ export default function Dashboard() {
   const [typingUsers, setTypingUsers] = useState<any[]>([]);
   const [chatReadAt, setChatReadAt] = useState<Date | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [onlineMembersCount, setOnlineMembersCount] = useState(1);
+  const [infoPairIndex, setInfoPairIndex] = useState(0);
+  const [isInfoFading, setIsInfoFading] = useState(false);
 
   const [tab, setTab] = useState("events");
 
@@ -208,6 +212,7 @@ export default function Dashboard() {
 
     return onSnapshot(collection(firestore, "chatTyping"), (snapshot) => {
       const now = Date.now();
+      const onlineWindowMs = 5 * 60 * 1000;
       const active = snapshot.docs
         .map((d) => ({ email: d.id, ...d.data() }))
         .filter((entry: any) => {
@@ -215,8 +220,42 @@ export default function Dashboard() {
           const updatedMs = entry.updatedAt?.toDate?.()?.getTime?.() || 0;
           return now - updatedMs < 7000;
         });
+      const onlineEmails = new Set<string>();
+      snapshot.docs.forEach((d) => {
+        const data: any = d.data();
+        const updatedMs = data?.updatedAt?.toDate?.()?.getTime?.() || 0;
+        if (now - updatedMs < onlineWindowMs) {
+          onlineEmails.add(d.id);
+        }
+      });
+      onlineEmails.add(user.email);
+
       setTypingUsers(active);
+      setOnlineMembersCount(onlineEmails.size);
     });
+  }, [user?.email]);
+
+  useEffect(() => {
+    if (!user?.email) return;
+    const firestore = getFirestore();
+    if (!firestore) return;
+
+    const heartbeat = async () => {
+      await setDoc(
+        doc(firestore, "chatTyping", user.email),
+        {
+          userEmail: user.email,
+          isTyping: false,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+    };
+
+    heartbeat();
+    const intervalId = window.setInterval(heartbeat, 60000);
+
+    return () => window.clearInterval(intervalId);
   }, [user?.email]);
 
   useEffect(() => {
@@ -247,6 +286,13 @@ export default function Dashboard() {
   useEffect(() => {
     if (tab !== "chat") return;
     markChatAsRead();
+  }, [tab, chatMessages.length]);
+
+  useEffect(() => {
+    if (tab !== "chat") return;
+    const el = chatScrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
   }, [tab, chatMessages.length]);
 
   const logout = async () => {
@@ -547,8 +593,7 @@ export default function Dashboard() {
   };
 
   const isChatManager = userRole === "admin" || userRole === "superAdmin";
-
-  if (!user) return null;
+  const currentUserEmail = user?.email || "";
 
   const pendingEvents = events.filter((e) => e.status === "pending");
 
@@ -557,6 +602,53 @@ export default function Dashboard() {
   );
 
   const nextEventDays = upcomingEvents.length > 0 ? Math.ceil((new Date(upcomingEvents[0].date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : null;
+
+  const pendingForMeCount = currentUserEmail
+    ? pendingEvents.filter((event: any) => !votes[event.id]?.[currentUserEmail]).length
+    : 0;
+  const mentionCount = chatMessages.filter((message: any) =>
+    currentUserEmail && Array.isArray(message.mentions) && message.mentions.includes(currentUserEmail)
+  ).length;
+  const otherOnlineCount = Math.max(onlineMembersCount - 1, 0);
+
+  const infoItems = [
+    upcomingEvents.length > 0 ? `${upcomingEvents.length} partie${upcomingEvents.length > 1 ? "s" : ""} a venir` : null,
+    pendingForMeCount > 0 ? `${pendingForMeCount} proposition${pendingForMeCount > 1 ? "s" : ""} en attente de ta reponse` : null,
+    mentionCount > 0 ? `${mentionCount} message${mentionCount > 1 ? "s" : ""} avec @toi` : null,
+    unreadCount > 0 ? `${unreadCount} message${unreadCount > 1 ? "s" : ""} non lu${unreadCount > 1 ? "s" : ""}` : null,
+    otherOnlineCount > 0 ? `${otherOnlineCount} membre${otherOnlineCount > 1 ? "s" : ""} en ligne` : null,
+  ].filter(Boolean) as string[];
+
+  const normalizedInfoIndex = infoItems.length === 0 ? 0 : infoPairIndex % infoItems.length;
+  const currentInfoLine = infoItems[normalizedInfoIndex] || "";
+
+  const navItems = [
+    { key: "events", label: "Parties", icon: CalendarDays },
+    { key: "proposition", label: "Propositions", icon: ClipboardList },
+    { key: "chat", label: "Chat", icon: MessageCircle },
+    { key: "results", label: "Resultats", icon: Trophy },
+    { key: "members", label: "Participants", icon: Users },
+  ];
+
+  useEffect(() => {
+    if (infoItems.length <= 1) {
+      setInfoPairIndex(0);
+      setIsInfoFading(false);
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setIsInfoFading(true);
+      window.setTimeout(() => {
+        setInfoPairIndex((current) => (current + 1) % infoItems.length);
+        setIsInfoFading(false);
+      }, 240);
+    }, 4200);
+
+    return () => window.clearInterval(intervalId);
+  }, [infoItems.length]);
+
+  if (!user) return null;
 
   const getDaysInMonth = (month: number, year: number) => {
     return new Date(year, month + 1, 0).getDate();
@@ -619,22 +711,29 @@ export default function Dashboard() {
     <main className="min-h-screen bg-[#000e22] text-white">
       {/* F1 top accent bar */}
       <div className="h-1 w-full bg-[#d31f28]" />
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
-        <header className="flex items-start justify-between gap-4 sm:gap-6 xl:items-start xl:justify-between">
-          <div className="max-w-3xl pr-2">
+      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-6 pb-24 sm:pb-8">
+        <header className="flex items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
             <img
               src="https://cdn.discordapp.com/attachments/1068885680568148019/1494439845198696489/FD.png?ex=69e29d10&is=69e14b90&hm=fdeba7a50be29eb581e84c0690762d2cf5da649aeb5f6735349f8b6ddbc0ffb9&"
               alt="Formula D"
-              className="h-12 sm:h-14 w-auto mb-4 object-contain"
+              className="h-14 w-auto object-contain shrink-0"
             />
-            <p className="text-[11px] sm:text-xs font-bold tracking-[0.28em] sm:tracking-[0.4em] text-[#d31f28] uppercase mb-2">Formula D</p>
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-[-0.02em] leading-[0.95] uppercase">
-              PLANIFIEZ VOS <br />
-              <span className="text-[#d31f28]">PARTIES</span>
-            </h1>
+
+            <div className="info-laser-border h-14 flex-1 min-w-0 max-w-[640px] bg-[#010d1e] px-3 sm:px-4 flex items-center overflow-hidden">
+              {infoItems.length === 0 ? (
+                <p className="text-[11px] sm:text-xs uppercase tracking-[0.14em] text-gray-500">Aucune info urgente</p>
+              ) : (
+                <div className={`w-full transition-opacity duration-300 ${isInfoFading ? "opacity-0" : "opacity-100"}`}>
+                  <p className="truncate text-[11px] sm:text-xs uppercase tracking-[0.14em] text-gray-200 leading-5">
+                    <span className="text-[#d31f28] mr-2">Info</span>{currentInfoLine}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="shrink-0 self-start xl:ml-auto">
+          <div className="shrink-0">
             <div className="relative w-fit">
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -749,40 +848,18 @@ export default function Dashboard() {
           </div>
         </header>
 
-        {/* F1 NAV TABS */}
-        <div className="mt-8 sm:mt-10 -mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto border-b border-white/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="flex min-w-max">
-          {[
-            { key: "events", label: "Courses", value: `${upcomingEvents.length} validés` },
-            { key: "proposition", label: "Propositions", value: `${pendingEvents.length} en attente` },
-            { key: "members", label: "Participants", value: `${members.length} Pilotes` },
-            { key: "chat", label: "Chat", value: unreadCount > 0 ? `${unreadCount} non lus` : `${chatMessages.length} msg` },
-          ].map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`relative shrink-0 px-4 sm:px-6 py-3 sm:py-4 text-[11px] sm:text-xs font-black uppercase tracking-[0.14em] sm:tracking-[0.2em] transition-colors ${
-                tab === t.key
-                  ? "text-white"
-                  : "text-gray-500 hover:text-gray-300"
-              }`}
-            >
-              {t.label}
-              <span className={`block text-[10px] font-normal tracking-wide mt-0.5 ${ tab === t.key ? "text-[#d31f28]" : "text-gray-600"}`}>{t.value}</span>
-              {tab === t.key && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#d31f28]" />
-              )}
-            </button>
-          ))}
-          </div>
-        </div>
-
-        <div className="mt-6">
+        <div className="mt-4 sm:mt-6">
           <section className="border border-white/10 bg-[#010d1e] p-4 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3 pb-5 border-b border-white/10 mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-1 h-8 bg-[#d31f28]" />
-                <p className="text-xs font-black uppercase tracking-[0.35em] text-gray-400">Prochaine partie — <span className="text-[#d31f28]">{nextEventDays !== null ? `J-${nextEventDays}` : "—"}</span></p>
+                <p className="text-xs font-black uppercase tracking-[0.25em] text-gray-400">
+                  {tab === "events" && <>Parties a venir — <span className="text-[#d31f28]">{nextEventDays !== null ? `J-${nextEventDays}` : "—"}</span></>}
+                  {tab === "proposition" && <>Propositions de dates</>}
+                  {tab === "chat" && <>Chat equipe</>}
+                  {tab === "results" && <>Resultats</>}
+                  {tab === "members" && <>Participants</>}
+                </p>
               </div>
             </div>
 
@@ -997,6 +1074,13 @@ export default function Dashboard() {
               </div>
             )}
 
+            {tab === "results" && (
+              <div className="border border-white/10 bg-black/30 p-8 text-center">
+                <p className="text-xs uppercase tracking-[0.3em] text-[#d31f28] mb-3">Resultats</p>
+                <p className="text-sm uppercase tracking-widest text-gray-400">En construction</p>
+              </div>
+            )}
+
             {tab === "members" && (
               <div className="space-y-2">
                 {members.length === 0 ? (
@@ -1080,7 +1164,7 @@ export default function Dashboard() {
 
             {tab === "chat" && (
               <div className="space-y-4">
-                <div className="border border-white/10 bg-[#010d1e] p-4 sm:p-6 max-h-[50vh] sm:max-h-[44vh] overflow-y-auto">
+                <div ref={chatScrollRef} className="border border-white/10 bg-[#010d1e] p-4 sm:p-6 max-h-[50vh] sm:max-h-[44vh] overflow-y-auto">
                   {chatMessages.length === 0 ? (
                     <p className="text-xs uppercase tracking-widest text-gray-500">Pas encore de messages. Lancez la discussion.</p>
                   ) : (
@@ -1231,6 +1315,27 @@ export default function Dashboard() {
           </section>
         </div>
       </div>
+
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-[#000a18]/95 backdrop-blur">
+        <div className="mx-auto max-w-7xl px-2 py-2">
+          <div className="grid grid-cols-5 gap-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = tab === item.key;
+              return (
+                <button
+                  key={item.key}
+                  onClick={() => setTab(item.key)}
+                  className={`flex flex-col items-center justify-center gap-1 px-1 py-2 transition ${isActive ? "text-white" : "text-gray-500"}`}
+                >
+                  <Icon className={`w-4 h-4 ${isActive ? "text-[#d31f28]" : "text-gray-500"}`} />
+                  <span className="text-[9px] font-black uppercase tracking-[0.08em] leading-none">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </nav>
 
       {isEditingMember && selectedMember && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">

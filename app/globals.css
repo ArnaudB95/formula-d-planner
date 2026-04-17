@@ -24,3 +24,81 @@ body {
   color: var(--foreground);
   font-family: "Segoe UI", Arial, sans-serif;
 }
+
+.info-laser-border {
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.info-laser-border::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -45%;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    rgba(211, 31, 40, 0),
+    rgba(211, 31, 40, 0.45),
+    rgba(255, 88, 88, 0.8),
+    rgba(211, 31, 40, 0)
+  );
+  transform: skewX(-20deg);
+  opacity: 0;
+  pointer-events: none;
+  animation: info-laser-sweep 10s linear infinite;
+}
+
+.info-laser-border::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border: 1px solid rgba(211, 31, 40, 0);
+  box-shadow: none;
+  pointer-events: none;
+  animation: info-laser-glow 10s linear infinite;
+}
+
+@keyframes info-laser-sweep {
+  0%,
+  92% {
+    left: -45%;
+    opacity: 0;
+  }
+
+  94% {
+    opacity: 0.9;
+  }
+
+  99% {
+    left: 120%;
+    opacity: 0.5;
+  }
+
+  100% {
+    left: 120%;
+    opacity: 0;
+  }
+}
+
+@keyframes info-laser-glow {
+  0%,
+  92% {
+    border-color: rgba(211, 31, 40, 0);
+    box-shadow: none;
+  }
+
+  94%,
+  98% {
+    border-color: rgba(211, 31, 40, 0.9);
+    box-shadow:
+      0 0 14px rgba(211, 31, 40, 0.5),
+      inset 0 0 8px rgba(211, 31, 40, 0.28);
+  }
+
+  100% {
+    border-color: rgba(211, 31, 40, 0);
+    box-shadow: none;
+  }
+}

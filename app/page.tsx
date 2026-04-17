@@ -71,10 +71,6 @@ export default function Landing() {
             className="h-12 sm:h-14 w-auto mb-4 object-contain"
           />
           <p className="text-[11px] sm:text-xs font-bold tracking-[0.28em] sm:tracking-[0.4em] text-[#d31f28] uppercase mb-2">Formula D</p>
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-[-0.02em] leading-[0.95] uppercase">
-            PLANIFIEZ VOS <br />
-            <span className="text-[#d31f28]">PARTIES</span>
-          </h1>
         </div>
 
         <button
