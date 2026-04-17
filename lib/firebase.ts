@@ -4,7 +4,7 @@ import { getFirestore as getFirebaseFirestore } from "firebase/firestore";
 import { getStorage as getFirebaseStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyDjSANHRgABMXPfm-qQKoy2b25JmLh19k",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyDjSANHRgABMXPfm-qJQKoy2b25JmLh19k",
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "formula-d-planner.firebaseapp.com",
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "formula-d-planner",
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "formula-d-planner.appspot.com",

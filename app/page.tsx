@@ -4,10 +4,9 @@ import { useEffect, useState } from "react";
 import { getAuth, getProvider } from "@/lib/firebase";
 import {
   browserLocalPersistence,
-  getRedirectResult,
   onAuthStateChanged,
   setPersistence,
-  signInWithRedirect,
+  signInWithPopup,
 } from "firebase/auth";
 import { useRouter } from "next/navigation";
 
@@ -18,25 +17,6 @@ export default function Landing() {
   useEffect(() => {
     const auth = getAuth();
     if (!auth) return;
-
-    // Consume redirect result on mobile to expose auth errors instead of failing silently.
-    getRedirectResult(auth).catch((error: any) => {
-      console.error("Erreur retour connexion Google :", error);
-
-      if (error?.code === "auth/unauthorized-domain") {
-        alert(
-          "Connexion Google bloquée : domaine/IP non autorisé. Ajoute 192.168.1.152 dans Firebase Console > Authentication > Settings > Authorized domains."
-        );
-        return;
-      }
-
-      if (error?.code === "auth/network-request-failed") {
-        alert("Échec réseau pendant la connexion Google. Vérifie que le téléphone et le PC sont sur le même Wi-Fi.");
-        return;
-      }
-
-      alert(`Échec du retour Google : ${error?.code || error?.message || error}`);
-    });
 
     const unsub = onAuthStateChanged(auth, (u) => {
       if (u) {
@@ -57,15 +37,19 @@ export default function Landing() {
     try {
       setIsSigningIn(true);
       await setPersistence(auth, browserLocalPersistence);
-      await signInWithRedirect(auth, getProvider());
-      return;
+      await signInWithPopup(auth, getProvider());
     } catch (error: any) {
       console.error("Erreur de connexion Google :", error);
 
       if (error?.code === "auth/unauthorized-domain") {
         alert(
-          "Domaine non autorisé pour Google Auth. Ajoute ce domaine/IP dans Firebase Console > Authentication > Settings > Authorized domains, puis recharge la page."
+          "Domaine non autorisé pour Google Auth. Ajoute ce domaine dans Firebase Console > Authentication > Settings > Authorized domains."
         );
+        return;
+      }
+
+      if (error?.code === "auth/popup-blocked") {
+        alert("La popup Google a été bloquée par le navigateur. Autorise les popups pour ce site et réessaie.");
         return;
       }
 
