@@ -19,10 +19,17 @@
   }
 }
 
+/* Keep layout width stable when pages/tabs gain or lose vertical scrollbar. */
+html {
+  overflow-y: scroll;
+  scrollbar-gutter: stable both-edges;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: "Segoe UI", Arial, sans-serif;
+  overflow-x: hidden;
 }
 
 .info-laser-border {

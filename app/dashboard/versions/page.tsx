@@ -7,6 +7,16 @@ import { CalendarDays, ClipboardList, MessageCircle, Trophy, Users } from "lucid
 
 const releaseNotes = [
   {
+    version: "v1.5.0",
+    timestamp: "19/04/2026 · 13h40",
+    details: [
+      "Profil enrichi: modal elargi et ajout du champ Adresse (domicile), charge/sauvegarde dans Firestore.",
+      "Adresse intelligente: suggestions Google Places en direct, selection qui remplace le texte en cours puis ferme la liste proprement.",
+      "Robustesse autocomplete: gestion des erreurs API (message explicite) et verrou anti-reouverture apres selection jusqu a la prochaine saisie.",
+      "Evenements valides: affichage du lieu hote avec adresse cliquable Google Maps; lien Verifier sur Google Maps retire du formulaire profil.",
+    ],
+  },
+  {
     version: "v1.4.0",
     timestamp: "19/04/2026 · 12h20",
     details: [
@@ -103,7 +113,7 @@ export default function VersionsPage() {
   return (
     <main className="min-h-screen bg-[#000e22] text-white">
       <div className="h-1 w-full bg-[#d31f28]" />
-      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-6 pb-24 sm:pb-8">
+      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-6 pb-28 sm:pb-36">
         <header className="flex items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
             <Link href="/dashboard" className="shrink-0" aria-label="Aller aux Parties">
@@ -130,7 +140,7 @@ export default function VersionsPage() {
           <div className="border border-white/10 bg-[#010d1e] p-4 sm:p-6">
             <p className="text-[11px] uppercase tracking-[0.18em] text-[#d31f28]">Notes de version</p>
             <p className="mt-3 text-sm text-gray-300">
-              Version actuelle : <span className="text-white font-bold">v1.4.0</span>
+              Version actuelle : <span className="text-white font-bold">v1.5.0</span>
             </p>
 
           </div>
@@ -158,25 +168,77 @@ export default function VersionsPage() {
         </section>
       </div>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-[#000a18]/95 backdrop-blur">
-        <div className="mx-auto max-w-7xl px-2 py-2">
-          <div className="grid grid-cols-5 gap-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.key}
-                  href="/dashboard"
-                  className="flex flex-col items-center justify-center gap-1 px-1 py-2 transition text-gray-500 hover:text-white"
-                >
-                  <Icon className="w-4 h-4 text-gray-500" />
-                  <span className="text-[9px] font-black uppercase tracking-[0.08em] leading-none">{item.label}</span>
-                </Link>
-              );
-            })}
+      <div className="fixed bottom-0 left-0 right-0 z-50">
+        <nav className="border-t border-white/10 bg-[#000a18]/95 backdrop-blur">
+          <div className="mx-auto max-w-7xl px-2 py-2">
+            <div className="grid grid-cols-5 gap-1">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.key}
+                    href={`/dashboard?tab=${item.key}`}
+                    className="flex flex-col items-center justify-center gap-1 px-1 py-2 transition text-gray-500 hover:text-white"
+                  >
+                    <Icon className="w-4 h-4 text-gray-500" />
+                    <span className="text-[9px] font-black uppercase tracking-[0.08em] leading-none">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </nav>
+
+        <div className="border-t border-white/10 bg-[#000a18]/95">
+          <div className="mx-auto max-w-7xl px-3 sm:px-6 py-1.5">
+            <div className="flex flex-wrap justify-center items-center gap-x-2 gap-y-1 text-[9px] sm:text-[10px] uppercase tracking-[0.12em]">
+              <a
+                href="https://www.jeuxavolonte.asso.fr/regles/formula_d.pdf"
+                target="_blank"
+                rel="noreferrer"
+                className="text-white/40 hover:text-white/60 transition whitespace-normal break-words"
+              >
+                Regles du jeu
+              </a>
+              <span className="text-white/20">|</span>
+              <a
+                href="https://www.youtube.com/watch?v=n8ySi6tTb84"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Video YouTube"
+                title="Video YouTube"
+                className="text-white/40 hover:text-white/60 transition inline-flex items-center"
+              >
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M23.5 6.2a2.98 2.98 0 0 0-2.1-2.1C19.6 3.6 12 3.6 12 3.6s-7.6 0-9.4.5A2.98 2.98 0 0 0 .5 6.2 31.2 31.2 0 0 0 0 12a31.2 31.2 0 0 0 .5 5.8 2.98 2.98 0 0 0 2.1 2.1c1.8.5 9.4.5 9.4.5s7.6 0 9.4-.5a2.98 2.98 0 0 0 2.1-2.1A31.2 31.2 0 0 0 24 12a31.2 31.2 0 0 0-.5-5.8ZM9.6 15.6V8.4L15.9 12l-6.3 3.6Z" />
+                </svg>
+              </a>
+              <span className="text-white/20">|</span>
+              <a
+                href="https://boardgamearena.com/gamepanel?game=formulad"
+                target="_blank"
+                rel="noreferrer"
+                className="text-white/40 hover:text-white/60 transition whitespace-normal break-words"
+              >
+                BGA (BoardGame Arena)
+              </a>
+              <span className="text-white/20">|</span>
+              <a
+                href="https://formuladworldchampionship.mydurable.com/"
+                target="_blank"
+                rel="noreferrer"
+                className="text-white/40 hover:text-white/60 transition whitespace-normal break-words"
+              >
+                FDWC (Formula D World Championship)
+              </a>
+              <span className="text-white/20">|</span>
+              <span className="text-[8px] sm:text-[9px] font-medium tracking-[0.28em] text-white/28 whitespace-normal break-words">
+                AB 2026 v1
+              </span>
+            </div>
           </div>
         </div>
-      </nav>
+      </div>
     </main>
   );
 }

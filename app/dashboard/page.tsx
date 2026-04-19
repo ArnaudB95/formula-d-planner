@@ -66,7 +66,9 @@ const FUN_INFO_TEMPLATES = [
 
 export default function Dashboard() {
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
+  const chatPanelRef = useRef<HTMLDivElement | null>(null);
   const evolutionScrollRef = useRef<HTMLDivElement | null>(null);
+  const bottomBarRef = useRef<HTMLDivElement | null>(null);
   const [user, setUser] = useState<any>(null);
   const [events, setEvents] = useState<any[]>([]);
   const [members, setMembers] = useState<any[]>([]);
@@ -74,6 +76,7 @@ export default function Dashboard() {
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [typingUsers, setTypingUsers] = useState<any[]>([]);
   const [chatReadAt, setChatReadAt] = useState<Date | null>(null);
+  const [chatReadsLoaded, setChatReadsLoaded] = useState(false);
   const [evolutionReadByRequest, setEvolutionReadByRequest] = useState<Record<string, Date>>({});
   const [evolutionReadsLoaded, setEvolutionReadsLoaded] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -105,6 +108,7 @@ export default function Dashboard() {
 
   const [selectedDate, setSelectedDate] = useState("");
   const [chatInput, setChatInput] = useState("");
+  const [chatPanelHeight, setChatPanelHeight] = useState<number | null>(null);
   const [replyToMessageId, setReplyToMessageId] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingMessageText, setEditingMessageText] = useState("");
@@ -117,6 +121,10 @@ export default function Dashboard() {
   const [editPseudo, setEditPseudo] = useState("");
   const [editTeam, setEditTeam] = useState("");
   const [editAvatar, setEditAvatar] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
+  const [addressSuggestionsError, setAddressSuggestionsError] = useState<string | null>(null);
+  const [addressSelectionLocked, setAddressSelectionLocked] = useState(false);
   const [avatarUrlInput, setAvatarUrlInput] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileSaveMessage, setProfileSaveMessage] = useState<string | null>(null);
@@ -126,6 +134,7 @@ export default function Dashboard() {
     pseudo: "",
     team: "",
     avatar: "",
+    address: "",
   });
 
   const [selectedMember, setSelectedMember] = useState<any>(null);
@@ -141,6 +150,84 @@ export default function Dashboard() {
   const [venueEditorValue, setVenueEditorValue] = useState("");
 
   const router = useRouter();
+
+  // Suggestions d'adresse via Google Places API (HTTP)
+  useEffect(() => {
+    if (!isMenuOpen) return;
+
+    if (addressSelectionLocked) {
+      setAddressSuggestions([]);
+      return;
+    }
+
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (!apiKey || apiKey === "REMPLACE_PAR_TA_CLE_API") return;
+
+    const query = editAddress.trim();
+    if (query.length < 3) {
+      setAddressSuggestions([]);
+      setAddressSuggestionsError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(async () => {
+      try {
+        const response = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": apiKey,
+            "X-Goog-FieldMask": "suggestions.placePrediction.text.text",
+          },
+          body: JSON.stringify({
+            input: query,
+            languageCode: "fr",
+            regionCode: "FR",
+          }),
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          let errorMessage = "Impossible de charger les suggestions d'adresse.";
+          try {
+            const errorBody = await response.json();
+            const apiMessage = errorBody?.error?.message;
+            if (typeof apiMessage === "string" && apiMessage.length > 0) {
+              if (apiMessage.includes("Places API (New)")) {
+                errorMessage = "Active Places API (New) dans Google Cloud pour afficher les suggestions.";
+              } else {
+                errorMessage = apiMessage;
+              }
+            }
+          } catch {
+            // Keep default message when error body is not readable.
+          }
+          setAddressSuggestionsError(errorMessage);
+          setAddressSuggestions([]);
+          return;
+        }
+
+        const data = await response.json();
+        const suggestions: string[] = (data?.suggestions || [])
+          .map((item: any) => item?.placePrediction?.text?.text)
+          .filter((value: any): value is string => typeof value === "string" && value.length > 0);
+
+        setAddressSuggestions(Array.from(new Set(suggestions)).slice(0, 6));
+        setAddressSuggestionsError(null);
+      } catch (error: any) {
+        if (error?.name !== "AbortError") {
+          setAddressSuggestionsError("Impossible de contacter Google Places. Vérifie la connexion et les restrictions de clé API.");
+          setAddressSuggestions([]);
+        }
+      }
+    }, 220);
+
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [editAddress, isMenuOpen, addressSelectionLocked]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -241,10 +328,12 @@ export default function Dashboard() {
             pseudo: currentMember.data().pseudo || "",
             team: currentMember.data().team || "",
             avatar: currentMember.data().avatar || "",
+            address: currentMember.data().address || "",
           });
           setEditPseudo(currentMember.data().pseudo || "");
           setEditTeam(currentMember.data().team || "");
           setEditAvatar(currentMember.data().avatar || "");
+          setEditAddress(currentMember.data().address || "");
         }
       }
     });
@@ -341,7 +430,11 @@ export default function Dashboard() {
   }, [user?.email]);
 
   useEffect(() => {
-    if (!user?.email) return;
+    if (!user?.email) {
+      setChatReadAt(null);
+      setChatReadsLoaded(false);
+      return;
+    }
     const firestore = getFirestore();
     if (!firestore) return;
 
@@ -353,6 +446,7 @@ export default function Dashboard() {
         if (!current) return ts;
         return ts > current ? ts : current;
       });
+      setChatReadsLoaded(true);
     });
   }, [user?.email]);
 
@@ -385,6 +479,10 @@ export default function Dashboard() {
   }, [user?.email]);
 
   useEffect(() => {
+    if (!chatReadsLoaded) {
+      setUnreadCount(0);
+      return;
+    }
     if (!chatReadAt) {
       setUnreadCount(chatMessages.length);
       return;
@@ -395,7 +493,7 @@ export default function Dashboard() {
       return createdAt > chatReadAt;
     }).length;
     setUnreadCount(unread);
-  }, [chatMessages, chatReadAt]);
+  }, [chatMessages, chatReadAt, chatReadsLoaded]);
 
   useEffect(() => {
     if (tab !== "chat") return;
@@ -417,10 +515,56 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (tab !== "chat" || chatView !== "chat") return;
-    const el = chatScrollRef.current;
-    if (!el) return;
-    el.scrollTop = el.scrollHeight;
+    let settleTimeoutId = 0;
+    const frameId = window.requestAnimationFrame(() => {
+      scrollChatToLatestBoundary();
+      settleTimeoutId = window.setTimeout(() => {
+        scrollChatToLatestBoundary();
+      }, 120);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      if (settleTimeoutId) {
+        window.clearTimeout(settleTimeoutId);
+      }
+    };
   }, [tab, chatView, chatMessages.length]);
+
+  useEffect(() => {
+    if (tab !== "chat" || chatView !== "chat") {
+      setChatPanelHeight(null);
+      return;
+    }
+
+    const recalc = () => {
+      const panel = chatPanelRef.current;
+      if (!panel) return;
+
+      const panelTop = panel.getBoundingClientRect().top;
+      const footerHeight = bottomBarRef.current?.getBoundingClientRect().height || 0;
+      const available = Math.floor(window.innerHeight - panelTop - footerHeight - 10);
+      setChatPanelHeight(Math.max(160, available));
+    };
+
+    const frameId = window.requestAnimationFrame(recalc);
+    window.addEventListener("resize", recalc);
+
+    const resizeObserver = typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(() => recalc())
+      : null;
+
+    if (resizeObserver) {
+      if (chatPanelRef.current) resizeObserver.observe(chatPanelRef.current);
+      if (bottomBarRef.current) resizeObserver.observe(bottomBarRef.current);
+    }
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.removeEventListener("resize", recalc);
+      resizeObserver?.disconnect();
+    };
+  }, [tab, chatView, replyToMessageId, editingMessageId, typingUsers.length]);
 
   useEffect(() => {
     if (tab !== "chat" || chatView !== "evolution") return;
@@ -652,6 +796,7 @@ export default function Dashboard() {
           pseudo: editPseudo || null,
           team: editTeam || null,
           avatar: avatarUrl || null,
+          address: editAddress || null,
         },
         { merge: true }
       );
@@ -898,8 +1043,14 @@ export default function Dashboard() {
   const isChatManager = userRole === "admin" || userRole === "superAdmin";
   const currentUserEmail = user?.email || "";
 
+  const isSuperAdmin = userRole === "superAdmin";
+
   const participatedEvolutionRequestIds = useMemo(() => {
     if (!currentUserEmail) return new Set<string>();
+    // Super admin receives notifications for all requests since they are the destination.
+    if (isSuperAdmin) {
+      return new Set<string>(evolutionRequests.map((r: any) => r.id));
+    }
     const requestIds = new Set<string>();
     evolutionRequests.forEach((request: any) => {
       if (request.createdBy === currentUserEmail) {
@@ -912,7 +1063,7 @@ export default function Dashboard() {
       }
     });
     return requestIds;
-  }, [currentUserEmail, evolutionReplies, evolutionRequests]);
+  }, [currentUserEmail, isSuperAdmin, evolutionReplies, evolutionRequests]);
 
   const evolutionUnreadByRequest = useMemo(() => {
     const unreadByRequest = new Map<string, number>();
@@ -922,6 +1073,7 @@ export default function Dashboard() {
 
     evolutionRequests.forEach((request: any) => {
       if (!participatedEvolutionRequestIds.has(request.id)) return;
+      // Never count your own request as unread.
       if (request.createdBy === currentUserEmail) return;
       const createdAt = request.createdAt?.toDate?.();
       if (!createdAt) return;
@@ -1393,6 +1545,13 @@ export default function Dashboard() {
     router.push("/dashboard/versions");
   };
 
+  const scrollChatToLatestBoundary = () => {
+    const container = chatScrollRef.current;
+    if (!container) return;
+
+    container.scrollTop = container.scrollHeight;
+  };
+
   return (
     <main className="min-h-screen bg-[#000e22] text-white">
       {/* F1 top accent bar */}
@@ -1462,7 +1621,7 @@ export default function Dashboard() {
                 </svg>
               </div>
               {isMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-[min(20rem,calc(100vw-2rem))] bg-[#001122] border border-white/20 rounded-lg shadow-xl z-50">
+                <div className="absolute right-0 top-full mt-2 w-[min(32rem,calc(100vw-2rem))] bg-[#001122] border border-white/20 rounded-lg shadow-xl z-50">
                   <div className="p-4">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-12 h-12 rounded-[2px] p-[2px] bg-black">
@@ -1525,6 +1684,44 @@ export default function Dashboard() {
                           </div>
                         )}
                         <p className="mt-2 text-xs text-gray-400">Entrez une URL d'image publique pour votre avatar.</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Adresse (domicile)</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={editAddress}
+                            onChange={(e) => {
+                              setAddressSelectionLocked(false);
+                              setEditAddress(e.target.value);
+                            }}
+                            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white placeholder-gray-400"
+                            placeholder="Ex: 12 rue de la Course, 75001 Paris"
+                            autoComplete="off"
+                          />
+                          {addressSuggestions.length > 0 && (
+                            <div className="absolute z-50 mt-1 w-full rounded-md border border-white/20 bg-[#021126] shadow-xl overflow-hidden">
+                              {addressSuggestions.map((suggestion) => (
+                                <button
+                                  key={suggestion}
+                                  type="button"
+                                  onMouseDown={() => {
+                                    setAddressSelectionLocked(true);
+                                    setEditAddress(suggestion);
+                                    setAddressSuggestions([]);
+                                  }}
+                                  className="block w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-white/10"
+                                >
+                                  {suggestion}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        {addressSuggestionsError && (
+                          <p className="mt-1 text-xs text-red-300">{addressSuggestionsError}</p>
+                        )}
+                        <p className="mt-1 text-xs text-gray-400">Utilisée pour afficher le lieu quand tu héberges une partie.</p>
                       </div>
                       <button
                         type="button"
@@ -1597,6 +1794,8 @@ export default function Dashboard() {
                     const absent = members.filter((m) => eventVotes[m.email] === "absent");
                     const waiting = members.filter((m) => !eventVotes[m.email]);
                     const venueHostLabel = event.venueHostEmail ? getPseudo(event.venueHostEmail) : null;
+                    const venueHostMember = event.venueHostEmail ? members.find((m: any) => m.email === event.venueHostEmail) : null;
+                    const venueHostAddress = venueHostMember?.address || null;
 
                     return (
                       <div key={event.id} className="border-l-4 border-[#d31f28] bg-white/5 border border-white/10 p-4 sm:p-6">
@@ -1610,6 +1809,18 @@ export default function Dashboard() {
                                 {venueHostLabel ? (
                                   <>
                                     Chez <span className="text-white font-bold">{venueHostLabel}</span>
+                                    {venueHostAddress && (
+                                      <a
+                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venueHostAddress)}`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="ml-2 inline-flex items-center gap-1 text-[11px] normal-case text-[#4a9ff7] hover:underline"
+                                        title={venueHostAddress}
+                                      >
+                                        <svg className="h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                                        {venueHostAddress}
+                                      </a>
+                                    )}
                                   </>
                                 ) : (
                                   <span className="text-gray-400">a definir</span>
@@ -1949,10 +2160,14 @@ export default function Dashboard() {
             )}
 
             {tab === "chat" && (
-              <div className="space-y-3 sm:space-y-4">
+              <div
+                ref={chatPanelRef}
+                className="flex min-h-0 flex-col gap-3 sm:gap-4 overflow-hidden"
+                style={chatView === "chat" && chatPanelHeight ? { height: `${chatPanelHeight}px` } : undefined}
+              >
                 {chatView === "chat" && (
                   <>
-                    <div ref={chatScrollRef} className="border-y border-white/10 sm:border bg-[#010d1e] p-2 sm:p-6 max-h-[50vh] sm:max-h-[44vh] overflow-y-auto overflow-x-hidden">
+                    <div ref={chatScrollRef} className="border-y border-white/10 sm:border bg-[#010d1e] p-2 sm:p-6 overflow-y-auto overflow-x-hidden min-h-0 flex-1">
                       {chatMessages.length === 0 ? (
                         <p className="text-xs uppercase tracking-widest text-gray-500">Pas encore de messages. Lancez la discussion.</p>
                       ) : (
@@ -1961,7 +2176,7 @@ export default function Dashboard() {
                           .map((m) => {
                             const replies = chatMessages.filter((r) => r.parentId === m.id);
                             return (
-                              <div key={m.id} className="mb-3 sm:mb-4 border-l-2 border-white/10 pl-2 sm:pl-3">
+                              <div key={m.id} data-chat-thread-item="true" className="mb-3 sm:mb-4 border-l-2 border-white/10 pl-2 sm:pl-3">
                                 <div className="flex items-start justify-between gap-2 sm:gap-3">
                                   <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.13em] sm:tracking-[0.15em] text-gray-500 mb-1">
                                     {getPseudo(m.user)} · {formatChatTime(m.createdAt)}
@@ -2330,7 +2545,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-50">
+      <div ref={bottomBarRef} className="fixed bottom-0 left-0 right-0 z-50">
         <nav className="border-t border-white/10 bg-[#000a18]/95 backdrop-blur">
           <div className="mx-auto max-w-7xl px-2 py-2">
             <div className="grid grid-cols-5 gap-1">
@@ -2345,7 +2560,7 @@ export default function Dashboard() {
                   >
                     <span className="relative inline-flex">
                       <Icon className={`w-4 h-4 ${isActive ? "text-[#d31f28]" : "text-gray-500"}`} />
-                      {item.key === "chat" && !suppressChatBadge && chatNotificationCount > 0 && (
+                      {item.key === "chat" && chatReadsLoaded && !suppressChatBadge && chatNotificationCount > 0 && (
                         <span
                           className="absolute -right-3 -top-2 inline-flex min-w-5 items-center justify-center rounded-full bg-[#d31f28] px-1 py-[1px] text-[9px] font-black text-white"
                           aria-label={`Notification ${chatNotificationCount}`}

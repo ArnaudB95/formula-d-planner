@@ -1,0 +1,124 @@
+=======================================================================
+REGLES DU BLOC INFO - DASHBOARD
+=======================================================================
+
+DESCRIPTION
+-----------
+Le bloc info est la zone en haut a gauche du dashboard qui affiche
+des messages rotatifs (source + texte).
+
+Il existe 2 categories de messages :
+1) Messages systeme
+2) Messages fun
+
+MESSAGES SYSTEME
+----------------
+Ordre des messages systeme :
+
+1. Nombre de parties a venir
+  Condition speciale: afficher ce message seulement si l'utilisateur
+  connecte est "present" sur au moins une partie a venir.
+  Exemple: "Parties 2 dates a venir" ou "Partie 1 date a venir"
+
+2. Propositions en attente pour l'utilisateur
+  Exemple: "Propositions 2 en attente" ou "Proposition 1 en attente"
+
+3. Mentions @ de l'utilisateur dans le chat
+  Exemple: "Chat 3 mentions @" ou "Chat 1 mention @"
+
+4. Messages non lus du chat
+  Exemple: "Chat 5 non lus" ou "Chat 1 non lu"
+
+5. Autres membres en ligne
+  Condition: afficher seulement si d'autres utilisateurs que moi sont en ligne.
+  Exemple: "1 autre Pilote est en ligne"
+  Exemple: "3 autres Pilotes sont en ligne"
+
+Notes:
+- Un message systeme n'apparait que si sa condition est vraie.
+- Le pluriel s'adapte automatiquement.
+- Structure: { source, text }
+
+MESSAGES FUN
+------------
+Un message fun a la forme:
+"[Pseudo] ..."
+
+Regles des messages fun:
+- Cible seulement les membres ayant un pseudo perso (pas d'email brut).
+- Le pseudo est choisi aleatoirement.
+- Un pseudo ne doit pas etre reutilise avant que tous les pseudos eligibles
+  aient ete utilises une fois (cycle complet).
+- Les templates fun sont aussi tires aleatoirement sans repetition,
+  puis re-melanges une fois tous utilises.
+
+Liste des 40 templates fun:
+1. [Pseudo] vise le podium... ou pas
+2. [Pseudo] sponsorise par RNG
+3. [Pseudo] prie les des en secret
+4. [Pseudo] va jouer safe... ou Pas !
+5. [Pseudo] vise la pole... Dance
+6. [Pseudo] a un plan fou ! ... flou
+7. [Pseudo] relit les regles... a sa facon
+8. [Pseudo] fait confiance aux des
+9. [Pseudo] prepare une strategie secrete
+10. [Pseudo] annonce une grande saison
+11. [Pseudo] suit son instinct
+12. [Pseudo] optimise... sur le papier
+13. [Pseudo] connait les regles... globalement
+14. [Pseudo] vise un championnat propre
+15. [Pseudo] prevoit un coup brillant
+16. [Pseudo] compte sur l'elan du moment
+17. [Pseudo] connait le circuit... en theorie
+18. [Pseudo] annonce du beau jeu
+19. [Pseudo] prepare un plan discret
+20. [Pseudo] joue la carte surprise
+21. [Pseudo] a tout prevu... presque
+22. [Pseudo] croit en sa strategie
+23. [Pseudo] prepare un depart soigne
+24. [Pseudo] vise une course memorable
+25. [Pseudo] affine son style
+26. [Pseudo] annonce une belle dynamique
+27. [Pseudo] apprivoise le hasard
+28. [Pseudo] prepare un coup audacieux
+29. [Pseudo] vise la regularite
+30. [Pseudo] affiche une confiance calme
+31. [Pseudo] prepare un plan solide
+32. [Pseudo] joue la victoire tranquille
+33. [Pseudo] vise un record perso
+34. [Pseudo] promet du spectacle
+35. [Pseudo] peaufine chaque detail
+36. [Pseudo] croit en ses chances
+37. [Pseudo] vise le haut du classement
+38. [Pseudo] prepare une surprise
+39. [Pseudo] annonce du tres serieux
+40. [Pseudo] joue gros cette saison
+
+CYCLE GLOBAL D'AFFICHAGE
+------------------------
+Cycle voulu:
+- Toujours des messages systeme en premier
+- Puis 1 message fun
+- Puis de nouveau 1 a 2 messages systeme
+- Puis 1 message fun
+- Etc.
+
+Details:
+- Les messages systeme ont leur propre cycle sequentiel.
+- Les messages fun ont leur propre cycle aleatoire sans repetition.
+- Exemple avec 2 messages systeme:
+  systeme 1 -> systeme 2 -> fun -> systeme 1 -> systeme 2 -> fun -> ...
+
+TIMING ET ANIMATION
+-------------------
+- Intervalle de rotation: 4200 ms
+- Duree du fondu: 240 ms
+- Si un seul message total est disponible: affichage statique
+
+RENDU
+-----
+- Bloc dans la barre du haut
+- Texte compact et lisible
+- Source coloree a gauche du texte
+
+=======================================================================

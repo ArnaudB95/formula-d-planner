@@ -7,7 +7,7 @@ export default function IndividualS120242026ResultsPage() {
       <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-6">
         <header className="flex items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
-            <Link href="/dashboard" className="shrink-0" aria-label="Aller aux Parties">
+            <Link href="/dashboard?tab=results" className="shrink-0" aria-label="Aller aux Resultats">
               <img
                 src="https://cdn.discordapp.com/attachments/1068885680568148019/1494439845198696489/FD.png?ex=69e29d10&is=69e14b90&hm=fdeba7a50be29eb581e84c0690762d2cf5da649aeb5f6735349f8b6ddbc0ffb9&"
                 alt="Formula D"
@@ -31,9 +31,28 @@ export default function IndividualS120242026ResultsPage() {
         </header>
 
         <section className="mt-4 border-l-4 border-[#d31f28] border border-white/10 bg-black/30 p-4 sm:p-6">
-          <div className="border border-white/10 bg-[#010d1e] p-6 sm:p-8 text-center">
-            <p className="text-[11px] uppercase tracking-[0.2em] text-[#d31f28]">Page dediee</p>
-            <p className="mt-3 text-sm uppercase tracking-[0.16em] text-gray-300">En cours de construction</p>
+          <div className="border border-white/10 bg-[#010d1e] p-4 sm:p-5">
+            <p className="text-[11px] uppercase tracking-[0.2em] text-[#d31f28]">Resultats visuels</p>
+
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-gray-400">Mobile: pincez pour zoomer ou glissez horizontalement</p>
+              <a
+                href="/I09.png"
+                target="_blank"
+                rel="noreferrer"
+                className="border border-white/20 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-gray-200 hover:text-white hover:border-white/40 transition"
+              >
+                Ouvrir en plein ecran
+              </a>
+            </div>
+
+            <div className="mt-3 border border-white/10 bg-black/40 p-2 sm:p-3 overflow-x-auto">
+              <img
+                src="/I09.png"
+                alt="Resultats Championnat Individuel Saison 1"
+                className="h-auto w-full min-w-[920px] sm:min-w-0 object-contain"
+              />
+            </div>
           </div>
         </section>
       </div>
