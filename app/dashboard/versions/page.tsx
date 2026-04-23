@@ -7,24 +7,63 @@ import { CalendarDays, ClipboardList, MessageCircle, Trophy, Users } from "lucid
 
 const releaseNotes = [
   {
+    version: "v1.5.5",
+    timestamp: "23/04/2026 · 21h30",
+    details: [
+      "Notifications email: champ personnel pour changer l'adresse (Gmail/Outlook/etc), suggestions d'adresse invisibles jusqu'à modification.",
+      "Batching chat intelligent: messages groupes en 1 email sur 30s, logging debug renforce, robustesse accrue (trim, filter emails vides).",
+    ],
+  },
+  {
+    version: "v1.5.4",
+    timestamp: "19/04/2026 · 17h25",
+    details: [
+      "Chat: pseudo passe en rouge dans les messages et les reponses pour une meilleure lisibilite.",
+      "Stabilite: correction du runtime error 'scrollChatToLatestBoundary before initialization' en supprimant le souci d initialisation.",
+    ],
+  },
+  {
+    version: "v1.5.3",
+    timestamp: "19/04/2026 · 17h05",
+    details: [
+      "Notifications email implantees: preference profil (OFF par defaut) + alertes pour nouvelles propositions de date et nouveaux messages du chat.",
+    ],
+  },
+  {
+    version: "v1.5.2",
+    timestamp: "19/04/2026 · 16h25",
+    details: [
+      "Correctif mobile iPhone: suppression du scroll horizontal parasite dans le chat, avec adaptation propre des lignes longues a la largeur ecran.",
+    ],
+  },
+  {
+    version: "v1.5.1",
+    timestamp: "19/04/2026 · 16h10",
+    details: [
+      "Parties a venir passe en mode premium: info session ultra-discrete, boutons 14h/17h intelligents, bascule auto en Absent et lisibilite immediate des presences partielles.",
+      "Finition UX: texte nettoye, accents harmonises, rendu plus propre et plus pro partout.",
+    ],
+  },
+  {
     version: "v1.5.0",
     timestamp: "19/04/2026 · 13h40",
     details: [
-      "Profil enrichi: modal elargi et ajout du champ Adresse (domicile), charge/sauvegarde dans Firestore.",
-      "Adresse intelligente: suggestions Google Places en direct, selection qui remplace le texte en cours puis ferme la liste proprement.",
-      "Robustesse autocomplete: gestion des erreurs API (message explicite) et verrou anti-reouverture apres selection jusqu a la prochaine saisie.",
-      "Evenements valides: affichage du lieu hote avec adresse cliquable Google Maps; lien Verifier sur Google Maps retire du formulaire profil.",
+      "Profil booste: modal plus large, adresse domiciliee dans Firestore, saisie guidee par Google Places en temps reel.",
+      "Experience fiabilisee de bout en bout: selection propre, erreurs gerees, anti-reouverture, et lieu hote cliquable sur Maps.",
     ],
   },
   {
     version: "v1.4.0",
     timestamp: "19/04/2026 · 12h20",
     details: [
-      "Refonte complete de l onglet Resultats: 4 cartes image compactes, recadrees et lisibles en desktop/mobile, avec textes renforces.",
-      "Nouveaux bandeaux de statut style HUD moderne (En cours/Termine), contraste optimise et rendu plus propre sur petits ecrans.",
-      "Titres retravailles: accent sur Equipe/Individuel et Saison X, avec Championnat et - YYYY / YYYY volontairement plus discrets.",
-      "Navigation corrigee: boutons Retour des pages dediees vers Resultats; page Equipe S1 basculee temporairement sur visuel E12 responsive (plein ecran + scroll horizontal).",
+      "Resultats entierement repenses: cartes plus nettes, statuts plus lisibles, hierarchie visuelle plus forte sur desktop comme mobile.",
+      "Navigation simplifiee et fluide: retours corriges et page Equipe S1 alignee sur un visuel E12 responsive plein ecran.",
     ],
+  },
+  {
+    version: "v1.3.3",
+    timestamp: "18/04/2026 · 22h05",
+    details: ["Page Résultats en ligne !"],
   },
   {
     version: "v1.3.2",
@@ -140,7 +179,7 @@ export default function VersionsPage() {
           <div className="border border-white/10 bg-[#010d1e] p-4 sm:p-6">
             <p className="text-[11px] uppercase tracking-[0.18em] text-[#d31f28]">Notes de version</p>
             <p className="mt-3 text-sm text-gray-300">
-              Version actuelle : <span className="text-white font-bold">v1.5.0</span>
+              Version actuelle : <span className="text-white font-bold">v1.5.4</span>
             </p>
 
           </div>

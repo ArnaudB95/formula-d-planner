@@ -23,6 +23,8 @@
 html {
   overflow-y: scroll;
   scrollbar-gutter: stable both-edges;
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 body {
@@ -30,6 +32,14 @@ body {
   color: var(--foreground);
   font-family: "Segoe UI", Arial, sans-serif;
   overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* iOS Safari can create horizontal overflow with stable both-edges; disable it on narrow screens. */
+@media (max-width: 767px) {
+  html {
+    scrollbar-gutter: auto;
+  }
 }
 
 .info-laser-border {

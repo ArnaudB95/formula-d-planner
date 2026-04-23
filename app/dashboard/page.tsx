@@ -103,6 +103,8 @@ export default function Dashboard() {
   const funTemplateIndexRef = useRef(0);
   const funPseudoPoolRef = useRef<string[]>([]);
   const funPseudoIndexRef = useRef(0);
+  const chatNotificationTimeoutsRef = useRef<NodeJS.Timeout | null>(null);
+  const chatNotificationCountRef = useRef<number>(0);
 
   const [tab, setTab] = useState("events");
 
@@ -122,9 +124,12 @@ export default function Dashboard() {
   const [editTeam, setEditTeam] = useState("");
   const [editAvatar, setEditAvatar] = useState("");
   const [editAddress, setEditAddress] = useState("");
+  const [editEmailNotifications, setEditEmailNotifications] = useState(false);
+  const [editNotificationEmail, setEditNotificationEmail] = useState("");
   const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
   const [addressSuggestionsError, setAddressSuggestionsError] = useState<string | null>(null);
   const [addressSelectionLocked, setAddressSelectionLocked] = useState(false);
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [avatarUrlInput, setAvatarUrlInput] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileSaveMessage, setProfileSaveMessage] = useState<string | null>(null);
@@ -135,6 +140,8 @@ export default function Dashboard() {
     team: "",
     avatar: "",
     address: "",
+    emailNotifications: false,
+    notificationEmail: "",
   });
 
   const [selectedMember, setSelectedMember] = useState<any>(null);
@@ -153,7 +160,16 @@ export default function Dashboard() {
 
   // Suggestions d'adresse via Google Places API (HTTP)
   useEffect(() => {
-    if (!isMenuOpen) return;
+    if (!isMenuOpen) {
+      setIsEditingAddress(false);
+      return;
+    }
+
+    if (!isEditingAddress) {
+      setAddressSuggestions([]);
+      setAddressSuggestionsError(null);
+      return;
+    }
 
     if (addressSelectionLocked) {
       setAddressSuggestions([]);
@@ -227,7 +243,7 @@ export default function Dashboard() {
       clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [editAddress, isMenuOpen, addressSelectionLocked]);
+  }, [editAddress, isMenuOpen, addressSelectionLocked, isEditingAddress]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -267,6 +283,15 @@ export default function Dashboard() {
 
     return () => unsub();
   }, [router]);
+
+  // Cleanup chat notification timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (chatNotificationTimeoutsRef.current) {
+        clearTimeout(chatNotificationTimeoutsRef.current);
+      }
+    };
+  }, []);
 
   //  EVENTS
   useEffect(() => {
@@ -329,11 +354,15 @@ export default function Dashboard() {
             team: currentMember.data().team || "",
             avatar: currentMember.data().avatar || "",
             address: currentMember.data().address || "",
+            emailNotifications: currentMember.data().emailNotifications === true,
+            notificationEmail: currentMember.data().notificationEmail || "",
           });
           setEditPseudo(currentMember.data().pseudo || "");
           setEditTeam(currentMember.data().team || "");
           setEditAvatar(currentMember.data().avatar || "");
           setEditAddress(currentMember.data().address || "");
+          setEditEmailNotifications(currentMember.data().emailNotifications === true);
+          setEditNotificationEmail(currentMember.data().notificationEmail || "");
         }
       }
     });
@@ -351,7 +380,7 @@ export default function Dashboard() {
         const v = docSnap.data();
 
         if (!data[v.eventId]) data[v.eventId] = {};
-        data[v.eventId][v.userEmail] = v.status;
+        data[v.eventId][v.userEmail] = v;
       });
 
       setVotes(data);
@@ -655,22 +684,111 @@ export default function Dashboard() {
       status: "pending",
     });
 
+    const recipients = members
+      .filter((member: any) => member?.email && member.email !== user.email && member.emailNotifications === true)
+      .map((member: any) => {
+        const email = (member.notificationEmail && member.notificationEmail.trim()) || member.email;
+        return email;
+      })
+      .filter((email: string) => Boolean(email));
+
+    if (recipients.length > 0) {
+      try {
+        console.log("Sending proposition notification to:", recipients);
+        const res = await fetch("/api/notifications", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            kind: "new-proposition",
+            recipients,
+            actorEmail: user.email,
+            title: formatDateFR(selectedDate),
+            date: selectedDate,
+          }),
+        });
+        const data = await res.json();
+        console.log("Proposition notification response:", data);
+      } catch (error) {
+        console.error("Notification proposition non envoyée:", error);
+      }
+    }
+
     setSelectedDate("");
   };
 
+  const getVoteStatus = (voteEntry: any) => {
+    if (!voteEntry) return null;
+    if (typeof voteEntry === "string") return voteEntry;
+    return voteEntry.status || null;
+  };
+
+  const getVoteSlots = (voteEntry: any) => {
+    if (getVoteStatus(voteEntry) !== "present") {
+      return { slot14: false, slot17: false };
+    }
+    if (voteEntry && typeof voteEntry === "object") {
+      return {
+        slot14: voteEntry.slot14 !== false,
+        slot17: voteEntry.slot17 !== false,
+      };
+    }
+    return { slot14: true, slot17: true };
+  };
+
+  const getPresenceWindowLabel = (voteEntry: any) => {
+    if (getVoteStatus(voteEntry) !== "present") return "";
+    const slots = getVoteSlots(voteEntry);
+    if (slots.slot14 && !slots.slot17) return "(uniquement 14h)";
+    if (!slots.slot14 && slots.slot17) return "(uniquement 17h)";
+    return "";
+  };
+
   // 🗳️ VOTE (modifiable)
-  const vote = async (eventId: string, status: string) => {
+  const vote = async (
+    eventId: string,
+    status: string,
+    slots?: { slot14: boolean; slot17: boolean }
+  ) => {
     if (!user) return;
 
     const firestore = getFirestore();
     if (!firestore) return;
 
+    const normalizedSlots =
+      status === "present"
+        ? {
+            slot14: slots?.slot14 ?? true,
+            slot17: slots?.slot17 ?? true,
+          }
+        : { slot14: false, slot17: false };
+
     await setDoc(doc(firestore, "votes", `${eventId}_${user.email}`), {
       eventId,
       userEmail: user.email,
       status,
+      ...normalizedSlots,
       updatedAt: serverTimestamp(),
     });
+  };
+
+  const toggleRacePresence = async (eventId: string, slot: "slot14" | "slot17") => {
+    if (!currentUserEmail) return;
+    const currentVote = votes[eventId]?.[currentUserEmail];
+    const currentStatus = getVoteStatus(currentVote);
+    if (currentStatus !== "present") return;
+
+    const currentSlots = getVoteSlots(currentVote);
+    const nextSlots = {
+      slot14: slot === "slot14" ? !currentSlots.slot14 : currentSlots.slot14,
+      slot17: slot === "slot17" ? !currentSlots.slot17 : currentSlots.slot17,
+    };
+
+    if (!nextSlots.slot14 && !nextSlots.slot17) {
+      await vote(eventId, "absent", nextSlots);
+      return;
+    }
+
+    await vote(eventId, "present", nextSlots);
   };
 
   // ✅ VALIDATION EVENT
@@ -797,6 +915,8 @@ export default function Dashboard() {
           team: editTeam || null,
           avatar: avatarUrl || null,
           address: editAddress || null,
+          emailNotifications: !!editEmailNotifications,
+          notificationEmail: editNotificationEmail || null,
         },
         { merge: true }
       );
@@ -884,6 +1004,55 @@ export default function Dashboard() {
       .map((member: any) => member.email);
   };
 
+  const sendChatNotificationBatched = (messageCount: number = 1) => {
+    const recipients = members
+      .filter((member: any) => member?.email && member.email !== user.email && member.emailNotifications === true)
+      .map((member: any) => {
+        const email = (member.notificationEmail && member.notificationEmail.trim()) || member.email;
+        return email;
+      })
+      .filter((email: string) => Boolean(email));
+
+    if (recipients.length === 0) return;
+
+    // Increment message count
+    chatNotificationCountRef.current += messageCount;
+
+    // Cancel existing timeout
+    if (chatNotificationTimeoutsRef.current) {
+      clearTimeout(chatNotificationTimeoutsRef.current);
+    }
+
+    // Debounce: send notification after 30 seconds of inactivity
+    const debounceTimer = setTimeout(async () => {
+      const totalMessages = chatNotificationCountRef.current;
+      try {
+        console.log(`Sending batched chat notification for ${totalMessages} message(s) to:`, recipients);
+        const res = await fetch("/api/notifications", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            kind: "new-chat-message",
+            recipients,
+            actorEmail: user.email,
+            text: totalMessages > 1 ? `${totalMessages} nouveaux messages` : "Nouveau message",
+            hasMentions: false,
+            messageCount: totalMessages,
+          }),
+        });
+        const data = await res.json();
+        console.log("Batched chat notification response:", data);
+      } catch (error) {
+        console.error("Notification chat non envoyée:", error);
+      } finally {
+        chatNotificationCountRef.current = 0;
+        chatNotificationTimeoutsRef.current = null;
+      }
+    }, 30000); // 30 second debounce
+
+    chatNotificationTimeoutsRef.current = debounceTimer;
+  };
+
   const sendChat = async () => {
     if (!chatInput.trim() || !user) return;
 
@@ -900,6 +1069,10 @@ export default function Dashboard() {
       editedAt: null,
       createdAt: serverTimestamp(),
     });
+
+    if (members.some((m: any) => m?.email && m.email !== user.email && m.emailNotifications === true)) {
+      sendChatNotificationBatched(1);
+    }
 
     setChatInput("");
     setReplyToMessageId(null);
@@ -1129,7 +1302,7 @@ export default function Dashboard() {
   ).length;
   const otherOnlineCount = Math.max(onlineMembersCount - 1, 0);
   const isPresentInUpcomingEvent = currentUserEmail
-    ? upcomingEvents.some((event: any) => votes[event.id]?.[currentUserEmail] === "present")
+    ? upcomingEvents.some((event: any) => getVoteStatus(votes[event.id]?.[currentUserEmail]) === "present")
     : false;
 
   const systemInfoItems = useMemo(() => {
@@ -1251,7 +1424,7 @@ export default function Dashboard() {
   const venueEditorPresentMembers = useMemo(() => {
     if (!venueEditorEvent) return [];
     const eventVotes = votes[venueEditorEvent.id] || {};
-    return members.filter((member) => eventVotes[member.email] === "present");
+    return members.filter((member) => getVoteStatus(eventVotes[member.email]) === "present");
   }, [members, votes, venueEditorEvent]);
 
   const navItems = [
@@ -1479,6 +1652,13 @@ export default function Dashboard() {
     return () => window.clearInterval(intervalId);
   }, [eligibleFunPseudos, systemInfoItems]);
 
+  function scrollChatToLatestBoundary() {
+    const container = chatScrollRef.current;
+    if (!container) return;
+
+    container.scrollTop = container.scrollHeight;
+  }
+
   if (!user) return null;
 
   const getDaysInMonth = (month: number, year: number) => {
@@ -1516,8 +1696,9 @@ export default function Dashboard() {
   const dayNames = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 
   const getColor = (eventVotes: any, email: string) => {
-    if (eventVotes[email] === "present") return "text-[#409b48]";
-    if (eventVotes[email] === "absent") return "text-[#d31f28]";
+    const status = getVoteStatus(eventVotes[email]);
+    if (status === "present") return "text-[#409b48]";
+    if (status === "absent") return "text-[#d31f28]";
     return "text-gray-400";
   };
 
@@ -1543,13 +1724,6 @@ export default function Dashboard() {
       window.sessionStorage.setItem("fd_release_notes_access", "granted");
     }
     router.push("/dashboard/versions");
-  };
-
-  const scrollChatToLatestBoundary = () => {
-    const container = chatScrollRef.current;
-    if (!container) return;
-
-    container.scrollTop = container.scrollHeight;
   };
 
   return (
@@ -1693,6 +1867,7 @@ export default function Dashboard() {
                             value={editAddress}
                             onChange={(e) => {
                               setAddressSelectionLocked(false);
+                              setIsEditingAddress(true);
                               setEditAddress(e.target.value);
                             }}
                             className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white placeholder-gray-400"
@@ -1723,6 +1898,39 @@ export default function Dashboard() {
                         )}
                         <p className="mt-1 text-xs text-gray-400">Utilisée pour afficher le lieu quand tu héberges une partie.</p>
                       </div>
+                      <div className="border border-white/10 bg-white/5 px-3 py-2">
+                        <label className="flex items-start gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={editEmailNotifications}
+                            onChange={(e) => setEditEmailNotifications(e.target.checked)}
+                            className="mt-0.5 h-4 w-4 rounded border-white/30 bg-transparent"
+                          />
+                          <span>
+                            Recevoir les notifications email
+                            <span className="block text-xs text-gray-400">
+                              Nouvelles propositions et nouveaux messages chat (désactivé par défaut).
+                            </span>
+                          </span>
+                        </label>
+                      </div>
+                      {editEmailNotifications && (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-300 mb-1">
+                            Adresse email pour les notifications
+                          </label>
+                          <input
+                            type="email"
+                            value={editNotificationEmail}
+                            onChange={(e) => setEditNotificationEmail(e.target.value)}
+                            placeholder="nom@outlook.com, nom@gmail.com, etc."
+                            className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded text-white placeholder-gray-500 text-sm focus:outline-none focus:border-[#d31f28]"
+                          />
+                          <p className="mt-1 text-xs text-gray-400">
+                            Laisse vide pour utiliser {user?.email}
+                          </p>
+                        </div>
+                      )}
                       <button
                         type="button"
                         onClick={saveProfile}
@@ -1783,6 +1991,11 @@ export default function Dashboard() {
 
             {tab === "events" && (
               <div className="space-y-5">
+                <div className="border border-white/10 bg-black/25 px-3 py-2 sm:px-4 sm:py-3">
+                  <p className="text-[10px] sm:text-[11px] text-gray-500 leading-4">
+                    Info session: 2 courses prévues (14h-17h puis 17h-21h), horaires indicatifs pouvant bouger de 1h à 2h selon le circuit. Par défaut, un pilote présent est considéré présent sur les 2 courses; si besoin, ajuste 14h/17h.
+                  </p>
+                </div>
                 {upcomingEvents.length === 0 ? (
                   <div className="border border-white/10 bg-black/40 p-6 text-center text-xs uppercase tracking-widest text-gray-500">
                     Aucun événement validé pour le moment.
@@ -1790,9 +2003,12 @@ export default function Dashboard() {
                 ) : (
                   upcomingEvents.map((event) => {
                     const eventVotes = votes[event.id] || {};
-                    const present = members.filter((m) => eventVotes[m.email] === "present");
-                    const absent = members.filter((m) => eventVotes[m.email] === "absent");
+                    const present = members.filter((m) => getVoteStatus(eventVotes[m.email]) === "present");
+                    const absent = members.filter((m) => getVoteStatus(eventVotes[m.email]) === "absent");
                     const waiting = members.filter((m) => !eventVotes[m.email]);
+                    const currentVote = currentUserEmail ? eventVotes[currentUserEmail] : null;
+                    const currentVoteStatus = getVoteStatus(currentVote);
+                    const currentSlots = getVoteSlots(currentVote);
                     const venueHostLabel = event.venueHostEmail ? getPseudo(event.venueHostEmail) : null;
                     const venueHostMember = event.venueHostEmail ? members.find((m: any) => m.email === event.venueHostEmail) : null;
                     const venueHostAddress = venueHostMember?.address || null;
@@ -1838,6 +2054,22 @@ export default function Dashboard() {
                             </div>
                           </div>
                           <div className="flex w-full sm:w-auto flex-wrap gap-2">
+                            {currentVoteStatus === "present" && (
+                              <>
+                                <button
+                                  onClick={() => toggleRacePresence(event.id, "slot14")}
+                                  className={`flex-1 sm:flex-none text-center px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] transition ${currentSlots.slot14 ? "bg-[#409b48] text-white hover:bg-[#37853e]" : "bg-[#d31f28] text-white hover:bg-[#b81d23]"}`}
+                                >
+                                  14h
+                                </button>
+                                <button
+                                  onClick={() => toggleRacePresence(event.id, "slot17")}
+                                  className={`flex-1 sm:flex-none text-center px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] transition ${currentSlots.slot17 ? "bg-[#409b48] text-white hover:bg-[#37853e]" : "bg-[#d31f28] text-white hover:bg-[#b81d23]"}`}
+                                >
+                                  17h
+                                </button>
+                              </>
+                            )}
                             <button
                               onClick={() => vote(event.id, "present")}
                               className="flex-1 sm:flex-none text-center bg-[#409b48] px-5 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-[#37853e] transition"
@@ -1864,7 +2096,20 @@ export default function Dashboard() {
                         <div className="mt-5 grid gap-px sm:grid-cols-3 bg-white/10">
                           <div className="bg-[#010d1e] p-4">
                             <p className="text-xs uppercase tracking-[0.3em] text-[#409b48] font-black">Présents — {present.length}</p>
-                            <p className="mt-2 text-sm text-[#409b48]">{present.map(m => getPseudo(m.email)).join(', ') || '—'}</p>
+                            <p className="mt-2 text-sm text-[#409b48]">
+                              {present.length === 0
+                                ? "—"
+                                : present.map((m, index) => {
+                                    const slotLabel = getPresenceWindowLabel(eventVotes[m.email]);
+                                    return (
+                                      <span key={m.email}>
+                                        {index > 0 ? ", " : ""}
+                                        <span className="text-[#409b48]">{getPseudo(m.email)}</span>
+                                        {slotLabel && <span className="text-[11px] text-[#70b87a]"> {slotLabel}</span>}
+                                      </span>
+                                    );
+                                  })}
+                            </p>
                           </div>
                           <div className="bg-[#010d1e] p-4">
                             <p className="text-xs uppercase tracking-[0.3em] text-gray-500 font-black">En attente — {waiting.length}</p>
@@ -1965,8 +2210,8 @@ export default function Dashboard() {
                 ) : (
                   pendingEvents.map((event) => {
                     const eventVotes = votes[event.id] || {};
-                    const present = members.filter((m) => eventVotes[m.email] === "present");
-                    const absent = members.filter((m) => eventVotes[m.email] === "absent");
+                    const present = members.filter((m) => getVoteStatus(eventVotes[m.email]) === "present");
+                    const absent = members.filter((m) => getVoteStatus(eventVotes[m.email]) === "absent");
                     const waiting = members.filter((m) => !eventVotes[m.email]);
 
                     return (
@@ -2177,9 +2422,9 @@ export default function Dashboard() {
                             const replies = chatMessages.filter((r) => r.parentId === m.id);
                             return (
                               <div key={m.id} data-chat-thread-item="true" className="mb-3 sm:mb-4 border-l-2 border-white/10 pl-2 sm:pl-3">
-                                <div className="flex items-start justify-between gap-2 sm:gap-3">
-                                  <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.13em] sm:tracking-[0.15em] text-gray-500 mb-1">
-                                    {getPseudo(m.user)} · {formatChatTime(m.createdAt)}
+                                <div className="flex items-start justify-between gap-2 sm:gap-3 min-w-0">
+                                  <p className="min-w-0 flex-1 text-[10px] sm:text-[11px] uppercase tracking-[0.13em] sm:tracking-[0.15em] text-gray-500 mb-1 break-words [overflow-wrap:anywhere]">
+                                    <span className="text-[#d31f28]">{getPseudo(m.user)}</span> · {formatChatTime(m.createdAt)}
                                     {m.editedAt ? " · modifie" : ""}
                                   </p>
                                   <div className="flex items-center gap-1">
@@ -2222,15 +2467,15 @@ export default function Dashboard() {
                                     )}
                                   </div>
                                 </div>
-                                <p className="text-gray-200 text-[13px] sm:text-sm whitespace-pre-wrap break-words">{renderTextWithMentions(m.text || "")}</p>
+                                <p className="text-gray-200 text-[13px] sm:text-sm whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{renderTextWithMentions(m.text || "")}</p>
 
                                 {replies.length > 0 && (
                                   <div className="mt-2.5 ml-2 sm:mt-3 sm:ml-3 space-y-2 border-l border-white/10 pl-2 sm:pl-3">
                                     {replies.map((reply) => (
                                       <div key={reply.id} className="bg-black/30 border border-white/10 px-2 py-2 sm:px-3">
-                                        <div className="mb-1 flex items-start justify-between gap-1.5 sm:gap-2">
-                                          <p className="text-[9px] sm:text-[10px] uppercase tracking-[0.13em] sm:tracking-[0.15em] text-gray-500">
-                                            {getPseudo(reply.user)} · {formatChatTime(reply.createdAt)}
+                                        <div className="mb-1 flex items-start justify-between gap-1.5 sm:gap-2 min-w-0">
+                                          <p className="min-w-0 flex-1 text-[9px] sm:text-[10px] uppercase tracking-[0.13em] sm:tracking-[0.15em] text-gray-500 break-words [overflow-wrap:anywhere]">
+                                            <span className="text-[#d31f28]">{getPseudo(reply.user)}</span> · {formatChatTime(reply.createdAt)}
                                             {reply.editedAt ? " · modifie" : ""}
                                           </p>
                                           <div className="flex items-center gap-1">
@@ -2262,7 +2507,7 @@ export default function Dashboard() {
                                             )}
                                           </div>
                                         </div>
-                                        <p className="text-[13px] sm:text-sm text-gray-200 whitespace-pre-wrap break-words">{renderTextWithMentions(reply.text || "")}</p>
+                                        <p className="text-[13px] sm:text-sm text-gray-200 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{renderTextWithMentions(reply.text || "")}</p>
                                       </div>
                                     ))}
                                   </div>
