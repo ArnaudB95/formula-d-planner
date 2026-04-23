@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import nodemailer from "nodemailer";
 
 type NotificationBody = {
   kind: "new-proposition" | "new-chat-message";
@@ -63,17 +64,16 @@ const buildEmail = (payload: NotificationBody) => {
 };
 
 export async function POST(request: Request) {
-  const resendApiKey = process.env.RESEND_API_KEY;
-  const from = process.env.NOTIFICATIONS_FROM_EMAIL;
+  const gmailUser = process.env.GMAIL_USER;
+  const gmailPass = process.env.GMAIL_APP_PASSWORD;
 
   console.log("Notification API called");
-  console.log("RESEND_API_KEY configured:", !!resendApiKey);
-  console.log("NOTIFICATIONS_FROM_EMAIL:", from);
+  console.log("GMAIL_USER configured:", !!gmailUser);
 
-  if (!resendApiKey || !from) {
-    console.error("Missing config: RESEND_API_KEY or NOTIFICATIONS_FROM_EMAIL");
+  if (!gmailUser || !gmailPass) {
+    console.error("Missing config: GMAIL_USER or GMAIL_APP_PASSWORD");
     return NextResponse.json(
-      { ok: false, error: "Notifications email non configurées (RESEND_API_KEY/NOTIFICATIONS_FROM_EMAIL)." },
+      { ok: false, error: "Notifications email non configurées (GMAIL_USER/GMAIL_APP_PASSWORD)." },
       { status: 500 }
     );
   }
@@ -98,30 +98,21 @@ export async function POST(request: Request) {
 
   const email = buildEmail(body);
 
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: { user: gmailUser, pass: gmailPass },
+  });
+
   const sendPromises = recipients.map(async (to) => {
     console.log(`Sending email to: ${to}`);
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from,
-        to,
-        subject: email.subject,
-        html: email.html,
-        text: email.text,
-      }),
+    await transporter.sendMail({
+      from: `"Formula D Planner" <${gmailUser}>`,
+      to,
+      subject: email.subject,
+      html: email.html,
+      text: email.text,
     });
-
-    if (!res.ok) {
-      const reason = await res.text();
-      console.error(`Resend failed for ${to}: ${res.status} - ${reason}`);
-      throw new Error(`Envoi Resend refusé (${res.status}): ${reason}`);
-    }
-    const result = await res.json();
-    console.log(`Email sent to ${to}, ID: ${result.id}`);
+    console.log(`Email sent to ${to}`);
   });
 
   try {

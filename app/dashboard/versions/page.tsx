@@ -7,6 +7,15 @@ import { CalendarDays, ClipboardList, MessageCircle, Trophy, Users } from "lucid
 
 const releaseNotes = [
   {
+    version: "v1.5.6",
+    timestamp: "24/04/2026 · 00h00",
+    details: [
+      "Notifications email fiabilisees en mode 100% gratuit via Gmail, sans dependance Resend.",
+      "Suppression des evenements et propositions securisee par une demande de confirmation avant effacement.",
+      "Evolution Appli gagne l edition inline des demandes et reponses, avec trace modifiee et droits limites a l auteur, admin ou superAdmin.",
+    ],
+  },
+  {
     version: "v1.5.5",
     timestamp: "23/04/2026 · 21h30",
     details: [
@@ -179,7 +188,7 @@ export default function VersionsPage() {
           <div className="border border-white/10 bg-[#010d1e] p-4 sm:p-6">
             <p className="text-[11px] uppercase tracking-[0.18em] text-[#d31f28]">Notes de version</p>
             <p className="mt-3 text-sm text-gray-300">
-              Version actuelle : <span className="text-white font-bold">v1.5.4</span>
+              Version actuelle : <span className="text-white font-bold">v1.5.6</span>
             </p>
 
           </div>

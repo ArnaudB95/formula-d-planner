@@ -88,6 +88,12 @@ export default function Dashboard() {
   const [newEvolutionTitle, setNewEvolutionTitle] = useState("");
   const [newEvolutionBody, setNewEvolutionBody] = useState("");
   const [evolutionReplyInput, setEvolutionReplyInput] = useState("");
+  const [editingEvolutionTarget, setEditingEvolutionTarget] = useState<{
+    type: "request" | "reply";
+    id: string;
+  } | null>(null);
+  const [editingEvolutionTitle, setEditingEvolutionTitle] = useState("");
+  const [editingEvolutionText, setEditingEvolutionText] = useState("");
   const [onlineMembersCount, setOnlineMembersCount] = useState(1);
   const [onlineMemberEmails, setOnlineMemberEmails] = useState<Set<string>>(new Set());
   const [currentInfoLine, setCurrentInfoLine] = useState<{
@@ -814,6 +820,10 @@ export default function Dashboard() {
   const deleteEvent = async (event: any) => {
     if (!event?.id) return;
     if (!canManageProposition(event) && userRole !== "admin" && userRole !== "superAdmin") return;
+    const label = event?.status === "pending" ? "cette proposition" : "cet evenement";
+    const eventTitle = event?.title ? `\n\n${event.title}` : "";
+    const confirmed = window.confirm(`Confirmer la suppression de ${label} ?${eventTitle}`);
+    if (!confirmed) return;
     const firestore = getFirestore();
     if (!firestore) return;
 
@@ -1144,6 +1154,61 @@ export default function Dashboard() {
 
     setEvolutionReplyInput("");
     await markEvolutionRequestAsRead(selectedEvolutionId);
+  };
+
+  const canEditEvolutionRequest = (request: any) => {
+    return userRole === "admin" || userRole === "superAdmin" || request?.createdBy === user?.email;
+  };
+
+  const canEditEvolutionReply = (reply: any) => {
+    return userRole === "admin" || userRole === "superAdmin" || reply?.user === user?.email;
+  };
+
+  const startEditEvolutionRequest = (request: any) => {
+    setEditingEvolutionTarget({ type: "request", id: request.id });
+    setEditingEvolutionTitle(request.title || "");
+    setEditingEvolutionText(request.body || "");
+  };
+
+  const startEditEvolutionReply = (reply: any) => {
+    setEditingEvolutionTarget({ type: "reply", id: reply.id });
+    setEditingEvolutionTitle("");
+    setEditingEvolutionText(reply.text || "");
+  };
+
+  const cancelEvolutionEdit = () => {
+    setEditingEvolutionTarget(null);
+    setEditingEvolutionTitle("");
+    setEditingEvolutionText("");
+  };
+
+  const saveEditedEvolutionMessage = async () => {
+    if (!editingEvolutionTarget) return;
+    const firestore = getFirestore();
+    if (!firestore) return;
+
+    if (editingEvolutionTarget.type === "request") {
+      if (!editingEvolutionTitle.trim() || !editingEvolutionText.trim()) return;
+      const currentRequest = evolutionRequests.find((request: any) => request.id === editingEvolutionTarget.id);
+      if (!currentRequest || !canEditEvolutionRequest(currentRequest)) return;
+
+      await updateDoc(doc(firestore, "evolutionRequests", editingEvolutionTarget.id), {
+        title: editingEvolutionTitle.trim(),
+        body: editingEvolutionText.trim(),
+        editedAt: serverTimestamp(),
+      });
+    } else {
+      if (!editingEvolutionText.trim()) return;
+      const currentReply = evolutionReplies.find((reply: any) => reply.id === editingEvolutionTarget.id);
+      if (!currentReply || !canEditEvolutionReply(currentReply)) return;
+
+      await updateDoc(doc(firestore, "evolutionReplies", editingEvolutionTarget.id), {
+        text: editingEvolutionText.trim(),
+        editedAt: serverTimestamp(),
+      });
+    }
+
+    cancelEvolutionEdit();
   };
 
   const deleteEvolutionRequest = async (requestId: string) => {
@@ -2667,7 +2732,10 @@ export default function Dashboard() {
                             return (
                               <button
                                 key={request.id}
-                                onClick={() => setSelectedEvolutionId(request.id)}
+                                onClick={() => {
+                                  setSelectedEvolutionId(request.id);
+                                  cancelEvolutionEdit();
+                                }}
                                 className={`w-full text-left px-4 py-3 border-b border-white/10 transition ${selected ? "bg-[#d31f28]/15" : "hover:bg-white/5"}`}
                               >
                                 <p className="text-sm font-semibold text-white whitespace-normal break-words leading-5">{request.title}</p>
@@ -2711,7 +2779,7 @@ export default function Dashboard() {
                                 <div>
                                   <p className="text-xs uppercase tracking-[0.2em] text-[#d31f28]">Demande</p>
                                   <h3 className="text-lg font-black text-white mt-1">{currentRequest.title}</h3>
-                                  <p className="text-[11px] uppercase tracking-widest text-gray-500 mt-1">{getPseudo(currentRequest.createdBy)} · {formatChatTime(currentRequest.createdAt)}</p>
+                                  <p className="text-[11px] uppercase tracking-widest text-gray-500 mt-1">{getPseudo(currentRequest.createdBy)} · {formatChatTime(currentRequest.createdAt)}{currentRequest.editedAt ? " · modifie" : ""}</p>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   {userRole === "superAdmin" && (
@@ -2725,6 +2793,19 @@ export default function Dashboard() {
                                       <option value="traite">Traite</option>
                                     </select>
                                   )}
+                                  {canEditEvolutionRequest(currentRequest) && (
+                                    <button
+                                      onClick={() => startEditEvolutionRequest(currentRequest)}
+                                      className="border border-white/20 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:text-white hover:border-white/40"
+                                      title="Editer"
+                                      aria-label="Editer"
+                                    >
+                                      <span className="inline-flex items-center gap-2">
+                                        <Pencil className="h-3.5 w-3.5" />
+                                        Editer
+                                      </span>
+                                    </button>
+                                  )}
                                   {(userRole === "admin" || userRole === "superAdmin") && (
                                     <button
                                       onClick={() => deleteEvolutionRequest(currentRequest.id)}
@@ -2737,14 +2818,84 @@ export default function Dashboard() {
                               </div>
 
                               <div className="border border-white/10 bg-[#010d1e] p-3">
-                                <p className="text-sm text-gray-200 whitespace-pre-wrap">{currentRequest.body}</p>
+                                {editingEvolutionTarget?.type === "request" && editingEvolutionTarget.id === currentRequest.id ? (
+                                  <div className="space-y-3">
+                                    <input
+                                      value={editingEvolutionTitle}
+                                      onChange={(e) => setEditingEvolutionTitle(e.target.value)}
+                                      className="w-full border border-white/20 bg-transparent px-4 py-2 text-white text-sm outline-none focus:border-[#d31f28] transition"
+                                      placeholder="Titre de la demande"
+                                    />
+                                    <textarea
+                                      value={editingEvolutionText}
+                                      onChange={(e) => setEditingEvolutionText(e.target.value)}
+                                      rows={5}
+                                      className="w-full border border-white/20 bg-transparent px-4 py-3 text-white text-sm outline-none focus:border-[#d31f28] transition resize-y"
+                                      placeholder="Message de la demande"
+                                    />
+                                    <div className="flex flex-wrap gap-2">
+                                      <button
+                                        onClick={saveEditedEvolutionMessage}
+                                        className="bg-[#d31f28] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-[#b81d23]"
+                                      >
+                                        Enregistrer
+                                      </button>
+                                      <button
+                                        onClick={cancelEvolutionEdit}
+                                        className="border border-white/20 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:text-white hover:border-white/40"
+                                      >
+                                        Annuler
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <p className="text-sm text-gray-200 whitespace-pre-wrap">{currentRequest.body}</p>
+                                )}
                               </div>
 
                               <div ref={evolutionScrollRef} className="space-y-2 max-h-[32vh] overflow-y-auto pr-1">
                                 {replies.map((reply: any) => (
                                   <div key={reply.id} className="border border-white/10 bg-[#010d1e] px-3 py-2">
-                                    <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-1">{getPseudo(reply.user)} · {formatChatTime(reply.createdAt)}</p>
-                                    <p className="text-sm text-gray-200 whitespace-pre-wrap">{reply.text}</p>
+                                    <div className="mb-1 flex items-start justify-between gap-2">
+                                      <p className="text-[10px] uppercase tracking-widest text-gray-500">{getPseudo(reply.user)} · {formatChatTime(reply.createdAt)}{reply.editedAt ? " · modifie" : ""}</p>
+                                      {canEditEvolutionReply(reply) && (
+                                        <button
+                                          onClick={() => startEditEvolutionReply(reply)}
+                                          className="text-gray-400 hover:text-white transition"
+                                          title="Editer"
+                                          aria-label="Editer"
+                                        >
+                                          <Pencil className="h-3.5 w-3.5" />
+                                        </button>
+                                      )}
+                                    </div>
+                                    {editingEvolutionTarget?.type === "reply" && editingEvolutionTarget.id === reply.id ? (
+                                      <div className="space-y-3">
+                                        <textarea
+                                          value={editingEvolutionText}
+                                          onChange={(e) => setEditingEvolutionText(e.target.value)}
+                                          rows={4}
+                                          className="w-full border border-white/20 bg-transparent px-4 py-3 text-white text-sm outline-none focus:border-[#d31f28] transition resize-y"
+                                          placeholder="Modifier la reponse"
+                                        />
+                                        <div className="flex flex-wrap gap-2">
+                                          <button
+                                            onClick={saveEditedEvolutionMessage}
+                                            className="bg-[#d31f28] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-[#b81d23]"
+                                          >
+                                            Enregistrer
+                                          </button>
+                                          <button
+                                            onClick={cancelEvolutionEdit}
+                                            className="border border-white/20 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:text-white hover:border-white/40"
+                                          >
+                                            Annuler
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-gray-200 whitespace-pre-wrap">{reply.text}</p>
+                                    )}
                                   </div>
                                 ))}
                               </div>
