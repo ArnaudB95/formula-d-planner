@@ -19,7 +19,8 @@ import {
 } from "firebase/firestore";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarDays, ClipboardList, MessageCircle, Pencil, Reply, Trash2, Trophy, Users } from "lucide-react";
+import { CalendarDays, ClipboardList, MessageCircle, Pencil, Reply, Trash2, Trophy, Users, Route, Gamepad2 } from "lucide-react";
+import SimuF1Panel from "./simuf1/SimuF1Panel";
 
 const FUN_INFO_TEMPLATES = [
   "[Pseudo] vise le podium... ou pas",
@@ -104,6 +105,7 @@ export default function Dashboard() {
   const [isInfoFading, setIsInfoFading] = useState(false);
   const infoPhaseRef = useRef<"system" | "fun">("system");
   const systemBurstRemainingRef = useRef(0);
+  const singleSystemFunRemainingRef = useRef(0);
   const systemIndexRef = useRef(0);
   const funTemplatePoolRef = useRef<string[]>([]);
   const funTemplateIndexRef = useRef(0);
@@ -111,6 +113,11 @@ export default function Dashboard() {
   const funPseudoIndexRef = useRef(0);
   const chatNotificationTimeoutsRef = useRef<NodeJS.Timeout | null>(null);
   const chatNotificationCountRef = useRef<number>(0);
+  const [simuF1NextRace, setSimuF1NextRace] = useState<{
+    raceName: string;
+    sundayDateISO: string | null;
+    participating: boolean;
+  }>({ raceName: "Monaco", sundayDateISO: null, participating: false });
 
   const [tab, setTab] = useState("events");
 
@@ -255,7 +262,7 @@ export default function Dashboard() {
     if (typeof window === "undefined") return;
     const requestedTab = new URLSearchParams(window.location.search).get("tab");
     if (!requestedTab) return;
-    const allowedTabs = new Set(["events", "proposition", "chat", "results", "members"]);
+    const allowedTabs = new Set(["events", "proposition", "chat", "results", "members", "circuits", "simuf1"]);
     if (!allowedTabs.has(requestedTab)) return;
     setTab((prev) => (prev === requestedTab ? prev : requestedTab));
   }, []);
@@ -315,6 +322,58 @@ export default function Dashboard() {
       );
     });
   }, []);
+
+  // 🏎️ SIMUF1 NEXT RACE INFO (for system info line)
+  useEffect(() => {
+    const firestore = getFirestore();
+    if (!firestore) return;
+
+    let unsubEntry: (() => void) | null = null;
+
+    const unsubRaces = onSnapshot(collection(firestore, "simuf1Races"), (snapshot) => {
+      const todayISO = new Date().toISOString().slice(0, 10);
+      const races = snapshot.docs
+        .map((d) => ({ id: d.id, ...(d.data() as any) }))
+        .filter((race) => typeof race.sundayDateISO === "string")
+        .sort((a, b) => String(a.sundayDateISO).localeCompare(String(b.sundayDateISO)));
+
+      const nextRace = races.find((race) => race.sundayDateISO >= todayISO) || races[races.length - 1] || null;
+
+      if (!nextRace) {
+        setSimuF1NextRace({ raceName: "Monaco", sundayDateISO: null, participating: false });
+        if (unsubEntry) {
+          unsubEntry();
+          unsubEntry = null;
+        }
+        return;
+      }
+
+      const raceName =
+        String(nextRace.circuitName || nextRace.trackName || nextRace.name || "").trim() || "Monaco";
+
+      const email = String(user?.email || "").trim();
+      if (!email) {
+        setSimuF1NextRace({ raceName, sundayDateISO: String(nextRace.sundayDateISO), participating: false });
+        if (unsubEntry) {
+          unsubEntry();
+          unsubEntry = null;
+        }
+        return;
+      }
+
+      const entryId = email.replaceAll("/", "_").replaceAll(".", "_");
+      if (unsubEntry) unsubEntry();
+      unsubEntry = onSnapshot(doc(firestore, "simuf1Races", String(nextRace.id), "entries", entryId), (entrySnap) => {
+        const participating = entrySnap.exists() ? entrySnap.data()?.participating === true : false;
+        setSimuF1NextRace({ raceName, sundayDateISO: String(nextRace.sundayDateISO), participating });
+      });
+    });
+
+    return () => {
+      unsubRaces();
+      if (unsubEntry) unsubEntry();
+    };
+  }, [user?.email]);
 
   // 👥 MEMBERS
   useEffect(() => {
@@ -1371,6 +1430,16 @@ export default function Dashboard() {
     : false;
 
   const systemInfoItems = useMemo(() => {
+    const simuF1Days = simuF1NextRace.sundayDateISO
+      ? Math.max(
+          0,
+          Math.ceil(
+            (new Date(`${simuF1NextRace.sundayDateISO}T00:00:00`).getTime() - new Date().getTime()) /
+              (1000 * 60 * 60 * 24)
+          )
+        )
+      : null;
+
     return [
       upcomingEvents.length > 0 && isPresentInUpcomingEvent
         ? {
@@ -1405,6 +1474,12 @@ export default function Dashboard() {
                 : `${otherOnlineCount} autres Pilotes sont en ligne`,
           }
         : null,
+      simuF1Days !== null
+        ? {
+            source: "SimuF1",
+            text: `Prochaine course ${simuF1NextRace.raceName} dans ${simuF1Days} jour${simuF1Days > 1 ? "s" : ""} - ${simuF1NextRace.participating ? "Bravo tu participes !" : "Inscrit toi !"}`,
+          }
+        : null,
     ].filter(Boolean) as Array<{ source: string; text: string }>;
   }, [
     upcomingEvents.length,
@@ -1413,6 +1488,9 @@ export default function Dashboard() {
     mentionCount,
     unreadCount,
     otherOnlineCount,
+    simuF1NextRace.participating,
+    simuF1NextRace.raceName,
+    simuF1NextRace.sundayDateISO,
   ]);
 
   const eligibleFunPseudos = useMemo(() => {
@@ -1498,6 +1576,8 @@ export default function Dashboard() {
     { key: "chat", label: "Chat", icon: MessageCircle },
     { key: "results", label: "Resultats", icon: Trophy },
     { key: "members", label: "Pilotes", icon: Users },
+    { key: "circuits", label: "Circuits", icon: Route },
+    { key: "simuf1", label: "SimuF1", icon: Gamepad2 },
   ];
 
   const resultsCategories = [
@@ -1631,6 +1711,7 @@ export default function Dashboard() {
 
     infoPhaseRef.current = hasSystem ? "system" : "fun";
     systemBurstRemainingRef.current = 0;
+    singleSystemFunRemainingRef.current = 0;
     systemIndexRef.current = 0;
     funTemplatePoolRef.current = shuffle(FUN_INFO_TEMPLATES);
     funTemplateIndexRef.current = 0;
@@ -1682,6 +1763,26 @@ export default function Dashboard() {
     };
 
     const getNextInfoLine = () => {
+      const singleSystemMode = hasSystem && hasFun && systemCount === 1;
+
+      if (singleSystemMode) {
+        if (infoPhaseRef.current === "fun") {
+          const line = nextFunLine();
+          singleSystemFunRemainingRef.current = Math.max(0, singleSystemFunRemainingRef.current - 1);
+          infoPhaseRef.current = singleSystemFunRemainingRef.current > 0 ? "fun" : "system";
+          return line;
+        }
+
+        const systemLine = nextSystemLine();
+        if (systemLine) {
+          singleSystemFunRemainingRef.current = 3;
+          infoPhaseRef.current = "fun";
+          return systemLine;
+        }
+
+        return nextFunLine();
+      }
+
       if (infoPhaseRef.current === "fun" && hasFun) {
         const line = nextFunLine();
         infoPhaseRef.current = hasSystem ? "system" : "fun";
@@ -1712,7 +1813,7 @@ export default function Dashboard() {
         setCurrentInfoLine(getNextInfoLine());
         setIsInfoFading(false);
       }, 240);
-    }, 4200);
+    }, 8400);
 
     return () => window.clearInterval(intervalId);
   }, [eligibleFunPseudos, systemInfoItems]);
@@ -1791,6 +1892,8 @@ export default function Dashboard() {
     router.push("/dashboard/versions");
   };
 
+  const resolvedAvatar = ((profile?.avatar as string) || (user?.photoURL as string) || "").trim();
+
   return (
     <main className="min-h-screen bg-[#000e22] text-white">
       {/* F1 top accent bar */}
@@ -1805,7 +1908,7 @@ export default function Dashboard() {
               className="shrink-0"
             >
               <img
-                src="https://cdn.discordapp.com/attachments/1068885680568148019/1494439845198696489/FD.png?ex=69e29d10&is=69e14b90&hm=fdeba7a50be29eb581e84c0690762d2cf5da649aeb5f6735349f8b6ddbc0ffb9&"
+                src="/fd-icon.png"
                 alt="Formula D"
                 className="h-7 sm:h-14 w-auto object-contain"
               />
@@ -1841,11 +1944,11 @@ export default function Dashboard() {
                 className="w-9 h-9 sm:w-14 sm:h-14 rounded-[2px] p-[2px] bg-black transition"
               >
                 <div className="w-full h-full rounded-[2px] overflow-hidden bg-[#d31f28] [transform:translateZ(0)] [-webkit-mask-image:-webkit-radial-gradient(white,black)] [mask-image:radial-gradient(white,black)] flex items-center justify-center">
-                  {profile.avatar ? (
+                  {resolvedAvatar ? (
                     <div
                       aria-label="Avatar"
                       className="w-full h-full rounded-[inherit] bg-center bg-cover"
-                      style={{ backgroundImage: `url("${profile.avatar}")` }}
+                      style={{ backgroundImage: `url("${resolvedAvatar}")` }}
                     />
                   ) : (
                     <svg className="w-6 h-6 sm:w-12 sm:h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -1865,11 +1968,11 @@ export default function Dashboard() {
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-12 h-12 rounded-[2px] p-[2px] bg-black">
                         <div className="w-full h-full bg-[#d31f28] rounded-[2px] flex items-center justify-center overflow-hidden [transform:translateZ(0)] [-webkit-mask-image:-webkit-radial-gradient(white,black)] [mask-image:radial-gradient(white,black)]">
-                          {profile.avatar ? (
+                          {resolvedAvatar ? (
                             <div
                               aria-label="Avatar"
                               className="w-full h-full rounded-[inherit] bg-center bg-cover"
-                              style={{ backgroundImage: `url("${profile.avatar}")` }}
+                              style={{ backgroundImage: `url("${resolvedAvatar}")` }}
                             />
                           ) : (
                             <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -1895,13 +1998,13 @@ export default function Dashboard() {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1">Équipe</label>
+                        <label className="block text-sm font-medium mb-1">Écurie</label>
                         <input
                           type="text"
                           value={editTeam}
                           onChange={(e) => setEditTeam(e.target.value)}
                           className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white placeholder-gray-400"
-                          placeholder="Votre équipe"
+                          placeholder="Votre écurie"
                         />
                       </div>
                       <div>
@@ -2034,6 +2137,8 @@ export default function Dashboard() {
                   {tab === "chat" && <>{chatView === "evolution" ? "Evolution Appli" : "Chat"}</>}
                   {tab === "results" && <>Resultats</>}
                   {tab === "members" && <>Participants</>}
+                  {tab === "circuits" && <>Circuits</>}
+                  {tab === "simuf1" && <>SimuF1</>}
                 </p>
               </div>
               {tab === "chat" && (
@@ -2466,6 +2571,24 @@ export default function Dashboard() {
                     </div>
                   ))
                 )}
+              </div>
+            )}
+
+            {tab === "circuits" && (
+              <div className="border border-white/10 bg-[#010d1e] p-6 sm:p-8 text-center">
+                <h3 className="text-xl sm:text-2xl font-black uppercase tracking-[0.12em] text-white">Circuits</h3>
+                <p className="mt-4 text-sm sm:text-base text-gray-300">Page à venir avec la liste des circuits à notre disposition</p>
+              </div>
+            )}
+
+            {tab === "simuf1" && (
+              <div className="space-y-4">
+                <SimuF1Panel
+                  userEmail={user?.email || ""}
+                  userPseudo={profile?.pseudo || user?.displayName || user?.email || "Pilote"}
+                  defaultTeamName={profile?.team || "Ecurie inconnue"}
+                  isSuperAdmin={userRole === "superAdmin"}
+                />
               </div>
             )}
 
@@ -2944,7 +3067,9 @@ export default function Dashboard() {
       <div ref={bottomBarRef} className="fixed bottom-0 left-0 right-0 z-50">
         <nav className="border-t border-white/10 bg-[#000a18]/95 backdrop-blur">
           <div className="mx-auto max-w-7xl px-2 py-2">
-            <div className="grid grid-cols-5 gap-1">
+            <div
+              className={`grid gap-1 ${navItems.length === 7 ? "grid-cols-7" : navItems.length === 6 ? "grid-cols-6" : "grid-cols-5"}`}
+            >
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = tab === item.key;
@@ -3022,7 +3147,7 @@ export default function Dashboard() {
                 onClick={openReleaseNotes}
                 className="text-[8px] sm:text-[9px] font-medium tracking-[0.28em] text-white/28 hover:text-white/45 transition whitespace-normal break-words"
               >
-                AB 2026 v1
+                AB 2026 v2
               </button>
             </div>
           </div>

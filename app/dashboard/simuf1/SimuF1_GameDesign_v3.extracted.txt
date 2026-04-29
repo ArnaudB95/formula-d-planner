@@ -1,0 +1,401 @@
+﻿ðŸŽ  SimuF1
+SpÃ©cifications de Game Design â€” v3.0
+Document technique destinÃ© Ã  GitHub Copilot
+1. Vue d'ensemble du jeu
+SimuF1 est un jeu de simulation de Formule 1 accessible aux membres inscrits d'un site web. Chaque semaine, un Grand Prix est simulÃ© automatiquement le dimanche Ã  12h00. Les joueurs configurent les statistiques de leur voiture avant la course. La simulation gÃ©nÃ¨re d'abord les qualifications, puis une course de 10 tours.
+ParamÃ¨tre
+Valeur
+FrÃ©quence
+1 Grand Prix par semaine â€” dimanche 12h00
+Joueurs
+Membres inscrits au site
+Voitures par joueur
+2 voitures configurables indÃ©pendamment
+Format
+Qualifications â†’ Course (10 tours)
+DÃ© utilisÃ©
+1d100 (dÃ© Ã  100 faces)
+Budget de stats
+25 points Ã  distribuer sur 5 statistiques
+Valeur neutre
+5/10 sur chaque stat = 0% bonus/malus
+2. SystÃ¨me de points & budget
+Chaque voiture possÃ¨de 5 statistiques. Par dÃ©faut, toutes sont Ã  5/10 (configuration neutre). Le joueur dispose d'un budget de 25 points Ã  rÃ©partir librement, avec un minimum de 1/10 et un maximum de 10/10 par statistique.
+ðŸ’¡ RÃˆGLE
+Budget de base = 25 points. Chaque arrÃªt aux stands programmÃ© coÃ»te 1 point supplÃ©mentaire retirÃ© du budget (0 arrÃªt par dÃ©faut). Les deux voitures sont configurÃ©es indÃ©pendamment avant chaque course.
+ðŸŸ¡  QUALIFICATIONS
+3. Stat 1 â€” BLOC  (Puissance moteur)
+Le BLOC dÃ©termine le temps de rÃ©fÃ©rence de chaque voiture aux qualifications. C'est une valeur dÃ©terministe : aucun dÃ© n'est lancÃ©. Toutes les voitures sont d'abord classÃ©es selon ce temps. Ce classement provisoire constitue la grille de dÃ©part avant l'application du GRIP.
+Score BLOC
+Ã‰cart vs temps de base
+Effet
+1 / 10
++4 sec
+Beaucoup plus lent
+2 / 10
++3 sec
+3 / 10
++2 sec
+4 / 10
++1 sec
+5 / 10
+Â± 0 sec  â† RÃ‰FÃ‰RENCE
+Neutre
+6 / 10
+âˆ’1 sec
+7 / 10
+âˆ’2 sec
+8 / 10
+âˆ’3 sec
+9 / 10
+âˆ’4 sec
+10 / 10
+âˆ’5 sec
+Beaucoup plus rapide
+âš ï¸  Ã‰GALITÃ‰
+Si deux voitures ont le mÃªme temps BLOC, leur ordre est dÃ©terminÃ© alÃ©atoirement (tirage au sort).
+4. Stat 2 â€” GRIP  (AdhÃ©rence en qualif)
+AprÃ¨s le classement BLOC, chaque voiture dont le GRIP est diffÃ©rent de 5/10 effectue un jet de dÃ© (1d100). Ce jet peut faire gagner ou perdre des places sur la grille provisoire.
+RÃ¨gle du jet : le rÃ©sultat du d100 doit Ãªtre â‰¤ au pourcentage indiquÃ© pour que le mouvement de place(s) se produise. Un score de 5/10 est neutre : aucun jet, aucun mouvement.
+Score GRIP
+Effet si jet rÃ©ussi
+% de dÃ©clenchement (d100 â‰¤ X)
+Impact / point
+1 / 10
+Perd 4 places
+16%
+âˆ’4% / point sous 5
+2 / 10
+Perd 3 places
+12%
+3 / 10
+Perd 2 places
+8%
+4 / 10
+Perd 1 place
+4%
+5 / 10
+Neutre â€” aucun jet
+â€”
+â€”
+6 / 10
+Gagne 1 place
+4%
++4% / point sur 5
+7 / 10
+Gagne 2 places
+8%
+8 / 10
+Gagne 3 places
+12%
+9 / 10
+Gagne 4 places
+16%
+10 / 10
+Gagne 5 places
+20%
+ðŸŽ²  SÃ‰QUENCE QUALIF
+1. Calculer le temps BLOC de chaque voiture  â†’  2. Trier pour obtenir la grille provisoire (Ã©galitÃ©s = tirage alÃ©atoire)  â†’  3. Chaque voiture lance son jet de GRIP (si â‰  5/10)  â†’  4. Appliquer les mouvements de places  â†’  Grille dÃ©finitive.
+ðŸ”´  COURSE  â€”  10 tours, 1 jet par stat par tour
+5. Stat 3 â€” AUDACE  (Tentative de dÃ©passement)
+Ã€ chaque tour, une voiture peut tenter de dÃ©passer l'adversaire directement devant elle. L'AUDACE dÃ©finit la probabilitÃ© de succÃ¨s de cette tentative. Si le jet Ã©choue, aucun dÃ©passement. Si le jet rÃ©ussit, la stat DÃ‰FENSE de l'adversaire s'applique.
+Formule : sous 5/10 â†’ âˆ’1%/point. Ã€ 5/10 â†’ 4%. Sur 5/10 â†’ +2%/point.
+Score AUDACE
+Chance de dÃ©passer
+DÃ©tail calcul
+1 / 10
+0%
+4% âˆ’ 4Ã—1% = 0%
+2 / 10
+1%
+4% âˆ’ 3Ã—1% = 1%
+3 / 10
+2%
+4% âˆ’ 2Ã—1% = 2%
+4 / 10
+3%
+4% âˆ’ 1Ã—1% = 3%
+5 / 10
+4%
+Base
+6 / 10
+6%
+4% + 1Ã—2% = 6%
+7 / 10
+8%
+4% + 2Ã—2% = 8%
+8 / 10
+10%
+4% + 3Ã—2% = 10%
+9 / 10
+12%
+4% + 4Ã—2% = 12%
+10 / 10
+14%
+4% + 5Ã—2% = 14%
+6. Stat 4 â€” DÃ‰FENSE  (RÃ©sistance au dÃ©passement)
+La DÃ‰FENSE ne s'active que si le jet d'AUDACE de l'adversaire a rÃ©ussi. Elle reprÃ©sente la chance pour le dÃ©fenseur de bloquer le dÃ©passement malgrÃ© tout. Si la DÃ‰FENSE rÃ©ussit, aucun changement de position. Si elle Ã©choue, l'adversaire passe.
+Formule : sous 5/10 â†’ âˆ’5%/point. Ã€ 5/10 â†’ 20%. Sur 5/10 â†’ +10%/point.
+Score DÃ‰FENSE
+Chance de rÃ©sister
+DÃ©tail calcul
+1 / 10
+0%
+20% âˆ’ 4Ã—5% = 0%
+2 / 10
+5%
+20% âˆ’ 3Ã—5% = 5%
+3 / 10
+10%
+20% âˆ’ 2Ã—5% = 10%
+4 / 10
+15%
+20% âˆ’ 1Ã—5% = 15%
+5 / 10
+20%
+Base
+6 / 10
+30%
+20% + 1Ã—10% = 30%
+7 / 10
+40%
+20% + 2Ã—10% = 40%
+8 / 10
+50%
+20% + 3Ã—10% = 50%
+9 / 10
+60%
+20% + 4Ã—10% = 60%
+10 / 10
+70%
+20% + 5Ã—10% = 70%
+ðŸ”„  RÃ‰SOLUTION DUEL
+Jet AUDACE attaquant â†’ si rÃ©ussi : jet DÃ‰FENSE dÃ©fenseur â†’ si ratÃ© : l'attaquant gagne 1 place, le dÃ©fenseur en perd 1. Un seul duel par paire de voitures adjacentes par tour.
+7. Stat 5 â€” ENDURANCE  (FiabilitÃ© mÃ©canique)
+Ã€ chaque tour, chaque voiture effectue un jet d'ENDURANCE. Si le rÃ©sultat du d100 est infÃ©rieur ou Ã©gal au pourcentage de casse, la voiture est Ã©liminÃ©e dÃ©finitivement (abandon). Elle est placÃ©e en derniÃ¨re position du classement final.
+Formule : sous 5/10 â†’ +0.5%/point. Ã€ 5/10 â†’ 5%. Sur 5/10 â†’ âˆ’1%/point.
+Score ENDURANCE
+% de casse par tour
+DÃ©tail calcul
+1 / 10
+7%
+5% + 4Ã—0.5% = 7%
+2 / 10
+6.5%
+5% + 3Ã—0.5% = 6.5%
+3 / 10
+6%
+5% + 2Ã—0.5% = 6%
+4 / 10
+5.5%
+5% + 1Ã—0.5% = 5.5%
+5 / 10
+5%
+Base
+6 / 10
+4%
+5% âˆ’ 1Ã—1% = 4%
+7 / 10
+3%
+5% âˆ’ 2Ã—1% = 3%
+8 / 10
+2%
+5% âˆ’ 3Ã—1% = 2%
+9 / 10
+1%
+5% âˆ’ 4Ã—1% = 1%
+10 / 10
+0%
+Aucun risque
+â˜ ï¸  Ã‰LIMINATION
+Un abandon est dÃ©finitif. La voiture ne participe plus aux tours suivants. Elle est classÃ©e en derniÃ¨re position (ex-aequo avec les autres abandons, dÃ©partagÃ©s par le tour d'abandon).
+8. Stat 6 â€” PNEUS  (DÃ©gradation progressive)
+Le mÃ©canisme PNEUS est une dÃ©gradation cumulative qui s'aggrave tour aprÃ¨s tour. Ã€ chaque tour, un jet d100 est effectuÃ©. Si le rÃ©sultat est infÃ©rieur ou Ã©gal au seuil (Score Pneus Ã— NumÃ©ro du tour), la voiture perd automatiquement 1 place. Aucune stat adverse ne peut contrer cet effet.
+8a. Score Pneus selon la statistique
+Stat PNEUS
+Score Pneus
+Note
+1 / 10
+10
+DÃ©gradation maximale
+2 / 10
+9
+3 / 10
+8
+4 / 10
+7
+5 / 10
+6
+Valeur neutre
+6 / 10
+5
+7 / 10
+4
+8 / 10
+3
+9 / 10
+2
+10 / 10
+1
+DÃ©gradation minimale
+8b. Seuil de perte de place par tour  =  Score Ã— NumÃ©ro du tour
+Si d100 â‰¤ (Score Pneus Ã— Tour) â†’ perte de 1 place immÃ©diate et immuable.
+Tour
+Stat 1/10 (Score 10)
+Stat 5/10 (Score 6)
+Stat 7/10 (Score 4)
+Stat 10/10 (Score 1)
+Tour 1
+â‰¤10% â€” risque faible
+â‰¤6%
+â‰¤4%
+â‰¤1%
+Tour 2
+â‰¤20%
+â‰¤12%
+â‰¤8%
+â‰¤2%
+Tour 3
+â‰¤30%
+â‰¤18%
+â‰¤12%
+â‰¤3%
+Tour 5
+â‰¤50%  âš ï¸
+â‰¤30%
+â‰¤20%
+â‰¤5%
+Tour 7
+â‰¤70%  âš ï¸
+â‰¤42%
+â‰¤28%
+â‰¤7%
+Tour 9
+â‰¤90%  ðŸ”´
+â‰¤54%
+â‰¤36%
+â‰¤9%
+Tour 10
+â‰¤100%  â˜ ï¸ CERTAINE
+â‰¤60%
+â‰¤40%
+â‰¤10%
+âš ï¸  ATTENTION
+Un Score Pneus de 10 (stat 1/10) rend la perte de place CERTAINE au tour 10 (seuil = 100%). C'est un risque calculÃ© Ã  assumer.
+ðŸ”§  ARRÃŠTS AUX STANDS
+9. MÃ©canique des arrÃªts aux stands
+Le joueur peut programmer 0, 1 ou 2 arrÃªts aux stands avant la course. Chaque arrÃªt coÃ»te 1 point retirÃ© du budget total de 25 points. Le joueur choisit Ã  quel tour l'arrÃªt aura lieu.
+ArrÃªts prÃ©vus
+CoÃ»t budget
+Effet sur le calcul PNEUS
+0  (dÃ©faut)
+0 point
+Les pneus subissent les 10 tours sans rÃ©initialisation
+1
+âˆ’1 point
+Au tour choisi, le compteur de tours est remis Ã  1 pour le calcul PNEUS
+2
+âˆ’2 points
+Deux remises Ã  1 du compteur de tours PNEUS au tour choisi pour chaque arrÃªt
+ðŸ”  RÃ‰INITIALISATION
+Un arrÃªt aux stands remet le numÃ©ro de tour Ã  1 pour le calcul PNEUS uniquement. Exemple : arrÃªt au tour 5 â†’ le tour 6 compte comme tour 1 dans la formule (Score Ã— 1 = risque minimal). Le tour 7 compte comme tour 2, etc.
+ðŸ“  CHOIX DU TOUR
+Le joueur choisit avant la course le numÃ©ro exact du tour oÃ¹ l'arrÃªt sera effectuÃ©. Ce choix est figÃ©. L'arrÃªt est automatiquement simulÃ© Ã  ce tour.
+âš™ï¸  SÃ‰QUENCE DE SIMULATION COMPLÃˆTE
+10. Ordre d'exÃ©cution â€” Qualifications
+Ã‰tape 1 â€” BLOC : Calculer le delta de temps BLOC pour chaque voiture.
+Ã‰tape 2 â€” Tri : Trier toutes les voitures par temps croissant (meilleur temps = pole provisoire). En cas d'Ã©galitÃ© parfaite, tirage alÃ©atoire.
+Ã‰tape 3 â€” GRIP : Pour chaque voiture dont le GRIP â‰  5/10, lancer 1d100. Si le rÃ©sultat â‰¤ % GRIP â†’ appliquer le mouvement de places (+ ou âˆ’).
+Ã‰tape 4 â€” RÃ©sultat : La grille rÃ©sultante est la grille de dÃ©part officielle.
+11. Ordre d'exÃ©cution â€” Course (par tour, de 1 Ã  10)
+Ã‰tape A â€” Stands : Si un arrÃªt aux stands est programmÃ© Ã  ce tour : remettre le compteur PNEUS Ã  1.
+Ã‰tape B â€” ENDURANCE : Pour chaque voiture, lancer le jet ENDURANCE (d100 â‰¤ % casse â†’ abandon).
+Ã‰tape C â€” AUDACE / DÃ‰FENSE : Pour chaque paire de voitures adjacentes : jet AUDACE de l'attaquant â†’ si rÃ©ussi, jet DÃ‰FENSE du dÃ©fenseur â†’ si ratÃ©, Ã©change de positions.
+Ã‰tape D â€” PNEUS : Pour chaque voiture encore en course, lancer d100. Si â‰¤ (Score Pneus Ã— NumÃ©ro de tour effectif) â†’ perte de 1 place.
+Ã‰tape E â€” Classement : Mettre Ã  jour le classement. Passer au tour suivant.
+12. Classement final
+Ã€ l'issue du tour 10 : voitures classÃ©es par position. Les abandons sont classÃ©s aprÃ¨s tous les finissants, triÃ©s par tour d'abandon (le plus tardif est mieux classÃ©).
+ðŸ“Š  RÃ‰CAPITULATIF DES STATISTIQUES
+Stat
+Phase
+5/10 = base
+âˆ’1 pt / point sous 5
++1 pt / point sur 5
+Min (1/10)
+Max (10/10)
+BLOC
+Qualif
+Â± 0 sec
+âˆ’1 sec/pt
++1 sec/pt
++4 sec
+âˆ’5 sec
+GRIP
+Qualif
+Neutre (0%)
+âˆ’4% chances/pt
++4% chances/pt
+âˆ’16% (âˆ’4 pl)
++20% (+5 pl)
+AUDACE
+Course
+4%
+âˆ’1%/pt
++2%/pt
+0%
+14%
+DÃ‰FENSE
+Course
+20%
+âˆ’5%/pt
++10%/pt
+0%
+70%
+ENDURANCE
+Course
+5% casse/tour
+âˆ’0.5%/pt
++1%/pt (meilleur)
+7%/tour
+0%/tour
+PNEUS
+Course
+Score = 6
++1 au score/pt
+âˆ’1 au score/pt
+Score = 10
+Score = 1
+ðŸ  EXEMPLE DE BUILD STRATÃ‰GIQUE
+13. Build "Attaque totale" (circuit rapide)
+Stat
+Points
+Effet clÃ©
+BLOC
+8/10
+âˆ’3 sec en qualif â†’ dÃ©part avancÃ©
+GRIP
+5/10
+Neutre
+AUDACE
+9/10
+12% de chance de dÃ©passer / tour
+DÃ‰FENSE
+2/10
+5% de rÃ©sistance seulement âš ï¸
+ENDURANCE
+7/10
+3% de casse / tour
+PNEUS
+4/10  (0 arrÃªt)
+Score = 7 â†’ â‰¤70% au tour 10 âš ï¸
+TOTAL
+35/25 pts âŒ
+DÃ©passe le budget ! Ã€ rÃ©Ã©quilibrer.
+Ce build illustre les compromis : une DÃ‰FENSE trÃ¨s basse rend la voiture facile Ã  dÃ©passer, et des PNEUS Ã  4/10 crÃ©ent un risque sÃ©rieux en fin de course. Le budget oblige Ã  des choix.
+14. Points Ã  dÃ©finir en phase 2
+Profils de circuits (circuit rapide, technique, mixte, imprÃ©visible) : quelles stats sont boostÃ©es / pÃ©nalisÃ©es selon le type de circuit.
+SystÃ¨me de points F1 pour le classement gÃ©nÃ©ral saison (25-18-15-12-10-8-6-4-2-1 ou systÃ¨me maison).
+Interface joueur : formulaire de configuration des stats avant chaque Grand Prix.
+Historique et statistiques par joueur : rÃ©sultats, Ã©volution de saison.
+Gestion des Ã©galitÃ©s de positions en course (plusieurs voitures au mÃªme rang aprÃ¨s un tour).
+â€” Fin du document de spÃ©cifications SimuF1 v3.0 â€”

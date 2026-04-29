@@ -3,9 +3,20 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, ClipboardList, MessageCircle, Trophy, Users } from "lucide-react";
+import { CalendarDays, ClipboardList, Gamepad2, MessageCircle, Route, Trophy, Users } from "lucide-react";
 
 const releaseNotes = [
+  {
+    version: "v2.0.0",
+    timestamp: "29/04/2026 · 12h00",
+    details: [
+      "Interface harmonisee: onglets Circuits et SimuF1 partout, desktop + mobile.",
+      "SimuF1 complet: config, course, classement, historique, sauvegarde Firestore.",
+      "Regles affinees: budget 31, BOOST/PNEUS, arrets 0-3, logs plus clairs.",
+      "Live ameliore: auto-course dimanche midi (Paris) + countdown + messages mieux rythmes.",
+      "Donnees fiabilisees: historique stable et participants valides mieux comptes.",
+    ],
+  },
   {
     version: "v1.5.6",
     timestamp: "24/04/2026 · 00h00",
@@ -144,6 +155,8 @@ export default function VersionsPage() {
     { key: "chat", label: "Chat", icon: MessageCircle },
     { key: "results", label: "Resultats", icon: Trophy },
     { key: "members", label: "Pilotes", icon: Users },
+    { key: "circuits", label: "Circuits", icon: Route },
+    { key: "simuf1", label: "SimuF1", icon: Gamepad2 },
   ];
 
   useEffect(() => {
@@ -188,7 +201,7 @@ export default function VersionsPage() {
           <div className="border border-white/10 bg-[#010d1e] p-4 sm:p-6">
             <p className="text-[11px] uppercase tracking-[0.18em] text-[#d31f28]">Notes de version</p>
             <p className="mt-3 text-sm text-gray-300">
-              Version actuelle : <span className="text-white font-bold">v1.5.6</span>
+              Version actuelle : <span className="text-white font-bold">v2.0.0</span>
             </p>
 
           </div>
@@ -219,7 +232,9 @@ export default function VersionsPage() {
       <div className="fixed bottom-0 left-0 right-0 z-50">
         <nav className="border-t border-white/10 bg-[#000a18]/95 backdrop-blur">
           <div className="mx-auto max-w-7xl px-2 py-2">
-            <div className="grid grid-cols-5 gap-1">
+            <div
+              className={`grid gap-1 ${navItems.length === 7 ? "grid-cols-7" : navItems.length === 6 ? "grid-cols-6" : "grid-cols-5"}`}
+            >
               {navItems.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -281,7 +296,7 @@ export default function VersionsPage() {
               </a>
               <span className="text-white/20">|</span>
               <span className="text-[8px] sm:text-[9px] font-medium tracking-[0.28em] text-white/28 whitespace-normal break-words">
-                AB 2026 v1
+                AB 2026 v2
               </span>
             </div>
           </div>
