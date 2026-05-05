@@ -2133,7 +2133,7 @@ export default function Dashboard() {
             <div className={`flex flex-wrap items-center justify-between gap-3 border-b border-[#343845] pb-5 mb-6 ${tab === "chat" ? "px-3 sm:px-0" : ""}`}>
               <div className="flex items-center gap-3">
                 <div className="w-1 h-8 bg-[#e10600]" />
-                <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-[0.09em] text-white">
+                <h2 className="f1-title text-2xl sm:text-3xl font-black uppercase tracking-[0.09em] text-white">
                   {tab === "events" && <>Parties a venir — <span className="text-[#e10600]">{nextEventDays !== null ? `J-${nextEventDays}` : "—"}</span></>}
                   {tab === "proposition" && <>Propositions de dates</>}
                   {tab === "chat" && <>{chatView === "evolution" ? "Evolution Appli" : "Chat"}</>}
@@ -3147,7 +3147,7 @@ export default function Dashboard() {
                         </span>
                       )}
                     </span>
-                    <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.06em] leading-none">{item.label}</span>
+                    <span className="text-[8px] sm:text-[9px] font-medium uppercase tracking-[0.06em] leading-none">{item.label}</span>
                   </button>
                 );
               })}

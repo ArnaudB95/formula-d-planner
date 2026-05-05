@@ -883,14 +883,22 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
               <p className="mt-3 text-xs uppercase tracking-[0.16em] text-[#ffd0cd]">Départ auto dans {countdownLabel}</p>
             </button>
 
-            <button
-              type="button"
+            <div
+              role="button"
+              tabIndex={0}
               onClick={() => {
                 if (!latestPublishedRace?.id) return;
                 setSelectedRaceId(latestPublishedRace.id);
                 setView("race-detail");
               }}
-              className="border border-white/15 bg-[#121419] p-4 sm:p-5 text-left hover:border-white/30 transition"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  if (!latestPublishedRace?.id) return;
+                  setSelectedRaceId(latestPublishedRace.id);
+                  setView("race-detail");
+                }
+              }}
+              className="border border-white/15 bg-[#121419] p-4 sm:p-5 text-left hover:border-white/30 transition cursor-pointer"
             >
               <h4 className="text-lg sm:text-xl font-black uppercase tracking-[0.08em] text-white">Détail du dernier Grand Prix</h4>
               {!latestPublishedRace ? (
@@ -932,11 +940,11 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
 
                         return (
                           <div key={car.carId} className="flex w-[31%] max-w-[170px] min-w-[92px] flex-col items-center">
-                            <div className="mb-1 text-center">
+                            <div className="mb-1 flex flex-col items-center text-center">
                               <button
                                 type="button"
                                 onClick={(e) => goToTeamPage(car.teamName, e)}
-                                className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.08em] text-white truncate hover:text-[#ff6f66]"
+                                className="text-[10px] sm:text-[11px] font-semibold text-white truncate hover:text-[#ff6f66] w-full text-center"
                                 title={`Voir l'écurie ${car.teamName}`}
                               >
                                 {car.pilotName}
@@ -944,13 +952,13 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
                               <button
                                 type="button"
                                 onClick={(e) => goToTeamPage(car.teamName, e)}
-                                className="text-[9px] sm:text-[10px] uppercase tracking-[0.08em] text-gray-400 truncate hover:text-[#ff9a94]"
+                                className="text-[9px] sm:text-[10px] font-normal text-gray-400 truncate hover:text-[#ff9a94] w-full text-center"
                                 title={`Voir l'écurie ${car.teamName}`}
                               >
                                 {car.teamName}
                               </button>
                             </div>
-                            <div className={`w-full border ${toneClass} ${heightClass} flex flex-col items-center justify-center px-2 py-1.5 sm:py-2`}>
+                            <div className={`w-full border ${toneClass} ${heightClass} flex flex-col items-center justify-end px-2 py-1.5 sm:py-2`}>
                               {order === 1 && (
                                 <span className="mb-0.5 inline-flex items-center" aria-label="Couronne première place" title="Couronne première place">
                                   <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -958,8 +966,8 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
                                   </svg>
                                 </span>
                               )}
-                              <span className={`${numberClass} font-black leading-none`}>{order}</span>
-                              <span className={`mt-0.5 ${pointsClass} font-black uppercase tracking-[0.12em] leading-none`}>{car.points} pts</span>
+                              <span className={`${numberClass} font-bold leading-none`}>{order}</span>
+                              <span className={`mt-0.5 ${pointsClass} font-medium uppercase tracking-[0.08em] leading-none`}>{car.points} pts</span>
                             </div>
                           </div>
                         );
@@ -968,7 +976,7 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
                   </div>
                 </div>
               )}
-            </button>
+            </div>
           </div>
 
           <div className="border border-[#30343e] bg-[#171a22]/95 p-4 sm:p-6">
@@ -1095,7 +1103,7 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
         <div className="space-y-4">
           <div className="border border-[#2f333d] bg-[#161920] p-4 sm:p-6">
             <div className="flex items-center justify-between mb-6">
-              <h4 className="text-2xl sm:text-3xl font-black uppercase tracking-[0.08em] text-white">Championnat 2026</h4>
+              <h4 className="f1-title text-2xl sm:text-3xl font-black uppercase tracking-[0.08em] text-white">Championnat 2026</h4>
               <button
                 type="button"
                 onClick={() => setView("home")}

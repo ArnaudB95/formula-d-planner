@@ -44,10 +44,18 @@ body {
   max-width: 100%;
 }
 
-.font-black.uppercase {
-  font-family: var(--font-bebas-neue), "Arial Narrow", sans-serif;
-  letter-spacing: 0.07em;
-  line-height: 0.95;
+@font-face {
+  font-family: "Formula1Bold";
+  src: url("/fonts/Formula1-Bold_web_0.ttf") format("truetype");
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+.f1-title {
+  font-family: "Formula1Bold", var(--font-bebas-neue), "Arial Narrow", sans-serif;
+  letter-spacing: 0.04em;
+  line-height: 1;
 }
 
 @keyframes fd-row-reveal {

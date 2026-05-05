@@ -209,7 +209,7 @@ export default function TeamProfilePanel({ teamSlug, onBack }: TeamProfilePanelP
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-[10px] uppercase tracking-[0.2em] text-[#b8becd]">Fiche écurie</p>
-            <h2 className="mt-1 text-2xl sm:text-4xl font-black uppercase tracking-[0.08em] text-white">{teamName}</h2>
+            <h2 className="f1-title mt-1 text-2xl sm:text-4xl font-black uppercase tracking-[0.08em] text-white">{teamName}</h2>
           </div>
           <button
             type="button"
