@@ -1,0 +1,73 @@
+RAPPORT DE SIMULATION SIMUF1
+Date: 2026-04-30
+Scenario: 3 courses, participants fictifs (3 a 6), 2 voitures chacun, 3 circuits differents
+
+=== SIMU-1 | Monaco (S1-W02) ===
+Participants: 3 (voitures: 6)
+Stats moyennes des voitures engagees:
+  BLOC 4.00 | GRIP 6.33 | AUDACE 4.50 | DEFENSE 4.00 | ENDURANCE 4.83 | PNEUS 5.33
+Classement final:
+  P1 - I. Rossi #2B [Helios GP 2] | Arrivee | points=25
+  P2 - L. Martin #1B [Crimson Torque 1] | Arrivee | points=18
+  P3 - N. Duval #2A [Helios GP 2] | DNF (tour 10) | points=0
+  P4 - E. Hayashi #3A [Crimson Torque 3] | DNF (tour 8) | points=0
+  P5 - S. Kova #1A [Crimson Torque 1] | DNF (tour 7) | points=0
+  P6 - R. Silva #3B [Crimson Torque 3] | DNF (tour 6) | points=0
+Indicateurs course:
+  DNF: 4/6 (66.7%) | tentatives audace=37 | audace reussie=1 | defenses reussies=0 | pertes adherence pneus=7
+
+=== SIMU-2 | Suzuka (S1-W11) ===
+Participants: 6 (voitures: 12)
+Stats moyennes des voitures engagees:
+  BLOC 5.42 | GRIP 4.75 | AUDACE 5.00 | DEFENSE 4.58 | ENDURANCE 4.50 | PNEUS 5.17
+Classement final:
+  P1 - P. Novak #5B [Polar Apex 5] | Arrivee | points=25
+  P2 - J. Hart #2A [Polar Apex 2] | Arrivee | points=18
+  P3 - I. Rossi #6B [Helios GP 6] | Arrivee | points=15
+  P4 - E. Hayashi #1B [Titan Lane 1] | Arrivee | points=12
+  P5 - L. Martin #4B [Helios GP 4] | Arrivee | points=10
+  P6 - P. Novak #3B [Arc Nova 3] | Arrivee | points=8
+  P7 - S. Kova #1A [Titan Lane 1] | Arrivee | points=6
+  P8 - N. Duval #2B [Polar Apex 2] | Arrivee | points=4
+  P9 - I. Rossi #3A [Arc Nova 3] | DNF (tour 10) | points=0
+  P10 - R. Silva #6A [Helios GP 6] | DNF (tour 8) | points=0
+  P11 - N. Duval #5A [Polar Apex 5] | DNF (tour 5) | points=0
+  P12 - L. Martin #4A [Helios GP 4] | DNF (tour 5) | points=0
+Indicateurs course:
+  DNF: 4/12 (33.3%) | tentatives audace=94 | audace reussie=11 | defenses reussies=4 | pertes adherence pneus=22
+
+=== SIMU-3 | Interlagos (S1-W18) ===
+Participants: 4 (voitures: 8)
+Stats moyennes des voitures engagees:
+  BLOC 4.38 | GRIP 5.50 | AUDACE 4.63 | DEFENSE 5.50 | ENDURANCE 3.63 | PNEUS 5.13
+Classement final:
+  P1 - L. Martin #1A [Titan Lane 1] | Arrivee | points=25
+  P2 - S. Kova #4A [Arc Nova 4] | Arrivee | points=18
+  P3 - E. Hayashi #2B [Falcon Works 2] | Arrivee | points=15
+  P4 - R. Silva #3B [Helios GP 3] | Arrivee | points=12
+  P5 - P. Novak #2A [Falcon Works 2] | Arrivee | points=10
+  P6 - J. Hart #1B [Titan Lane 1] | Arrivee | points=8
+  P7 - P. Novak #3A [Helios GP 3] | DNF (tour 10) | points=0
+  P8 - I. Rossi #4B [Arc Nova 4] | DNF (tour 9) | points=0
+Indicateurs course:
+  DNF: 2/8 (25.0%) | tentatives audace=67 | audace reussie=7 | defenses reussies=2 | pertes adherence pneus=11
+
+=== ANALYSE SYNTHETIQUE ===
+Au global, 26 voitures ont pris le depart et 10 ont abandonne (38.5%).
+Le ratio de succes des attaques AUDACE est de 19/198 (9.6%).
+Constats:
+1) Le poids de l'ENDURANCE est structurellement tres fort: chaque tour force un test de casse pour toutes les voitures actives.
+2) Les pneus provoquent de nombreuses permutations, ce qui augmente la variabilite meme sans duel AUDACE/DEFENSE.
+3) Les bonus/malus circuit orientent clairement les profils performants, mais l'effet aleatoire des jets reste dominant a court echantillon (3 courses).
+
+=== CRITIQUE EXPERTE DE LA QUALITE DE SIMULATION ===
+Points solides:
+- Le systeme est transparent (logs de des complets par phase/stat) et donc audit-able.
+- Les regles sont coherentes avec un jeu de gestion: qualification statique, course dynamique, interactions attacker/defender.
+- L'influence du circuit est multidimensionnelle (boost/penalite) et lisible pour les joueurs.
+Limites methodologiques observees:
+- Echantillon faible: 3 courses ne permettent pas d'estimer une meta stable ni d'evaluer l'equilibrage fin.
+- Variables non modelisees: meteo, incidents multi-voitures, safety car, usure differenciee selon style de pilotage.
+- Distribution des stats aleatoires non representee des comportements joueurs reels (optimisation, archetypes de build).
+- Le classement inclut toujours les DNF en fin d'ordre, mais leur score est fixe a 0 point.
+Niveau de confiance sur cette simulation ponctuelle: moyen-faible pour equilibrage global, moyen pour verifier la coherence mecanique.

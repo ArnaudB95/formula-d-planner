@@ -3,9 +3,31 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 import { CalendarDays, ClipboardList, Gamepad2, MessageCircle, Route, Trophy, Users } from "lucide-react";
+import { getAuth, getFirestore } from "@/lib/firebase";
 
 const releaseNotes = [
+  {
+    version: "v2.2.0",
+    timestamp: "05/05/2026 · 19h00",
+    details: [
+      "Qui dit nouvelle version v2, dit nouveau design !",
+      "Navigation claire: retours unifiés, onglets respectés, parcours menu/logo/sous-pages cohérent.",
+      "SimuF1 Écuries: fiche intégrée au shell global, design résultats/points, casques pilotes premium + Pilote 1/Pilote 2 partout.",
+      "Mobile & identité visuelle: couleurs d’écuries verrouillées (Bear’s Fury Crew rouge, Tiger’s Fury Crew orange, FRX turquoise), surbrillance championnat en rouge, rendu vertical optimisé.",
+    ],
+  },
+  {
+    version: "v2.1.0",
+    timestamp: "03/05/2026 · 12h00",
+    details: [
+      "SimuF1 auto: circuits hebdo + lancement serveur dimanche midi (Paris) + passage GP suivant.",
+      "Données course: logs complets (historique/dernier GP), Interlagos régénéré, points + championnats recalculés.",
+      "UX/Analyse: détail dernier GP unifié, classements pilotes/écuries, configs en jauges compactes, mobile/retours harmonisés.",
+    ],
+  },
   {
     version: "v2.0.0",
     timestamp: "29/04/2026 · 12h00",
@@ -148,12 +170,14 @@ const releaseNotes = [
 export default function VersionsPage() {
   const router = useRouter();
   const [allowed, setAllowed] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [resolvedAvatar, setResolvedAvatar] = useState("");
 
   const navItems = [
     { key: "events", label: "Parties", icon: CalendarDays },
     { key: "proposition", label: "Propositions", icon: ClipboardList },
-    { key: "chat", label: "Chat", icon: MessageCircle },
     { key: "results", label: "Resultats", icon: Trophy },
+    { key: "chat", label: "Chat", icon: MessageCircle },
     { key: "members", label: "Pilotes", icon: Users },
     { key: "circuits", label: "Circuits", icon: Route },
     { key: "simuf1", label: "SimuF1", icon: Gamepad2 },
@@ -169,39 +193,133 @@ export default function VersionsPage() {
     setAllowed(true);
   }, [router]);
 
+  useEffect(() => {
+    const auth = getAuth();
+    if (!auth) {
+      setResolvedAvatar("");
+      return;
+    }
+
+    const firestore = getFirestore();
+
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setResolvedAvatar("");
+        return;
+      }
+
+      const authAvatar = String(user.photoURL || "").trim();
+
+      if (!firestore || !user.email) {
+        setResolvedAvatar(authAvatar);
+        return;
+      }
+
+      try {
+        const profileSnap = await getDoc(doc(firestore, "members", user.email));
+        const profileAvatar = String(profileSnap.data()?.avatar || "").trim();
+        setResolvedAvatar(profileAvatar || authAvatar);
+      } catch {
+        setResolvedAvatar(authAvatar);
+      }
+    });
+
+    return () => unsub();
+  }, []);
+
   if (!allowed) return null;
 
   return (
-    <main className="min-h-screen bg-[#000e22] text-white">
-      <div className="h-1 w-full bg-[#d31f28]" />
+    <main className="min-h-screen bg-[#0f1014] text-white">
+      <div className="h-1 w-full bg-[#e10600]" />
       <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-6 pb-28 sm:pb-36">
         <header className="flex items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
             <Link href="/dashboard" className="shrink-0" aria-label="Aller aux Parties">
               <img
-                src="https://cdn.discordapp.com/attachments/1068885680568148019/1494439845198696489/FD.png?ex=69e29d10&is=69e14b90&hm=fdeba7a50be29eb581e84c0690762d2cf5da649aeb5f6735349f8b6ddbc0ffb9&"
+                src="/fd-icon.png"
                 alt="Formula D"
                 className="h-7 sm:h-14 w-auto object-contain"
               />
             </Link>
+
+            <div className="info-laser-border h-14 flex-1 min-w-0 max-w-[640px] bg-[#121419] px-3 sm:px-4 flex items-center overflow-hidden">
+              <p className="text-[11px] sm:text-xs uppercase tracking-[0.14em] text-gray-200 leading-4 whitespace-normal break-words">
+                <span className="text-[#e10600] mr-2">Systeme</span>
+                Historique des mises a jour Formula D Planner.
+              </p>
+            </div>
           </div>
 
-          <div className="shrink-0">
+          <div className="shrink-0 flex items-center gap-2">
             <button
               type="button"
               onClick={() => router.push("/dashboard")}
-              className="border border-white/20 px-4 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-gray-200 hover:text-white hover:border-white/40 transition"
+              className="inline-flex w-auto items-center justify-center border border-[#d65a62]/45 bg-[#5b2024]/35 px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#ffd3d0] transition hover:border-[#ff6f66]/55 hover:bg-[#692329]/45 hover:text-white"
             >
               Retour
             </button>
+
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsProfileMenuOpen((prev) => !prev)}
+                className="w-9 h-9 sm:w-14 sm:h-14 rounded-[2px] p-[2px] bg-black transition"
+                aria-label="Ouvrir le menu profil"
+              >
+                <div className="w-full h-full rounded-[2px] overflow-hidden bg-[#e10600] flex items-center justify-center">
+                  {resolvedAvatar ? (
+                    <div
+                      aria-label="Avatar"
+                      className="w-full h-full rounded-[inherit] bg-center bg-cover"
+                      style={{ backgroundImage: `url("${resolvedAvatar}")` }}
+                    />
+                  ) : (
+                    <svg className="w-5 h-5 sm:w-8 sm:h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                  )}
+                </div>
+              </button>
+
+              {isProfileMenuOpen && (
+                <div className="absolute right-0 top-full mt-2 w-56 bg-[#13151b] border border-white/20 rounded-lg shadow-xl z-50 p-2">
+                  <Link
+                    href="/dashboard?tab=events"
+                    className="block rounded px-3 py-2 text-sm text-gray-200 hover:bg-white/10"
+                  >
+                    Parties
+                  </Link>
+                  <Link
+                    href="/dashboard?tab=results"
+                    className="block rounded px-3 py-2 text-sm text-gray-200 hover:bg-white/10"
+                  >
+                    Resultats
+                  </Link>
+                  <Link
+                    href="/dashboard?tab=simuf1"
+                    className="block rounded px-3 py-2 text-sm text-gray-200 hover:bg-white/10"
+                  >
+                    SimuF1
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/dashboard")}
+                    className="mt-1 w-full text-left rounded px-3 py-2 text-sm text-[#ffd3d0] hover:bg-[#5b2024]/35"
+                  >
+                    Retour tableau de bord
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
-        <section className="mt-4 border-l-4 border-[#d31f28] border border-white/10 bg-black/30 p-4 sm:p-6">
-          <div className="border border-white/10 bg-[#010d1e] p-4 sm:p-6">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-[#d31f28]">Notes de version</p>
+        <section className="mt-4 border-l-4 border-[#e10600] border border-white/10 bg-black/30 p-4 sm:p-6">
+          <div className="border border-white/10 bg-[#121419] p-4 sm:p-6">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-[#e10600]">Notes de version</p>
             <p className="mt-3 text-sm text-gray-300">
-              Version actuelle : <span className="text-white font-bold">v2.0.0</span>
+              Version actuelle : <span className="text-white font-bold">v2.2.0</span>
             </p>
 
           </div>
@@ -210,7 +328,7 @@ export default function VersionsPage() {
             <h2 className="text-xs font-black uppercase tracking-[0.22em] text-gray-300">Historique recent</h2>
             <ol className="mt-4 space-y-3">
               {releaseNotes.map((item) => (
-                <li key={item.version} className="border-l-2 border-[#d31f28]/70 pl-3">
+                <li key={item.version} className="border-l-2 border-[#e10600]/70 pl-3">
                   <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 sm:gap-3">
                     <p className="text-sm font-bold text-white whitespace-normal break-words">{item.version}</p>
                     <p className="text-[10px] uppercase tracking-[0.08em] sm:tracking-[0.12em] text-gray-500 whitespace-normal break-words">{item.timestamp}</p>
@@ -230,7 +348,7 @@ export default function VersionsPage() {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-50">
-        <nav className="border-t border-white/10 bg-[#000a18]/95 backdrop-blur">
+        <nav className="border-t border-white/10 bg-[#0c0d11]/95 backdrop-blur">
           <div className="mx-auto max-w-7xl px-2 py-2">
             <div
               className={`grid gap-1 ${navItems.length === 7 ? "grid-cols-7" : navItems.length === 6 ? "grid-cols-6" : "grid-cols-5"}`}
@@ -252,7 +370,7 @@ export default function VersionsPage() {
           </div>
         </nav>
 
-        <div className="border-t border-white/10 bg-[#000a18]/95">
+        <div className="border-t border-white/10 bg-[#0c0d11]/95">
           <div className="mx-auto max-w-7xl px-3 sm:px-6 py-1.5">
             <div className="flex flex-wrap justify-center items-center gap-x-2 gap-y-1 text-[9px] sm:text-[10px] uppercase tracking-[0.12em]">
               <a
@@ -305,3 +423,4 @@ export default function VersionsPage() {
     </main>
   );
 }
+

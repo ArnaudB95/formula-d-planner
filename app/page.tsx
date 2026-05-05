@@ -60,8 +60,8 @@ export default function Landing() {
   };
 
   return (
-    <main className="min-h-screen bg-[#000e22] text-white">
-      <div className="h-1 w-full bg-[#d31f28]" />
+    <main className="min-h-screen bg-[#0f1014] text-white">
+      <div className="h-1 w-full bg-[#e10600]" />
 
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
         <div className="max-w-3xl">
@@ -70,13 +70,13 @@ export default function Landing() {
             alt="Formula D"
             className="h-12 sm:h-14 w-auto mb-4 object-contain"
           />
-          <p className="text-[11px] sm:text-xs font-bold tracking-[0.28em] sm:tracking-[0.4em] text-[#d31f28] uppercase mb-2">Formula D</p>
+          <p className="text-[11px] sm:text-xs font-bold tracking-[0.28em] sm:tracking-[0.4em] text-[#e10600] uppercase mb-2">Formula D</p>
         </div>
 
         <button
           onClick={login}
           disabled={isSigningIn}
-          className="mt-8 sm:mt-10 w-full max-w-2xl bg-[#d31f28] px-6 py-4 sm:py-5 text-xs sm:text-base font-black uppercase tracking-[0.18em] sm:tracking-[0.3em] text-white shadow-[0_25px_90px_rgba(211,31,40,0.2)] transition hover:bg-[#b81d23]"
+          className="mt-8 sm:mt-10 w-full max-w-2xl bg-[#e10600] px-6 py-4 sm:py-5 text-xs sm:text-base font-black uppercase tracking-[0.18em] sm:tracking-[0.3em] text-white shadow-[0_25px_90px_rgba(211,31,40,0.2)] transition hover:bg-[#ba0500]"
         >
           <span className="inline-flex items-center justify-center gap-3 sm:gap-4">
             <span className="text-xl leading-none">G</span>
@@ -87,3 +87,4 @@ export default function Landing() {
     </main>
   );
 }
+

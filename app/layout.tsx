@@ -1,5 +1,20 @@
 import type { Metadata } from "next";
+import { Bebas_Neue, Noto_Sans } from "next/font/google";
 import "./globals.css";
+
+const bebasNeue = Bebas_Neue({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-bebas-neue",
+  display: "swap",
+});
+
+const notoSans = Noto_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-noto-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Formula D Planner",
@@ -20,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased">
+    <html lang="en" className={`${bebasNeue.variable} ${notoSans.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

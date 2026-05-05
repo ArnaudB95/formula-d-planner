@@ -53,3 +53,5 @@
 - The current implementation supports one active weekly race and stores full race history.
 - Team and driver standings are cumulative and season scoped.
 - All SimuF1 data is isolated under SimuF1 collections and files in this directory.
+- DNF cars receive 0 points, regardless of final listed position.
+- Explicit progressive tire rule (race phase): each failed tire check adds +1 wear stack; at end of lap, a car loses `floor(stacks / 2)` places; a pit stop resets stacks to 0.

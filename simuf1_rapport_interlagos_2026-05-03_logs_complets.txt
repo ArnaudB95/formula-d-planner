@@ -1,0 +1,176 @@
+RAPPORT COMPLET SIMUF1 - 2026-2026-W18
+Date generation: 2026-05-03T17:10:48.597Z
+
+CLASSEMENT COURSE:
+P1 | Alain GRAVIER | Bear's Fury Crew | 10 pts
+P2 | Furious | Tiger's Fury Crew | 9 pts
+P3 | Jean TONNEAU | Bear's Fury Crew | 8 pts
+P4 | Bounty | FrX | 7 pts
+P5 | Fast | Tiger's Fury Crew | 0 pts | DNF T5
+P6 | FuraX | FrX | 0 pts | DNF T3
+
+LOGS COMPLETS (ordre chronologique):
+#1 | QUALIF | BLOC | roll=- threshold=- success=Y | Circuit Interlagos (Imprevisible): boosts endurance, pneus | penalites bloc, grip
+#2 | QUALIF | PNEUS | roll=- threshold=- success=Y | Regle pneus progressive: a chaque echec pneus, +1 stack usure. Chaque 2 stacks font perdre 1 place (arrondi inferieur) a la fin du tour. Un pit stop reset les stacks.
+#3 | QUALIF | BLOC | roll=- threshold=- success=Y | BLOC Jean TONNEAU: P1 provisoire, delta +0.0s (penalite)
+#4 | QUALIF | BLOC | roll=- threshold=- success=Y | BLOC FuraX: P2 provisoire, delta +0.0s (penalite)
+#5 | QUALIF | BLOC | roll=- threshold=- success=Y | BLOC Bounty: P3 provisoire, delta +0.0s (penalite)
+#6 | QUALIF | BLOC | roll=- threshold=- success=Y | BLOC Alain GRAVIER: P4 provisoire, delta +0.0s (penalite)
+#7 | QUALIF | BLOC | roll=- threshold=- success=Y | BLOC Fast: P5 provisoire, delta +0.0s (penalite)
+#8 | QUALIF | BLOC | roll=- threshold=- success=Y | BLOC Furious: P6 provisoire, delta +0.5s (penalite)
+#9 | QUALIF | GRIP | roll=- threshold=- success=N | GRIP Jean TONNEAU: P1 -> P1 (penalite)
+#10 | QUALIF | GRIP | roll=- threshold=- success=N | GRIP FuraX: P2 -> P2 (penalite)
+#11 | QUALIF | GRIP | roll=- threshold=- success=N | GRIP Bounty: P3 -> P3 (penalite)
+#12 | QUALIF | GRIP | roll=- threshold=- success=N | GRIP Alain GRAVIER: P4 -> P4 (penalite)
+#13 | QUALIF | GRIP | roll=- threshold=- success=N | GRIP Fast: P5 -> P5 (penalite)
+#14 | QUALIF | GRIP | roll=66 threshold=30 success=N | GRIP Furious: P6 -> P6 (penalite)
+#15 | COURSE | T1 | ENDURANCE | roll=11 threshold=1.3536000000000001 success=N | Jean TONNEAU tient bon (ENDURANCE, boost)
+#16 | COURSE | T1 | ENDURANCE | roll=35 threshold=1.512 success=N | FuraX tient bon (ENDURANCE, boost)
+#17 | COURSE | T1 | ENDURANCE | roll=42 threshold=1.512 success=N | Bounty tient bon (ENDURANCE, boost)
+#18 | COURSE | T1 | ENDURANCE | roll=41 threshold=1.3536000000000001 success=N | Alain GRAVIER tient bon (ENDURANCE, boost)
+#19 | COURSE | T1 | ENDURANCE | roll=90 threshold=2.088 success=N | Fast tient bon (ENDURANCE, boost)
+#20 | COURSE | T1 | ENDURANCE | roll=49 threshold=2.088 success=N | Furious tient bon (ENDURANCE, boost)
+#21 | COURSE | T1 | AUDACE | roll=97 threshold=16 success=N | Furious tente sur Fast
+#22 | COURSE | T1 | AUDACE | roll=33 threshold=29 success=N | Fast tente sur Alain GRAVIER
+#23 | COURSE | T1 | AUDACE | roll=6 threshold=16 success=Y | Alain GRAVIER tente sur Bounty
+#24 | COURSE | T1 | DEFENSE | roll=98 threshold=20 success=N | Bounty cède face à Alain GRAVIER
+#25 | COURSE | T1 | AUDACE | roll=70 threshold=16 success=N | Alain GRAVIER tente sur FuraX
+#26 | COURSE | T1 | AUDACE | roll=55 threshold=16 success=N | FuraX tente sur Jean TONNEAU
+#27 | COURSE | T1 | PNEUS | roll=34 threshold=5 success=N | Jean TONNEAU gere ses pneus: stack 0 (PNEUS, boost)
+#28 | COURSE | T1 | PNEUS | roll=59 threshold=5 success=N | FuraX gere ses pneus: stack 0 (PNEUS, boost)
+#29 | COURSE | T1 | PNEUS | roll=5 threshold=5 success=Y | Alain GRAVIER use ses pneus: stack 1 (PNEUS, boost)
+#30 | COURSE | T1 | PNEUS | roll=41 threshold=5 success=N | Bounty gere ses pneus: stack 0 (PNEUS, boost)
+#31 | COURSE | T1 | PNEUS | roll=13 threshold=3 success=N | Fast gere ses pneus: stack 0 (PNEUS, boost)
+#32 | COURSE | T1 | PNEUS | roll=27 threshold=5 success=N | Furious gere ses pneus: stack 0 (PNEUS, boost)
+#33 | COURSE | T2 | ENDURANCE | roll=19 threshold=1.3536000000000001 success=N | Jean TONNEAU tient bon (ENDURANCE, boost)
+#34 | COURSE | T2 | ENDURANCE | roll=31 threshold=1.512 success=N | FuraX tient bon (ENDURANCE, boost)
+#35 | COURSE | T2 | ENDURANCE | roll=51 threshold=1.3536000000000001 success=N | Alain GRAVIER tient bon (ENDURANCE, boost)
+#36 | COURSE | T2 | ENDURANCE | roll=9 threshold=1.512 success=N | Bounty tient bon (ENDURANCE, boost)
+#37 | COURSE | T2 | ENDURANCE | roll=69 threshold=2.088 success=N | Fast tient bon (ENDURANCE, boost)
+#38 | COURSE | T2 | ENDURANCE | roll=56 threshold=2.088 success=N | Furious tient bon (ENDURANCE, boost)
+#39 | COURSE | T2 | AUDACE | roll=51 threshold=16 success=N | Furious tente sur Fast
+#40 | COURSE | T2 | AUDACE | roll=10 threshold=29 success=Y | Fast tente sur Bounty
+#41 | COURSE | T2 | DEFENSE | roll=32 threshold=20 success=N | Bounty cède face à Fast
+#42 | COURSE | T2 | AUDACE | roll=55 threshold=29 success=N | Fast tente sur Alain GRAVIER
+#43 | COURSE | T2 | AUDACE | roll=86 threshold=16 success=N | Alain GRAVIER tente sur FuraX
+#44 | COURSE | T2 | AUDACE | roll=43 threshold=16 success=N | FuraX tente sur Jean TONNEAU
+#45 | COURSE | T2 | PNEUS | roll=58 threshold=10 success=N | Jean TONNEAU gere ses pneus: stack 0 (PNEUS, boost)
+#46 | COURSE | T2 | PNEUS | roll=57 threshold=10 success=N | FuraX gere ses pneus: stack 0 (PNEUS, boost)
+#47 | COURSE | T2 | PNEUS | roll=10 threshold=10 success=Y | Alain GRAVIER use ses pneus: stack 2 (PNEUS, boost)
+#48 | COURSE | T2 | PNEUS | roll=8 threshold=6 success=N | Fast gere ses pneus: stack 0 (PNEUS, boost)
+#49 | COURSE | T2 | PNEUS | roll=2 threshold=10 success=Y | Bounty use ses pneus: stack 1 (PNEUS, boost)
+#50 | COURSE | T2 | PNEUS | roll=83 threshold=10 success=N | Furious gere ses pneus: stack 0 (PNEUS, boost)
+#51 | COURSE | T2 | PNEUS | roll=- threshold=- success=Y | Alain GRAVIER perd 1 place(s) sur usure progressive (stack 2)
+#52 | COURSE | T3 | ENDURANCE | roll=88 threshold=1.3536000000000001 success=N | Jean TONNEAU tient bon (ENDURANCE, boost)
+#53 | COURSE | T3 | ENDURANCE | roll=1 threshold=1.512 success=Y | FuraX abandonne (ENDURANCE, boost)
+#54 | COURSE | T3 | ENDURANCE | roll=71 threshold=2.088 success=N | Fast tient bon (ENDURANCE, boost)
+#55 | COURSE | T3 | ENDURANCE | roll=46 threshold=1.3536000000000001 success=N | Alain GRAVIER tient bon (ENDURANCE, boost)
+#56 | COURSE | T3 | ENDURANCE | roll=37 threshold=1.512 success=N | Bounty tient bon (ENDURANCE, boost)
+#57 | COURSE | T3 | ENDURANCE | roll=18 threshold=2.088 success=N | Furious tient bon (ENDURANCE, boost)
+#58 | COURSE | T3 | AUDACE | roll=10 threshold=16 success=Y | Furious tente sur Bounty
+#59 | COURSE | T3 | DEFENSE | roll=77 threshold=20 success=N | Bounty cède face à Furious
+#60 | COURSE | T3 | AUDACE | roll=96 threshold=16 success=N | Furious tente sur Alain GRAVIER
+#61 | COURSE | T3 | AUDACE | roll=66 threshold=16 success=N | Alain GRAVIER tente sur Fast
+#62 | COURSE | T3 | AUDACE | roll=78 threshold=29 success=N | Fast tente sur Jean TONNEAU
+#63 | COURSE | T3 | PNEUS | roll=11 threshold=15 success=Y | Jean TONNEAU use ses pneus: stack 1 (PNEUS, boost)
+#64 | COURSE | T3 | PNEUS | roll=75 threshold=9 success=N | Fast gere ses pneus: stack 0 (PNEUS, boost)
+#65 | COURSE | T3 | PNEUS | roll=7 threshold=15 success=Y | Alain GRAVIER use ses pneus: stack 3 (PNEUS, boost)
+#66 | COURSE | T3 | PNEUS | roll=20 threshold=15 success=N | Furious gere ses pneus: stack 0 (PNEUS, boost)
+#67 | COURSE | T3 | PNEUS | roll=29 threshold=15 success=N | Bounty gere ses pneus: stack 1 (PNEUS, boost)
+#68 | COURSE | T3 | PNEUS | roll=- threshold=- success=Y | Alain GRAVIER perd 1 place(s) sur usure progressive (stack 3)
+#69 | COURSE | T4 | ENDURANCE | roll=56 threshold=1.3536000000000001 success=N | Jean TONNEAU tient bon (ENDURANCE, boost)
+#70 | COURSE | T4 | ENDURANCE | roll=77 threshold=2.088 success=N | Fast tient bon (ENDURANCE, boost)
+#71 | COURSE | T4 | ENDURANCE | roll=12 threshold=2.088 success=N | Furious tient bon (ENDURANCE, boost)
+#72 | COURSE | T4 | PNEUS | roll=- threshold=- success=Y | Alain GRAVIER passe au stand: stacks pneus reset a 0
+#73 | COURSE | T4 | ENDURANCE | roll=41 threshold=1.3536000000000001 success=N | Alain GRAVIER tient bon (ENDURANCE, boost)
+#74 | COURSE | T4 | ENDURANCE | roll=49 threshold=1.512 success=N | Bounty tient bon (ENDURANCE, boost)
+#75 | COURSE | T4 | AUDACE | roll=59 threshold=16 success=N | Bounty tente sur Alain GRAVIER
+#76 | COURSE | T4 | AUDACE | roll=82 threshold=16 success=N | Alain GRAVIER tente sur Furious
+#77 | COURSE | T4 | AUDACE | roll=38 threshold=16 success=N | Furious tente sur Fast
+#78 | COURSE | T4 | AUDACE | roll=63 threshold=29 success=N | Fast tente sur Jean TONNEAU
+#79 | COURSE | T4 | PNEUS | roll=70 threshold=20 success=N | Jean TONNEAU gere ses pneus: stack 1 (PNEUS, boost)
+#80 | COURSE | T4 | PNEUS | roll=61 threshold=12 success=N | Fast gere ses pneus: stack 0 (PNEUS, boost)
+#81 | COURSE | T4 | PNEUS | roll=19 threshold=20 success=Y | Furious use ses pneus: stack 1 (PNEUS, boost)
+#82 | COURSE | T4 | PNEUS | roll=44 threshold=5 success=N | Alain GRAVIER gere ses pneus: stack 0 (PNEUS, boost)
+#83 | COURSE | T4 | PNEUS | roll=83 threshold=20 success=N | Bounty gere ses pneus: stack 1 (PNEUS, boost)
+#84 | COURSE | T5 | PNEUS | roll=- threshold=- success=Y | Jean TONNEAU passe au stand: stacks pneus reset a 0
+#85 | COURSE | T5 | ENDURANCE | roll=53 threshold=1.3536000000000001 success=N | Jean TONNEAU tient bon (ENDURANCE, boost)
+#86 | COURSE | T5 | PNEUS | roll=- threshold=- success=Y | Fast passe au stand: stacks pneus reset a 0
+#87 | COURSE | T5 | ENDURANCE | roll=2 threshold=2.088 success=Y | Fast abandonne (ENDURANCE, boost)
+#88 | COURSE | T5 | PNEUS | roll=- threshold=- success=Y | Furious passe au stand: stacks pneus reset a 0
+#89 | COURSE | T5 | ENDURANCE | roll=88 threshold=2.088 success=N | Furious tient bon (ENDURANCE, boost)
+#90 | COURSE | T5 | ENDURANCE | roll=23 threshold=1.3536000000000001 success=N | Alain GRAVIER tient bon (ENDURANCE, boost)
+#91 | COURSE | T5 | PNEUS | roll=- threshold=- success=Y | Bounty passe au stand: stacks pneus reset a 0
+#92 | COURSE | T5 | ENDURANCE | roll=86 threshold=1.512 success=N | Bounty tient bon (ENDURANCE, boost)
+#93 | COURSE | T5 | AUDACE | roll=97 threshold=16 success=N | Bounty tente sur Alain GRAVIER
+#94 | COURSE | T5 | AUDACE | roll=74 threshold=16 success=N | Alain GRAVIER tente sur Furious
+#95 | COURSE | T5 | AUDACE | roll=69 threshold=16 success=N | Furious tente sur Jean TONNEAU
+#96 | COURSE | T5 | PNEUS | roll=86 threshold=5 success=N | Jean TONNEAU gere ses pneus: stack 0 (PNEUS, boost)
+#97 | COURSE | T5 | PNEUS | roll=50 threshold=5 success=N | Furious gere ses pneus: stack 0 (PNEUS, boost)
+#98 | COURSE | T5 | PNEUS | roll=34 threshold=5 success=N | Alain GRAVIER gere ses pneus: stack 0 (PNEUS, boost)
+#99 | COURSE | T5 | PNEUS | roll=84 threshold=5 success=N | Bounty gere ses pneus: stack 0 (PNEUS, boost)
+#100 | COURSE | T6 | ENDURANCE | roll=56 threshold=1.3536000000000001 success=N | Jean TONNEAU tient bon (ENDURANCE, boost)
+#101 | COURSE | T6 | ENDURANCE | roll=60 threshold=2.088 success=N | Furious tient bon (ENDURANCE, boost)
+#102 | COURSE | T6 | ENDURANCE | roll=22 threshold=1.3536000000000001 success=N | Alain GRAVIER tient bon (ENDURANCE, boost)
+#103 | COURSE | T6 | ENDURANCE | roll=99 threshold=1.512 success=N | Bounty tient bon (ENDURANCE, boost)
+#104 | COURSE | T6 | AUDACE | roll=2 threshold=16 success=Y | Bounty tente sur Alain GRAVIER
+#105 | COURSE | T6 | DEFENSE | roll=61 threshold=10 success=N | Alain GRAVIER cède face à Bounty
+#106 | COURSE | T6 | AUDACE | roll=6 threshold=16 success=Y | Bounty tente sur Furious
+#107 | COURSE | T6 | DEFENSE | roll=87 threshold=10 success=N | Furious cède face à Bounty
+#108 | COURSE | T6 | AUDACE | roll=51 threshold=16 success=N | Bounty tente sur Jean TONNEAU
+#109 | COURSE | T6 | PNEUS | roll=69 threshold=5 success=N | Jean TONNEAU gere ses pneus: stack 0 (PNEUS, boost)
+#110 | COURSE | T6 | PNEUS | roll=29 threshold=5 success=N | Bounty gere ses pneus: stack 0 (PNEUS, boost)
+#111 | COURSE | T6 | PNEUS | roll=93 threshold=5 success=N | Furious gere ses pneus: stack 0 (PNEUS, boost)
+#112 | COURSE | T6 | PNEUS | roll=61 threshold=10 success=N | Alain GRAVIER gere ses pneus: stack 0 (PNEUS, boost)
+#113 | COURSE | T7 | ENDURANCE | roll=82 threshold=1.3536000000000001 success=N | Jean TONNEAU tient bon (ENDURANCE, boost)
+#114 | COURSE | T7 | ENDURANCE | roll=18 threshold=1.512 success=N | Bounty tient bon (ENDURANCE, boost)
+#115 | COURSE | T7 | ENDURANCE | roll=42 threshold=2.088 success=N | Furious tient bon (ENDURANCE, boost)
+#116 | COURSE | T7 | PNEUS | roll=- threshold=- success=Y | Alain GRAVIER passe au stand: stacks pneus reset a 0
+#117 | COURSE | T7 | ENDURANCE | roll=31 threshold=1.3536000000000001 success=N | Alain GRAVIER tient bon (ENDURANCE, boost)
+#118 | COURSE | T7 | AUDACE | roll=26 threshold=16 success=N | Alain GRAVIER tente sur Furious
+#119 | COURSE | T7 | AUDACE | roll=8 threshold=16 success=Y | Furious tente sur Bounty
+#120 | COURSE | T7 | DEFENSE | roll=36 threshold=20 success=N | Bounty cède face à Furious
+#121 | COURSE | T7 | AUDACE | roll=13 threshold=16 success=Y | Furious tente sur Jean TONNEAU
+#122 | COURSE | T7 | DEFENSE | roll=29 threshold=10 success=N | Jean TONNEAU cède face à Furious
+#123 | COURSE | T7 | PNEUS | roll=1 threshold=10 success=Y | Furious use ses pneus: stack 1 (PNEUS, boost)
+#124 | COURSE | T7 | PNEUS | roll=2 threshold=10 success=Y | Jean TONNEAU use ses pneus: stack 1 (PNEUS, boost)
+#125 | COURSE | T7 | PNEUS | roll=47 threshold=10 success=N | Bounty gere ses pneus: stack 0 (PNEUS, boost)
+#126 | COURSE | T7 | PNEUS | roll=50 threshold=5 success=N | Alain GRAVIER gere ses pneus: stack 0 (PNEUS, boost)
+#127 | COURSE | T8 | ENDURANCE | roll=14 threshold=2.088 success=N | Furious tient bon (ENDURANCE, boost)
+#128 | COURSE | T8 | ENDURANCE | roll=55 threshold=1.3536000000000001 success=N | Jean TONNEAU tient bon (ENDURANCE, boost)
+#129 | COURSE | T8 | ENDURANCE | roll=89 threshold=1.512 success=N | Bounty tient bon (ENDURANCE, boost)
+#130 | COURSE | T8 | ENDURANCE | roll=59 threshold=1.3536000000000001 success=N | Alain GRAVIER tient bon (ENDURANCE, boost)
+#131 | COURSE | T8 | AUDACE | roll=57 threshold=16 success=N | Alain GRAVIER tente sur Bounty
+#132 | COURSE | T8 | AUDACE | roll=39 threshold=16 success=N | Bounty tente sur Jean TONNEAU
+#133 | COURSE | T8 | AUDACE | roll=13 threshold=23 success=Y | Jean TONNEAU tente sur Furious
+#134 | COURSE | T8 | DEFENSE | roll=69 threshold=10 success=N | Furious cède face à Jean TONNEAU
+#135 | COURSE | T8 | PNEUS | roll=96 threshold=15 success=N | Jean TONNEAU gere ses pneus: stack 1 (PNEUS, boost)
+#136 | COURSE | T8 | PNEUS | roll=100 threshold=15 success=N | Furious gere ses pneus: stack 1 (PNEUS, boost)
+#137 | COURSE | T8 | PNEUS | roll=12 threshold=15 success=Y | Bounty use ses pneus: stack 1 (PNEUS, boost)
+#138 | COURSE | T8 | PNEUS | roll=80 threshold=5 success=N | Alain GRAVIER gere ses pneus: stack 0 (PNEUS, boost)
+#139 | COURSE | T9 | ENDURANCE | roll=41 threshold=1.3536000000000001 success=N | Jean TONNEAU tient bon (ENDURANCE, boost)
+#140 | COURSE | T9 | ENDURANCE | roll=6 threshold=2.088 success=N | Furious tient bon (ENDURANCE, boost)
+#141 | COURSE | T9 | ENDURANCE | roll=85 threshold=1.512 success=N | Bounty tient bon (ENDURANCE, boost)
+#142 | COURSE | T9 | ENDURANCE | roll=9 threshold=1.3536000000000001 success=N | Alain GRAVIER tient bon (ENDURANCE, boost)
+#143 | COURSE | T9 | AUDACE | roll=3 threshold=16 success=Y | Alain GRAVIER tente sur Bounty
+#144 | COURSE | T9 | DEFENSE | roll=46 threshold=20 success=N | Bounty cède face à Alain GRAVIER
+#145 | COURSE | T9 | AUDACE | roll=15 threshold=16 success=Y | Alain GRAVIER tente sur Furious
+#146 | COURSE | T9 | DEFENSE | roll=40 threshold=10 success=N | Furious cède face à Alain GRAVIER
+#147 | COURSE | T9 | AUDACE | roll=22 threshold=16 success=N | Alain GRAVIER tente sur Jean TONNEAU
+#148 | COURSE | T9 | PNEUS | roll=3 threshold=20 success=Y | Jean TONNEAU use ses pneus: stack 2 (PNEUS, boost)
+#149 | COURSE | T9 | PNEUS | roll=83 threshold=10 success=N | Alain GRAVIER gere ses pneus: stack 0 (PNEUS, boost)
+#150 | COURSE | T9 | PNEUS | roll=65 threshold=20 success=N | Furious gere ses pneus: stack 1 (PNEUS, boost)
+#151 | COURSE | T9 | PNEUS | roll=44 threshold=20 success=N | Bounty gere ses pneus: stack 1 (PNEUS, boost)
+#152 | COURSE | T9 | PNEUS | roll=- threshold=- success=Y | Jean TONNEAU perd 1 place(s) sur usure progressive (stack 2)
+#153 | COURSE | T10 | ENDURANCE | roll=34 threshold=1.3536000000000001 success=N | Alain GRAVIER tient bon (ENDURANCE, boost)
+#154 | COURSE | T10 | ENDURANCE | roll=71 threshold=1.3536000000000001 success=N | Jean TONNEAU tient bon (ENDURANCE, boost)
+#155 | COURSE | T10 | ENDURANCE | roll=66 threshold=2.088 success=N | Furious tient bon (ENDURANCE, boost)
+#156 | COURSE | T10 | ENDURANCE | roll=8 threshold=1.512 success=N | Bounty tient bon (ENDURANCE, boost)
+#157 | COURSE | T10 | AUDACE | roll=92 threshold=16 success=N | Bounty tente sur Furious
+#158 | COURSE | T10 | AUDACE | roll=20 threshold=16 success=N | Furious tente sur Jean TONNEAU
+#159 | COURSE | T10 | AUDACE | roll=42 threshold=23 success=N | Jean TONNEAU tente sur Alain GRAVIER
+#160 | COURSE | T10 | PNEUS | roll=15 threshold=15 success=Y | Alain GRAVIER use ses pneus: stack 1 (PNEUS, boost)
+#161 | COURSE | T10 | PNEUS | roll=90 threshold=25 success=N | Jean TONNEAU gere ses pneus: stack 2 (PNEUS, boost)
+#162 | COURSE | T10 | PNEUS | roll=63 threshold=25 success=N | Furious gere ses pneus: stack 1 (PNEUS, boost)
+#163 | COURSE | T10 | PNEUS | roll=15 threshold=25 success=Y | Bounty use ses pneus: stack 2 (PNEUS, boost)
+#164 | COURSE | T10 | PNEUS | roll=- threshold=- success=Y | Jean TONNEAU perd 1 place(s) sur usure progressive (stack 2)

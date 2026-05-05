@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -213,7 +213,7 @@ export default function InfoAdminPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#000e22] text-white p-6">
+      <main className="min-h-screen bg-[#0f1014] text-white p-6">
         <p className="text-sm uppercase tracking-[0.2em] text-gray-400">Chargement admin...</p>
       </main>
     );
@@ -222,8 +222,8 @@ export default function InfoAdminPage() {
   if (!allowed) return null;
 
   return (
-    <main className="min-h-screen bg-[#000e22] text-white">
-      <div className="h-1 w-full bg-[#d31f28]" />
+    <main className="min-h-screen bg-[#0f1014] text-white">
+      <div className="h-1 w-full bg-[#e10600]" />
       <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-6 pb-24">
         <header className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
@@ -235,13 +235,13 @@ export default function InfoAdminPage() {
               />
             </Link>
             <div>
-              <p className="text-[11px] uppercase tracking-[0.2em] text-[#d31f28]">Administration</p>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-[#e10600]">Administration</p>
               <h1 className="text-sm sm:text-base font-black uppercase tracking-[0.12em]">Messages infos</h1>
             </div>
           </div>
           <Link
             href="/dashboard/versions"
-            className="border border-white/20 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-gray-200 hover:text-white hover:border-white/40 transition"
+            className="inline-flex w-auto items-center justify-center border border-[#d65a62]/45 bg-[#5b2024]/35 px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#ffd3d0] transition hover:border-[#ff6f66]/55 hover:bg-[#692329]/45 hover:text-white"
           >
             Retour notes
           </Link>
@@ -269,8 +269,8 @@ export default function InfoAdminPage() {
                   onChange={(e) => setSettings((prev) => ({ ...prev, mode: e.target.value as "sequential" | "random" }))}
                   className="w-full border border-white/20 bg-transparent px-3 py-2 text-sm"
                 >
-                  <option value="sequential" className="bg-[#001122]">Sequential</option>
-                  <option value="random" className="bg-[#001122]">Random</option>
+                  <option value="sequential" className="bg-[#13151b]">Sequential</option>
+                  <option value="random" className="bg-[#13151b]">Random</option>
                 </select>
               </div>
 
@@ -301,7 +301,7 @@ export default function InfoAdminPage() {
               <button
                 type="button"
                 onClick={saveSettings}
-                className="w-full bg-[#d31f28] px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-white hover:bg-[#b81d23] transition"
+                className="w-full bg-[#e10600] px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-white hover:bg-[#ba0500] transition"
               >
                 Sauvegarder les regles
               </button>
@@ -340,7 +340,7 @@ export default function InfoAdminPage() {
                 type="button"
                 onClick={importBulkMessages}
                 disabled={isSaving}
-                className="w-full bg-[#d31f28] px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-white hover:bg-[#b81d23] transition disabled:opacity-60"
+                className="w-full bg-[#e10600] px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-white hover:bg-[#ba0500] transition disabled:opacity-60"
               >
                 Importer
               </button>
@@ -358,7 +358,7 @@ export default function InfoAdminPage() {
             ) : (
               <div className="space-y-2 max-h-[68vh] overflow-y-auto pr-1">
                 {messages.map((message) => (
-                  <div key={message.id} className="border border-white/10 bg-[#010d1e] px-3 py-2">
+                  <div key={message.id} className="border border-white/10 bg-[#121419] px-3 py-2">
                     <p className="text-sm text-gray-200 whitespace-pre-wrap break-words">{message.text}</p>
                     <div className="mt-2 flex items-center justify-between gap-2">
                       <button
@@ -386,3 +386,4 @@ export default function InfoAdminPage() {
     </main>
   );
 }
+

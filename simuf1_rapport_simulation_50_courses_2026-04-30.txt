@@ -1,0 +1,782 @@
+RAPPORT DE SIMULATION SIMUF1 - BATCH 50 COURSES
+Date: 2026-04-30
+Scenario: 50 courses, 2 a 8 participants fictifs, 2 voitures chacun, 3 circuits differents
+Circuits utilises: Monaco (S1-W02), Suzuka (S1-W11), Interlagos (S1-W18)
+Regles cle: DNF = 0 point, AUDACE renforcee, pneus progressifs par stacks
+
+=== SIMU50-01 | Monaco (S1-W02) ===
+Participants: 2 | Voitures: 4 | Finishers: 1 | DNF: 3
+AUDACE 0/13 (0.0%) | DEFENSE succes=0 | PNEUS echecs=7
+Classement final:
+  P1 S. Kova #1B [Iron Pulse 1] ARR pts=10
+  P2 N. Duval #2A [Arc Nova 2] DNF T9 pts=0
+  P3 O. Kim #2B [Arc Nova 2] DNF T4 pts=0
+  P4 E. Hayashi #1A [Iron Pulse 1] DNF T3 pts=0
+
+=== SIMU50-02 | Suzuka (S1-W11) ===
+Participants: 8 | Voitures: 16 | Finishers: 15 | DNF: 1
+AUDACE 18/146 (12.3%) | DEFENSE succes=5 | PNEUS echecs=82
+Classement final:
+  P1 P. Novak #3A [Vertex One 3] ARR pts=10
+  P2 J. Hart #4B [Titan Lane 4] ARR pts=9
+  P3 O. Kim #6A [Helios GP 6] ARR pts=8
+  P4 D. Costa #6B [Helios GP 6] ARR pts=7
+  P5 A. Becker #7A [Crimson Torque 7] ARR pts=6
+  P6 F. Laurent #2A [Arc Nova 2] ARR pts=5
+  P7 F. Laurent #3B [Vertex One 3] ARR pts=4
+  P8 L. Martin #8B [Helios GP 8] ARR pts=3
+  P9 T. Meyer #5A [Titan Lane 5] ARR pts=2
+  P10 P. Novak #1B [Polar Apex 1] ARR pts=1
+  P11 N. Duval #7B [Crimson Torque 7] ARR pts=0
+  P12 I. Rossi #5B [Titan Lane 5] ARR pts=0
+  P13 S. Kova #1A [Polar Apex 1] ARR pts=0
+  P14 S. Kova #8A [Helios GP 8] ARR pts=0
+  P15 A. Becker #4A [Titan Lane 4] ARR pts=0
+  P16 I. Rossi #2B [Arc Nova 2] DNF T7 pts=0
+
+=== SIMU50-03 | Interlagos (S1-W18) ===
+Participants: 2 | Voitures: 4 | Finishers: 3 | DNF: 1
+AUDACE 7/25 (28.0%) | DEFENSE succes=1 | PNEUS echecs=12
+Classement final:
+  P1 S. Kova #1A [Iron Pulse 1] ARR pts=10
+  P2 A. Becker #2A [Iron Pulse 2] ARR pts=9
+  P3 R. Silva #2B [Iron Pulse 2] ARR pts=8
+  P4 I. Rossi #1B [Iron Pulse 1] DNF T6 pts=0
+
+=== SIMU50-04 | Monaco (S1-W02) ===
+Participants: 6 | Voitures: 12 | Finishers: 10 | DNF: 2
+AUDACE 4/104 (3.8%) | DEFENSE succes=1 | PNEUS echecs=55
+Classement final:
+  P1 R. Silva #3B [Blue Comet 3] ARR pts=10
+  P2 N. Duval #1B [Crimson Torque 1] ARR pts=9
+  P3 F. Laurent #6A [Iron Pulse 6] ARR pts=8
+  P4 L. Martin #6B [Iron Pulse 6] ARR pts=7
+  P5 S. Kova #2A [Arc Nova 2] ARR pts=6
+  P6 O. Kim #3A [Blue Comet 3] ARR pts=5
+  P7 O. Kim #5A [Zenith Motorsport 5] ARR pts=4
+  P8 A. Becker #4B [Titan Lane 4] ARR pts=3
+  P9 R. Silva #5B [Zenith Motorsport 5] ARR pts=2
+  P10 R. Silva #1A [Crimson Torque 1] ARR pts=1
+  P11 R. Silva #4A [Titan Lane 4] DNF T10 pts=0
+  P12 N. Duval #2B [Arc Nova 2] DNF T6 pts=0
+
+=== SIMU50-05 | Suzuka (S1-W11) ===
+Participants: 7 | Voitures: 14 | Finishers: 12 | DNF: 2
+AUDACE 27/118 (22.9%) | DEFENSE succes=10 | PNEUS echecs=53
+Classement final:
+  P1 A. Becker #2B [Helios GP 2] ARR pts=10
+  P2 I. Rossi #1A [Polar Apex 1] ARR pts=9
+  P3 N. Duval #5A [Helios GP 5] ARR pts=8
+  P4 A. Becker #4B [Polar Apex 4] ARR pts=7
+  P5 J. Hart #7B [Crimson Torque 7] ARR pts=6
+  P6 N. Duval #3B [Blue Comet 3] ARR pts=5
+  P7 T. Meyer #3A [Blue Comet 3] ARR pts=4
+  P8 N. Duval #7A [Crimson Torque 7] ARR pts=3
+  P9 A. Becker #1B [Polar Apex 1] ARR pts=2
+  P10 I. Rossi #4A [Polar Apex 4] ARR pts=1
+  P11 P. Novak #6A [Blue Comet 6] ARR pts=0
+  P12 M. Ito #2A [Helios GP 2] ARR pts=0
+  P13 M. Ito #6B [Blue Comet 6] DNF T7 pts=0
+  P14 E. Hayashi #5B [Helios GP 5] DNF T3 pts=0
+
+=== SIMU50-06 | Interlagos (S1-W18) ===
+Participants: 2 | Voitures: 4 | Finishers: 4 | DNF: 0
+AUDACE 9/30 (30.0%) | DEFENSE succes=1 | PNEUS echecs=10
+Classement final:
+  P1 N. Duval #1A [Helios GP 1] ARR pts=10
+  P2 A. Becker #2B [Arc Nova 2] ARR pts=9
+  P3 T. Meyer #1B [Helios GP 1] ARR pts=8
+  P4 T. Meyer #2A [Arc Nova 2] ARR pts=7
+
+=== SIMU50-07 | Monaco (S1-W02) ===
+Participants: 7 | Voitures: 14 | Finishers: 12 | DNF: 2
+AUDACE 5/110 (4.5%) | DEFENSE succes=0 | PNEUS echecs=74
+Classement final:
+  P1 P. Novak #1A [Arc Nova 1] ARR pts=10
+  P2 L. Martin #5A [Zenith Motorsport 5] ARR pts=9
+  P3 P. Novak #5B [Zenith Motorsport 5] ARR pts=8
+  P4 J. Hart #7A [Arc Nova 7] ARR pts=7
+  P5 F. Laurent #7B [Arc Nova 7] ARR pts=6
+  P6 J. Hart #1B [Arc Nova 1] ARR pts=5
+  P7 J. Hart #3A [Titan Lane 3] ARR pts=4
+  P8 A. Becker #2A [Helios GP 2] ARR pts=3
+  P9 A. Becker #6B [Arc Nova 6] ARR pts=2
+  P10 E. Hayashi #6A [Arc Nova 6] ARR pts=1
+  P11 A. Becker #4B [Iron Pulse 4] ARR pts=0
+  P12 F. Laurent #3B [Titan Lane 3] ARR pts=0
+  P13 N. Duval #2B [Helios GP 2] DNF T1 pts=0
+  P14 E. Hayashi #4A [Iron Pulse 4] DNF T1 pts=0
+
+=== SIMU50-08 | Suzuka (S1-W11) ===
+Participants: 6 | Voitures: 12 | Finishers: 10 | DNF: 2
+AUDACE 18/98 (18.4%) | DEFENSE succes=3 | PNEUS echecs=37
+Classement final:
+  P1 O. Kim #5B [Crimson Torque 5] ARR pts=10
+  P2 R. Silva #5A [Crimson Torque 5] ARR pts=9
+  P3 L. Martin #1A [Zenith Motorsport 1] ARR pts=8
+  P4 I. Rossi #6B [Helios GP 6] ARR pts=7
+  P5 S. Kova #6A [Helios GP 6] ARR pts=6
+  P6 I. Rossi #4B [Vertex One 4] ARR pts=5
+  P7 S. Kova #3B [Arc Nova 3] ARR pts=4
+  P8 D. Costa #3A [Arc Nova 3] ARR pts=3
+  P9 L. Martin #4A [Vertex One 4] ARR pts=2
+  P10 R. Silva #1B [Zenith Motorsport 1] ARR pts=1
+  P11 A. Becker #2B [Vertex One 2] DNF T7 pts=0
+  P12 R. Silva #2A [Vertex One 2] DNF T3 pts=0
+
+=== SIMU50-09 | Interlagos (S1-W18) ===
+Participants: 3 | Voitures: 6 | Finishers: 6 | DNF: 0
+AUDACE 9/50 (18.0%) | DEFENSE succes=3 | PNEUS echecs=29
+Classement final:
+  P1 L. Martin #2B [Falcon Works 2] ARR pts=10
+  P2 M. Ito #1B [Helios GP 1] ARR pts=9
+  P3 F. Laurent #2A [Falcon Works 2] ARR pts=8
+  P4 I. Rossi #3A [Helios GP 3] ARR pts=7
+  P5 E. Hayashi #3B [Helios GP 3] ARR pts=6
+  P6 P. Novak #1A [Helios GP 1] ARR pts=5
+
+=== SIMU50-10 | Monaco (S1-W02) ===
+Participants: 6 | Voitures: 12 | Finishers: 10 | DNF: 2
+AUDACE 10/103 (9.7%) | DEFENSE succes=5 | PNEUS echecs=47
+Classement final:
+  P1 T. Meyer #5B [Titan Lane 5] ARR pts=10
+  P2 E. Hayashi #1A [Titan Lane 1] ARR pts=9
+  P3 L. Martin #5A [Titan Lane 5] ARR pts=8
+  P4 P. Novak #6B [Titan Lane 6] ARR pts=7
+  P5 A. Becker #3B [Vertex One 3] ARR pts=6
+  P6 I. Rossi #2B [Arc Nova 2] ARR pts=5
+  P7 N. Duval #4B [Crimson Torque 4] ARR pts=4
+  P8 L. Martin #6A [Titan Lane 6] ARR pts=3
+  P9 I. Rossi #2A [Arc Nova 2] ARR pts=2
+  P10 S. Kova #4A [Crimson Torque 4] ARR pts=1
+  P11 T. Meyer #1B [Titan Lane 1] DNF T9 pts=0
+  P12 I. Rossi #3A [Vertex One 3] DNF T6 pts=0
+
+=== SIMU50-11 | Suzuka (S1-W11) ===
+Participants: 3 | Voitures: 6 | Finishers: 5 | DNF: 1
+AUDACE 5/46 (10.9%) | DEFENSE succes=0 | PNEUS echecs=16
+Classement final:
+  P1 P. Novak #3A [Arc Nova 3] ARR pts=10
+  P2 E. Hayashi #1A [Helios GP 1] ARR pts=9
+  P3 O. Kim #2B [Crimson Torque 2] ARR pts=8
+  P4 S. Kova #1B [Helios GP 1] ARR pts=7
+  P5 E. Hayashi #3B [Arc Nova 3] ARR pts=6
+  P6 J. Hart #2A [Crimson Torque 2] DNF T7 pts=0
+
+=== SIMU50-12 | Interlagos (S1-W18) ===
+Participants: 7 | Voitures: 14 | Finishers: 14 | DNF: 0
+AUDACE 26/130 (20.0%) | DEFENSE succes=6 | PNEUS echecs=70
+Classement final:
+  P1 L. Martin #1A [Iron Pulse 1] ARR pts=10
+  P2 D. Costa #2B [Crimson Torque 2] ARR pts=9
+  P3 J. Hart #4A [Iron Pulse 4] ARR pts=8
+  P4 P. Novak #3A [Polar Apex 3] ARR pts=7
+  P5 S. Kova #1B [Iron Pulse 1] ARR pts=6
+  P6 E. Hayashi #6A [Titan Lane 6] ARR pts=5
+  P7 E. Hayashi #6B [Titan Lane 6] ARR pts=4
+  P8 I. Rossi #5A [Crimson Torque 5] ARR pts=3
+  P9 J. Hart #2A [Crimson Torque 2] ARR pts=2
+  P10 D. Costa #5B [Crimson Torque 5] ARR pts=1
+  P11 N. Duval #3B [Polar Apex 3] ARR pts=0
+  P12 L. Martin #7B [Blue Comet 7] ARR pts=0
+  P13 N. Duval #7A [Blue Comet 7] ARR pts=0
+  P14 N. Duval #4B [Iron Pulse 4] ARR pts=0
+
+=== SIMU50-13 | Monaco (S1-W02) ===
+Participants: 4 | Voitures: 8 | Finishers: 5 | DNF: 3
+AUDACE 5/43 (11.6%) | DEFENSE succes=3 | PNEUS echecs=26
+Classement final:
+  P1 R. Silva #4A [Iron Pulse 4] ARR pts=10
+  P2 O. Kim #1B [Crimson Torque 1] ARR pts=9
+  P3 F. Laurent #2B [Crimson Torque 2] ARR pts=8
+  P4 R. Silva #2A [Crimson Torque 2] ARR pts=7
+  P5 D. Costa #3B [Polar Apex 3] ARR pts=6
+  P6 A. Becker #4B [Iron Pulse 4] DNF T3 pts=0
+  P7 E. Hayashi #3A [Polar Apex 3] DNF T2 pts=0
+  P8 O. Kim #1A [Crimson Torque 1] DNF T1 pts=0
+
+=== SIMU50-14 | Suzuka (S1-W11) ===
+Participants: 5 | Voitures: 10 | Finishers: 9 | DNF: 1
+AUDACE 11/81 (13.6%) | DEFENSE succes=1 | PNEUS echecs=46
+Classement final:
+  P1 N. Duval #3A [Arc Nova 3] ARR pts=10
+  P2 R. Silva #1A [Falcon Works 1] ARR pts=9
+  P3 S. Kova #3B [Arc Nova 3] ARR pts=8
+  P4 M. Ito #4B [Helios GP 4] ARR pts=7
+  P5 L. Martin #5B [Blue Comet 5] ARR pts=6
+  P6 S. Kova #2B [Helios GP 2] ARR pts=5
+  P7 O. Kim #5A [Blue Comet 5] ARR pts=4
+  P8 O. Kim #2A [Helios GP 2] ARR pts=3
+  P9 T. Meyer #1B [Falcon Works 1] ARR pts=2
+  P10 R. Silva #4A [Helios GP 4] DNF T2 pts=0
+
+=== SIMU50-15 | Interlagos (S1-W18) ===
+Participants: 7 | Voitures: 14 | Finishers: 13 | DNF: 1
+AUDACE 27/128 (21.1%) | DEFENSE succes=8 | PNEUS echecs=59
+Classement final:
+  P1 R. Silva #2B [Falcon Works 2] ARR pts=10
+  P2 F. Laurent #4A [Blue Comet 4] ARR pts=9
+  P3 T. Meyer #2A [Falcon Works 2] ARR pts=8
+  P4 T. Meyer #5A [Vertex One 5] ARR pts=7
+  P5 D. Costa #1A [Arc Nova 1] ARR pts=6
+  P6 N. Duval #4B [Blue Comet 4] ARR pts=5
+  P7 L. Martin #1B [Arc Nova 1] ARR pts=4
+  P8 R. Silva #3B [Vertex One 3] ARR pts=3
+  P9 D. Costa #7A [Polar Apex 7] ARR pts=2
+  P10 T. Meyer #7B [Polar Apex 7] ARR pts=1
+  P11 N. Duval #3A [Vertex One 3] ARR pts=0
+  P12 L. Martin #6A [Vertex One 6] ARR pts=0
+  P13 P. Novak #5B [Vertex One 5] ARR pts=0
+  P14 E. Hayashi #6B [Vertex One 6] DNF T9 pts=0
+
+=== SIMU50-16 | Monaco (S1-W02) ===
+Participants: 7 | Voitures: 14 | Finishers: 13 | DNF: 1
+AUDACE 11/123 (8.9%) | DEFENSE succes=0 | PNEUS echecs=63
+Classement final:
+  P1 T. Meyer #4A [Helios GP 4] ARR pts=10
+  P2 N. Duval #2B [Crimson Torque 2] ARR pts=9
+  P3 E. Hayashi #1B [Titan Lane 1] ARR pts=8
+  P4 M. Ito #7B [Vertex One 7] ARR pts=7
+  P5 J. Hart #4B [Helios GP 4] ARR pts=6
+  P6 I. Rossi #6B [Arc Nova 6] ARR pts=5
+  P7 R. Silva #6A [Arc Nova 6] ARR pts=4
+  P8 L. Martin #3A [Zenith Motorsport 3] ARR pts=3
+  P9 D. Costa #3B [Zenith Motorsport 3] ARR pts=2
+  P10 R. Silva #1A [Titan Lane 1] ARR pts=1
+  P11 P. Novak #5A [Arc Nova 5] ARR pts=0
+  P12 J. Hart #2A [Crimson Torque 2] ARR pts=0
+  P13 D. Costa #7A [Vertex One 7] ARR pts=0
+  P14 M. Ito #5B [Arc Nova 5] DNF T4 pts=0
+
+=== SIMU50-17 | Suzuka (S1-W11) ===
+Participants: 2 | Voitures: 4 | Finishers: 3 | DNF: 1
+AUDACE 5/26 (19.2%) | DEFENSE succes=3 | PNEUS echecs=15
+Classement final:
+  P1 R. Silva #1A [Crimson Torque 1] ARR pts=10
+  P2 T. Meyer #2A [Falcon Works 2] ARR pts=9
+  P3 E. Hayashi #1B [Crimson Torque 1] ARR pts=8
+  P4 F. Laurent #2B [Falcon Works 2] DNF T7 pts=0
+
+=== SIMU50-18 | Interlagos (S1-W18) ===
+Participants: 7 | Voitures: 14 | Finishers: 11 | DNF: 3
+AUDACE 27/122 (22.1%) | DEFENSE succes=8 | PNEUS echecs=52
+Classement final:
+  P1 P. Novak #3A [Titan Lane 3] ARR pts=10
+  P2 L. Martin #1A [Arc Nova 1] ARR pts=9
+  P3 I. Rossi #4A [Iron Pulse 4] ARR pts=8
+  P4 R. Silva #6A [Falcon Works 6] ARR pts=7
+  P5 J. Hart #7B [Polar Apex 7] ARR pts=6
+  P6 D. Costa #6B [Falcon Works 6] ARR pts=5
+  P7 I. Rossi #4B [Iron Pulse 4] ARR pts=4
+  P8 F. Laurent #2B [Zenith Motorsport 2] ARR pts=3
+  P9 M. Ito #5A [Helios GP 5] ARR pts=2
+  P10 D. Costa #5B [Helios GP 5] ARR pts=1
+  P11 F. Laurent #2A [Zenith Motorsport 2] ARR pts=0
+  P12 F. Laurent #3B [Titan Lane 3] DNF T10 pts=0
+  P13 E. Hayashi #1B [Arc Nova 1] DNF T10 pts=0
+  P14 L. Martin #7A [Polar Apex 7] DNF T5 pts=0
+
+=== SIMU50-19 | Monaco (S1-W02) ===
+Participants: 7 | Voitures: 14 | Finishers: 13 | DNF: 1
+AUDACE 13/127 (10.2%) | DEFENSE succes=4 | PNEUS echecs=77
+Classement final:
+  P1 D. Costa #6B [Polar Apex 6] ARR pts=10
+  P2 M. Ito #5A [Helios GP 5] ARR pts=9
+  P3 F. Laurent #2B [Zenith Motorsport 2] ARR pts=8
+  P4 T. Meyer #6A [Polar Apex 6] ARR pts=7
+  P5 R. Silva #1A [Titan Lane 1] ARR pts=6
+  P6 E. Hayashi #2A [Zenith Motorsport 2] ARR pts=5
+  P7 I. Rossi #5B [Helios GP 5] ARR pts=4
+  P8 E. Hayashi #1B [Titan Lane 1] ARR pts=3
+  P9 N. Duval #7A [Blue Comet 7] ARR pts=2
+  P10 P. Novak #4B [Titan Lane 4] ARR pts=1
+  P11 N. Duval #3B [Titan Lane 3] ARR pts=0
+  P12 D. Costa #3A [Titan Lane 3] ARR pts=0
+  P13 L. Martin #7B [Blue Comet 7] ARR pts=0
+  P14 E. Hayashi #4A [Titan Lane 4] DNF T8 pts=0
+
+=== SIMU50-20 | Suzuka (S1-W11) ===
+Participants: 8 | Voitures: 16 | Finishers: 14 | DNF: 2
+AUDACE 26/135 (19.3%) | DEFENSE succes=8 | PNEUS echecs=72
+Classement final:
+  P1 J. Hart #4A [Vertex One 4] ARR pts=10
+  P2 R. Silva #6A [Falcon Works 6] ARR pts=9
+  P3 D. Costa #2B [Crimson Torque 2] ARR pts=8
+  P4 P. Novak #3B [Zenith Motorsport 3] ARR pts=7
+  P5 J. Hart #6B [Falcon Works 6] ARR pts=6
+  P6 L. Martin #7B [Arc Nova 7] ARR pts=5
+  P7 E. Hayashi #1B [Helios GP 1] ARR pts=4
+  P8 M. Ito #5A [Zenith Motorsport 5] ARR pts=3
+  P9 D. Costa #7A [Arc Nova 7] ARR pts=2
+  P10 S. Kova #8B [Zenith Motorsport 8] ARR pts=1
+  P11 J. Hart #3A [Zenith Motorsport 3] ARR pts=0
+  P12 I. Rossi #4B [Vertex One 4] ARR pts=0
+  P13 T. Meyer #1A [Helios GP 1] ARR pts=0
+  P14 F. Laurent #5B [Zenith Motorsport 5] ARR pts=0
+  P15 F. Laurent #8A [Zenith Motorsport 8] DNF T5 pts=0
+  P16 N. Duval #2A [Crimson Torque 2] DNF T2 pts=0
+
+=== SIMU50-21 | Interlagos (S1-W18) ===
+Participants: 2 | Voitures: 4 | Finishers: 4 | DNF: 0
+AUDACE 2/30 (6.7%) | DEFENSE succes=1 | PNEUS echecs=13
+Classement final:
+  P1 P. Novak #1A [Zenith Motorsport 1] ARR pts=10
+  P2 D. Costa #1B [Zenith Motorsport 1] ARR pts=9
+  P3 S. Kova #2B [Crimson Torque 2] ARR pts=8
+  P4 E. Hayashi #2A [Crimson Torque 2] ARR pts=7
+
+=== SIMU50-22 | Monaco (S1-W02) ===
+Participants: 6 | Voitures: 12 | Finishers: 10 | DNF: 2
+AUDACE 8/99 (8.1%) | DEFENSE succes=2 | PNEUS echecs=45
+Classement final:
+  P1 I. Rossi #1B [Zenith Motorsport 1] ARR pts=10
+  P2 J. Hart #6A [Falcon Works 6] ARR pts=9
+  P3 E. Hayashi #2A [Arc Nova 2] ARR pts=8
+  P4 O. Kim #5B [Polar Apex 5] ARR pts=7
+  P5 R. Silva #2B [Arc Nova 2] ARR pts=6
+  P6 P. Novak #3B [Vertex One 3] ARR pts=5
+  P7 T. Meyer #3A [Vertex One 3] ARR pts=4
+  P8 D. Costa #6B [Falcon Works 6] ARR pts=3
+  P9 T. Meyer #5A [Polar Apex 5] ARR pts=2
+  P10 M. Ito #4A [Vertex One 4] ARR pts=1
+  P11 O. Kim #1A [Zenith Motorsport 1] DNF T7 pts=0
+  P12 A. Becker #4B [Vertex One 4] DNF T4 pts=0
+
+=== SIMU50-23 | Suzuka (S1-W11) ===
+Participants: 5 | Voitures: 10 | Finishers: 8 | DNF: 2
+AUDACE 14/74 (18.9%) | DEFENSE succes=5 | PNEUS echecs=49
+Classement final:
+  P1 O. Kim #2B [Blue Comet 2] ARR pts=10
+  P2 I. Rossi #3A [Zenith Motorsport 3] ARR pts=9
+  P3 S. Kova #4B [Crimson Torque 4] ARR pts=8
+  P4 L. Martin #5B [Falcon Works 5] ARR pts=7
+  P5 L. Martin #1A [Blue Comet 1] ARR pts=6
+  P6 P. Novak #1B [Blue Comet 1] ARR pts=5
+  P7 L. Martin #5A [Falcon Works 5] ARR pts=4
+  P8 I. Rossi #3B [Zenith Motorsport 3] ARR pts=3
+  P9 L. Martin #2A [Blue Comet 2] DNF T3 pts=0
+  P10 L. Martin #4A [Crimson Torque 4] DNF T3 pts=0
+
+=== SIMU50-24 | Interlagos (S1-W18) ===
+Participants: 6 | Voitures: 12 | Finishers: 10 | DNF: 2
+AUDACE 20/105 (19.0%) | DEFENSE succes=6 | PNEUS echecs=51
+Classement final:
+  P1 J. Hart #3A [Crimson Torque 3] ARR pts=10
+  P2 S. Kova #1A [Falcon Works 1] ARR pts=9
+  P3 S. Kova #5B [Arc Nova 5] ARR pts=8
+  P4 P. Novak #2A [Vertex One 2] ARR pts=7
+  P5 I. Rossi #3B [Crimson Torque 3] ARR pts=6
+  P6 M. Ito #6B [Iron Pulse 6] ARR pts=5
+  P7 R. Silva #5A [Arc Nova 5] ARR pts=4
+  P8 M. Ito #2B [Vertex One 2] ARR pts=3
+  P9 N. Duval #4A [Iron Pulse 4] ARR pts=2
+  P10 L. Martin #1B [Falcon Works 1] ARR pts=1
+  P11 T. Meyer #6A [Iron Pulse 6] DNF T9 pts=0
+  P12 A. Becker #4B [Iron Pulse 4] DNF T8 pts=0
+
+=== SIMU50-25 | Monaco (S1-W02) ===
+Participants: 3 | Voitures: 6 | Finishers: 5 | DNF: 1
+AUDACE 7/46 (15.2%) | DEFENSE succes=4 | PNEUS echecs=35
+Classement final:
+  P1 F. Laurent #3A [Zenith Motorsport 3] ARR pts=10
+  P2 T. Meyer #1A [Crimson Torque 1] ARR pts=9
+  P3 S. Kova #2B [Falcon Works 2] ARR pts=8
+  P4 I. Rossi #1B [Crimson Torque 1] ARR pts=7
+  P5 J. Hart #3B [Zenith Motorsport 3] ARR pts=6
+  P6 E. Hayashi #2A [Falcon Works 2] DNF T7 pts=0
+
+=== SIMU50-26 | Suzuka (S1-W11) ===
+Participants: 2 | Voitures: 4 | Finishers: 2 | DNF: 2
+AUDACE 1/10 (10.0%) | DEFENSE succes=0 | PNEUS echecs=9
+Classement final:
+  P1 A. Becker #2B [Helios GP 2] ARR pts=10
+  P2 E. Hayashi #2A [Helios GP 2] ARR pts=9
+  P3 T. Meyer #1B [Falcon Works 1] DNF T1 pts=0
+  P4 I. Rossi #1A [Falcon Works 1] DNF T1 pts=0
+
+=== SIMU50-27 | Interlagos (S1-W18) ===
+Participants: 6 | Voitures: 12 | Finishers: 10 | DNF: 2
+AUDACE 12/100 (12.0%) | DEFENSE succes=3 | PNEUS echecs=52
+Classement final:
+  P1 T. Meyer #3B [Iron Pulse 3] ARR pts=10
+  P2 R. Silva #1B [Helios GP 1] ARR pts=9
+  P3 D. Costa #6B [Arc Nova 6] ARR pts=8
+  P4 L. Martin #1A [Helios GP 1] ARR pts=7
+  P5 A. Becker #2A [Zenith Motorsport 2] ARR pts=6
+  P6 J. Hart #5A [Vertex One 5] ARR pts=5
+  P7 F. Laurent #4A [Falcon Works 4] ARR pts=4
+  P8 F. Laurent #6A [Arc Nova 6] ARR pts=3
+  P9 J. Hart #4B [Falcon Works 4] ARR pts=2
+  P10 S. Kova #2B [Zenith Motorsport 2] ARR pts=1
+  P11 I. Rossi #3A [Iron Pulse 3] DNF T9 pts=0
+  P12 S. Kova #5B [Vertex One 5] DNF T3 pts=0
+
+=== SIMU50-28 | Monaco (S1-W02) ===
+Participants: 3 | Voitures: 6 | Finishers: 5 | DNF: 1
+AUDACE 7/42 (16.7%) | DEFENSE succes=6 | PNEUS echecs=27
+Classement final:
+  P1 N. Duval #3B [Polar Apex 3] ARR pts=10
+  P2 N. Duval #3A [Polar Apex 3] ARR pts=9
+  P3 R. Silva #2A [Iron Pulse 2] ARR pts=8
+  P4 M. Ito #1B [Helios GP 1] ARR pts=7
+  P5 L. Martin #1A [Helios GP 1] ARR pts=6
+  P6 A. Becker #2B [Iron Pulse 2] DNF T3 pts=0
+
+=== SIMU50-29 | Suzuka (S1-W11) ===
+Participants: 2 | Voitures: 4 | Finishers: 3 | DNF: 1
+AUDACE 2/25 (8.0%) | DEFENSE succes=0 | PNEUS echecs=16
+Classement final:
+  P1 D. Costa #1B [Crimson Torque 1] ARR pts=10
+  P2 E. Hayashi #2B [Vertex One 2] ARR pts=9
+  P3 T. Meyer #2A [Vertex One 2] ARR pts=8
+  P4 T. Meyer #1A [Crimson Torque 1] DNF T6 pts=0
+
+=== SIMU50-30 | Interlagos (S1-W18) ===
+Participants: 3 | Voitures: 6 | Finishers: 4 | DNF: 2
+AUDACE 8/39 (20.5%) | DEFENSE succes=3 | PNEUS echecs=23
+Classement final:
+  P1 L. Martin #3B [Arc Nova 3] ARR pts=10
+  P2 A. Becker #1B [Arc Nova 1] ARR pts=9
+  P3 T. Meyer #1A [Arc Nova 1] ARR pts=8
+  P4 T. Meyer #2A [Falcon Works 2] ARR pts=7
+  P5 J. Hart #3A [Arc Nova 3] DNF T7 pts=0
+  P6 I. Rossi #2B [Falcon Works 2] DNF T4 pts=0
+
+=== SIMU50-31 | Monaco (S1-W02) ===
+Participants: 7 | Voitures: 14 | Finishers: 12 | DNF: 2
+AUDACE 14/116 (12.1%) | DEFENSE succes=7 | PNEUS echecs=53
+Classement final:
+  P1 D. Costa #6B [Arc Nova 6] ARR pts=10
+  P2 T. Meyer #2B [Vertex One 2] ARR pts=9
+  P3 R. Silva #3A [Helios GP 3] ARR pts=8
+  P4 L. Martin #5B [Arc Nova 5] ARR pts=7
+  P5 E. Hayashi #3B [Helios GP 3] ARR pts=6
+  P6 F. Laurent #2A [Vertex One 2] ARR pts=5
+  P7 E. Hayashi #7A [Titan Lane 7] ARR pts=4
+  P8 L. Martin #5A [Arc Nova 5] ARR pts=3
+  P9 N. Duval #1B [Falcon Works 1] ARR pts=2
+  P10 D. Costa #6A [Arc Nova 6] ARR pts=1
+  P11 M. Ito #4A [Falcon Works 4] ARR pts=0
+  P12 R. Silva #1A [Falcon Works 1] ARR pts=0
+  P13 T. Meyer #4B [Falcon Works 4] DNF T6 pts=0
+  P14 P. Novak #7B [Titan Lane 7] DNF T2 pts=0
+
+=== SIMU50-32 | Suzuka (S1-W11) ===
+Participants: 7 | Voitures: 14 | Finishers: 9 | DNF: 5
+AUDACE 20/108 (18.5%) | DEFENSE succes=2 | PNEUS echecs=52
+Classement final:
+  P1 L. Martin #5B [Vertex One 5] ARR pts=10
+  P2 I. Rossi #1B [Falcon Works 1] ARR pts=9
+  P3 T. Meyer #2A [Arc Nova 2] ARR pts=8
+  P4 D. Costa #3B [Arc Nova 3] ARR pts=7
+  P5 M. Ito #5A [Vertex One 5] ARR pts=6
+  P6 R. Silva #4A [Titan Lane 4] ARR pts=5
+  P7 D. Costa #6A [Crimson Torque 6] ARR pts=4
+  P8 R. Silva #7B [Vertex One 7] ARR pts=3
+  P9 E. Hayashi #7A [Vertex One 7] ARR pts=2
+  P10 M. Ito #1A [Falcon Works 1] DNF T10 pts=0
+  P11 O. Kim #2B [Arc Nova 2] DNF T9 pts=0
+  P12 J. Hart #6B [Crimson Torque 6] DNF T7 pts=0
+  P13 D. Costa #3A [Arc Nova 3] DNF T6 pts=0
+  P14 D. Costa #4B [Titan Lane 4] DNF T1 pts=0
+
+=== SIMU50-33 | Interlagos (S1-W18) ===
+Participants: 2 | Voitures: 4 | Finishers: 4 | DNF: 0
+AUDACE 9/30 (30.0%) | DEFENSE succes=2 | PNEUS echecs=23
+Classement final:
+  P1 O. Kim #2B [Falcon Works 2] ARR pts=10
+  P2 L. Martin #1A [Titan Lane 1] ARR pts=9
+  P3 L. Martin #1B [Titan Lane 1] ARR pts=8
+  P4 I. Rossi #2A [Falcon Works 2] ARR pts=7
+
+=== SIMU50-34 | Monaco (S1-W02) ===
+Participants: 3 | Voitures: 6 | Finishers: 6 | DNF: 0
+AUDACE 5/50 (10.0%) | DEFENSE succes=1 | PNEUS echecs=35
+Classement final:
+  P1 O. Kim #1B [Iron Pulse 1] ARR pts=10
+  P2 L. Martin #2B [Crimson Torque 2] ARR pts=9
+  P3 M. Ito #1A [Iron Pulse 1] ARR pts=8
+  P4 M. Ito #3B [Polar Apex 3] ARR pts=7
+  P5 P. Novak #3A [Polar Apex 3] ARR pts=6
+  P6 E. Hayashi #2A [Crimson Torque 2] ARR pts=5
+
+=== SIMU50-35 | Suzuka (S1-W11) ===
+Participants: 8 | Voitures: 16 | Finishers: 10 | DNF: 6
+AUDACE 24/118 (20.3%) | DEFENSE succes=6 | PNEUS echecs=57
+Classement final:
+  P1 P. Novak #8B [Polar Apex 8] ARR pts=10
+  P2 R. Silva #3B [Arc Nova 3] ARR pts=9
+  P3 F. Laurent #2A [Titan Lane 2] ARR pts=8
+  P4 T. Meyer #3A [Arc Nova 3] ARR pts=7
+  P5 D. Costa #1A [Vertex One 1] ARR pts=6
+  P6 J. Hart #4A [Zenith Motorsport 4] ARR pts=5
+  P7 L. Martin #7A [Zenith Motorsport 7] ARR pts=4
+  P8 O. Kim #6A [Zenith Motorsport 6] ARR pts=3
+  P9 D. Costa #7B [Zenith Motorsport 7] ARR pts=2
+  P10 L. Martin #6B [Zenith Motorsport 6] ARR pts=1
+  P11 J. Hart #1B [Vertex One 1] DNF T9 pts=0
+  P12 R. Silva #5A [Iron Pulse 5] DNF T7 pts=0
+  P13 A. Becker #8A [Polar Apex 8] DNF T6 pts=0
+  P14 M. Ito #4B [Zenith Motorsport 4] DNF T6 pts=0
+  P15 N. Duval #5B [Iron Pulse 5] DNF T4 pts=0
+  P16 D. Costa #2B [Titan Lane 2] DNF T2 pts=0
+
+=== SIMU50-36 | Interlagos (S1-W18) ===
+Participants: 4 | Voitures: 8 | Finishers: 8 | DNF: 0
+AUDACE 20/70 (28.6%) | DEFENSE succes=8 | PNEUS echecs=39
+Classement final:
+  P1 O. Kim #1A [Arc Nova 1] ARR pts=10
+  P2 D. Costa #3A [Arc Nova 3] ARR pts=9
+  P3 D. Costa #2B [Crimson Torque 2] ARR pts=8
+  P4 R. Silva #1B [Arc Nova 1] ARR pts=7
+  P5 R. Silva #3B [Arc Nova 3] ARR pts=6
+  P6 N. Duval #2A [Crimson Torque 2] ARR pts=5
+  P7 P. Novak #4B [Vertex One 4] ARR pts=4
+  P8 N. Duval #4A [Vertex One 4] ARR pts=3
+
+=== SIMU50-37 | Monaco (S1-W02) ===
+Participants: 7 | Voitures: 14 | Finishers: 11 | DNF: 3
+AUDACE 7/110 (6.4%) | DEFENSE succes=3 | PNEUS echecs=48
+Classement final:
+  P1 L. Martin #5B [Titan Lane 5] ARR pts=10
+  P2 L. Martin #5A [Titan Lane 5] ARR pts=9
+  P3 A. Becker #7A [Arc Nova 7] ARR pts=8
+  P4 T. Meyer #1B [Titan Lane 1] ARR pts=7
+  P5 L. Martin #2A [Titan Lane 2] ARR pts=6
+  P6 S. Kova #3A [Titan Lane 3] ARR pts=5
+  P7 R. Silva #4A [Zenith Motorsport 4] ARR pts=4
+  P8 T. Meyer #1A [Titan Lane 1] ARR pts=3
+  P9 D. Costa #3B [Titan Lane 3] ARR pts=2
+  P10 E. Hayashi #6B [Polar Apex 6] ARR pts=1
+  P11 P. Novak #2B [Titan Lane 2] ARR pts=0
+  P12 T. Meyer #7B [Arc Nova 7] DNF T6 pts=0
+  P13 A. Becker #4B [Zenith Motorsport 4] DNF T4 pts=0
+  P14 M. Ito #6A [Polar Apex 6] DNF T3 pts=0
+
+=== SIMU50-38 | Suzuka (S1-W11) ===
+Participants: 6 | Voitures: 12 | Finishers: 11 | DNF: 1
+AUDACE 16/103 (15.5%) | DEFENSE succes=5 | PNEUS echecs=38
+Classement final:
+  P1 T. Meyer #2A [Titan Lane 2] ARR pts=10
+  P2 L. Martin #1B [Zenith Motorsport 1] ARR pts=9
+  P3 S. Kova #6B [Arc Nova 6] ARR pts=8
+  P4 L. Martin #3A [Crimson Torque 3] ARR pts=7
+  P5 E. Hayashi #3B [Crimson Torque 3] ARR pts=6
+  P6 F. Laurent #4A [Polar Apex 4] ARR pts=5
+  P7 N. Duval #4B [Polar Apex 4] ARR pts=4
+  P8 M. Ito #2B [Titan Lane 2] ARR pts=3
+  P9 S. Kova #6A [Arc Nova 6] ARR pts=2
+  P10 T. Meyer #1A [Zenith Motorsport 1] ARR pts=1
+  P11 D. Costa #5B [Blue Comet 5] ARR pts=0
+  P12 O. Kim #5A [Blue Comet 5] DNF T4 pts=0
+
+=== SIMU50-39 | Interlagos (S1-W18) ===
+Participants: 8 | Voitures: 16 | Finishers: 14 | DNF: 2
+AUDACE 34/143 (23.8%) | DEFENSE succes=9 | PNEUS echecs=58
+Classement final:
+  P1 N. Duval #3A [Blue Comet 3] ARR pts=10
+  P2 J. Hart #8A [Titan Lane 8] ARR pts=9
+  P3 F. Laurent #1A [Zenith Motorsport 1] ARR pts=8
+  P4 J. Hart #5A [Falcon Works 5] ARR pts=7
+  P5 L. Martin #7A [Polar Apex 7] ARR pts=6
+  P6 P. Novak #6A [Helios GP 6] ARR pts=5
+  P7 E. Hayashi #7B [Polar Apex 7] ARR pts=4
+  P8 E. Hayashi #1B [Zenith Motorsport 1] ARR pts=3
+  P9 R. Silva #2B [Polar Apex 2] ARR pts=2
+  P10 M. Ito #3B [Blue Comet 3] ARR pts=1
+  P11 N. Duval #5B [Falcon Works 5] ARR pts=0
+  P12 A. Becker #8B [Titan Lane 8] ARR pts=0
+  P13 S. Kova #4B [Zenith Motorsport 4] ARR pts=0
+  P14 I. Rossi #2A [Polar Apex 2] ARR pts=0
+  P15 R. Silva #6B [Helios GP 6] DNF T8 pts=0
+  P16 R. Silva #4A [Zenith Motorsport 4] DNF T7 pts=0
+
+=== SIMU50-40 | Monaco (S1-W02) ===
+Participants: 3 | Voitures: 6 | Finishers: 3 | DNF: 3
+AUDACE 2/22 (9.1%) | DEFENSE succes=1 | PNEUS echecs=22
+Classement final:
+  P1 J. Hart #1B [Falcon Works 1] ARR pts=10
+  P2 T. Meyer #1A [Falcon Works 1] ARR pts=9
+  P3 M. Ito #2A [Blue Comet 2] ARR pts=8
+  P4 M. Ito #2B [Blue Comet 2] DNF T2 pts=0
+  P5 D. Costa #3A [Iron Pulse 3] DNF T2 pts=0
+  P6 M. Ito #3B [Iron Pulse 3] DNF T1 pts=0
+
+=== SIMU50-41 | Suzuka (S1-W11) ===
+Participants: 4 | Voitures: 8 | Finishers: 7 | DNF: 1
+AUDACE 11/65 (16.9%) | DEFENSE succes=5 | PNEUS echecs=28
+Classement final:
+  P1 J. Hart #2B [Arc Nova 2] ARR pts=10
+  P2 M. Ito #1A [Falcon Works 1] ARR pts=9
+  P3 F. Laurent #3B [Crimson Torque 3] ARR pts=8
+  P4 A. Becker #4A [Vertex One 4] ARR pts=7
+  P5 N. Duval #2A [Arc Nova 2] ARR pts=6
+  P6 S. Kova #1B [Falcon Works 1] ARR pts=5
+  P7 R. Silva #3A [Crimson Torque 3] ARR pts=4
+  P8 M. Ito #4B [Vertex One 4] DNF T6 pts=0
+
+=== SIMU50-42 | Interlagos (S1-W18) ===
+Participants: 4 | Voitures: 8 | Finishers: 8 | DNF: 0
+AUDACE 13/70 (18.6%) | DEFENSE succes=2 | PNEUS echecs=47
+Classement final:
+  P1 S. Kova #3B [Zenith Motorsport 3] ARR pts=10
+  P2 N. Duval #2A [Blue Comet 2] ARR pts=9
+  P3 L. Martin #2B [Blue Comet 2] ARR pts=8
+  P4 A. Becker #4B [Crimson Torque 4] ARR pts=7
+  P5 P. Novak #3A [Zenith Motorsport 3] ARR pts=6
+  P6 L. Martin #1B [Arc Nova 1] ARR pts=5
+  P7 M. Ito #1A [Arc Nova 1] ARR pts=4
+  P8 D. Costa #4A [Crimson Torque 4] ARR pts=3
+
+=== SIMU50-43 | Monaco (S1-W02) ===
+Participants: 4 | Voitures: 8 | Finishers: 8 | DNF: 0
+AUDACE 3/70 (4.3%) | DEFENSE succes=3 | PNEUS echecs=36
+Classement final:
+  P1 N. Duval #3B [Polar Apex 3] ARR pts=10
+  P2 T. Meyer #2B [Zenith Motorsport 2] ARR pts=9
+  P3 L. Martin #4A [Falcon Works 4] ARR pts=8
+  P4 P. Novak #2A [Zenith Motorsport 2] ARR pts=7
+  P5 I. Rossi #1B [Crimson Torque 1] ARR pts=6
+  P6 J. Hart #3A [Polar Apex 3] ARR pts=5
+  P7 O. Kim #1A [Crimson Torque 1] ARR pts=4
+  P8 F. Laurent #4B [Falcon Works 4] ARR pts=3
+
+=== SIMU50-44 | Suzuka (S1-W11) ===
+Participants: 3 | Voitures: 6 | Finishers: 6 | DNF: 0
+AUDACE 8/50 (16.0%) | DEFENSE succes=4 | PNEUS echecs=24
+Classement final:
+  P1 S. Kova #1A [Titan Lane 1] ARR pts=10
+  P2 D. Costa #1B [Titan Lane 1] ARR pts=9
+  P3 S. Kova #3B [Titan Lane 3] ARR pts=8
+  P4 F. Laurent #3A [Titan Lane 3] ARR pts=7
+  P5 P. Novak #2B [Iron Pulse 2] ARR pts=6
+  P6 N. Duval #2A [Iron Pulse 2] ARR pts=5
+
+=== SIMU50-45 | Interlagos (S1-W18) ===
+Participants: 3 | Voitures: 6 | Finishers: 5 | DNF: 1
+AUDACE 9/40 (22.5%) | DEFENSE succes=2 | PNEUS echecs=23
+Classement final:
+  P1 I. Rossi #3B [Vertex One 3] ARR pts=10
+  P2 D. Costa #2B [Titan Lane 2] ARR pts=9
+  P3 O. Kim #1B [Helios GP 1] ARR pts=8
+  P4 L. Martin #1A [Helios GP 1] ARR pts=7
+  P5 T. Meyer #2A [Titan Lane 2] ARR pts=6
+  P6 R. Silva #3A [Vertex One 3] DNF T1 pts=0
+
+=== SIMU50-46 | Monaco (S1-W02) ===
+Participants: 8 | Voitures: 16 | Finishers: 16 | DNF: 0
+AUDACE 15/150 (10.0%) | DEFENSE succes=3 | PNEUS echecs=78
+Classement final:
+  P1 S. Kova #4B [Titan Lane 4] ARR pts=10
+  P2 I. Rossi #1A [Iron Pulse 1] ARR pts=9
+  P3 E. Hayashi #8A [Titan Lane 8] ARR pts=8
+  P4 I. Rossi #5B [Polar Apex 5] ARR pts=7
+  P5 E. Hayashi #3A [Helios GP 3] ARR pts=6
+  P6 M. Ito #1B [Iron Pulse 1] ARR pts=5
+  P7 F. Laurent #4A [Titan Lane 4] ARR pts=4
+  P8 J. Hart #7B [Vertex One 7] ARR pts=3
+  P9 I. Rossi #6B [Vertex One 6] ARR pts=2
+  P10 O. Kim #2B [Helios GP 2] ARR pts=1
+  P11 N. Duval #3B [Helios GP 3] ARR pts=0
+  P12 P. Novak #5A [Polar Apex 5] ARR pts=0
+  P13 R. Silva #6A [Vertex One 6] ARR pts=0
+  P14 L. Martin #2A [Helios GP 2] ARR pts=0
+  P15 P. Novak #8B [Titan Lane 8] ARR pts=0
+  P16 E. Hayashi #7A [Vertex One 7] ARR pts=0
+
+=== SIMU50-47 | Suzuka (S1-W11) ===
+Participants: 3 | Voitures: 6 | Finishers: 5 | DNF: 1
+AUDACE 15/49 (30.6%) | DEFENSE succes=10 | PNEUS echecs=33
+Classement final:
+  P1 O. Kim #2A [Titan Lane 2] ARR pts=10
+  P2 D. Costa #3B [Blue Comet 3] ARR pts=9
+  P3 F. Laurent #1A [Titan Lane 1] ARR pts=8
+  P4 O. Kim #3A [Blue Comet 3] ARR pts=7
+  P5 R. Silva #2B [Titan Lane 2] ARR pts=6
+  P6 N. Duval #1B [Titan Lane 1] DNF T10 pts=0
+
+=== SIMU50-48 | Interlagos (S1-W18) ===
+Participants: 2 | Voitures: 4 | Finishers: 4 | DNF: 0
+AUDACE 5/30 (16.7%) | DEFENSE succes=1 | PNEUS echecs=16
+Classement final:
+  P1 S. Kova #2B [Helios GP 2] ARR pts=10
+  P2 P. Novak #2A [Helios GP 2] ARR pts=9
+  P3 M. Ito #1A [Crimson Torque 1] ARR pts=8
+  P4 S. Kova #1B [Crimson Torque 1] ARR pts=7
+
+=== SIMU50-49 | Monaco (S1-W02) ===
+Participants: 6 | Voitures: 12 | Finishers: 10 | DNF: 2
+AUDACE 13/93 (14.0%) | DEFENSE succes=5 | PNEUS echecs=64
+Classement final:
+  P1 O. Kim #1B [Arc Nova 1] ARR pts=10
+  P2 T. Meyer #4A [Zenith Motorsport 4] ARR pts=9
+  P3 F. Laurent #5B [Blue Comet 5] ARR pts=8
+  P4 T. Meyer #2A [Vertex One 2] ARR pts=7
+  P5 M. Ito #3A [Zenith Motorsport 3] ARR pts=6
+  P6 S. Kova #4B [Zenith Motorsport 4] ARR pts=5
+  P7 S. Kova #5A [Blue Comet 5] ARR pts=4
+  P8 F. Laurent #2B [Vertex One 2] ARR pts=3
+  P9 P. Novak #1A [Arc Nova 1] ARR pts=2
+  P10 F. Laurent #6A [Crimson Torque 6] ARR pts=1
+  P11 D. Costa #3B [Zenith Motorsport 3] DNF T3 pts=0
+  P12 N. Duval #6B [Crimson Torque 6] DNF T2 pts=0
+
+=== SIMU50-50 | Suzuka (S1-W11) ===
+Participants: 3 | Voitures: 6 | Finishers: 5 | DNF: 1
+AUDACE 13/44 (29.5%) | DEFENSE succes=6 | PNEUS echecs=27
+Classement final:
+  P1 M. Ito #1B [Arc Nova 1] ARR pts=10
+  P2 I. Rossi #3A [Titan Lane 3] ARR pts=9
+  P3 N. Duval #1A [Arc Nova 1] ARR pts=8
+  P4 E. Hayashi #3B [Titan Lane 3] ARR pts=7
+  P5 N. Duval #2B [Polar Apex 2] ARR pts=6
+  P6 N. Duval #2A [Polar Apex 2] DNF T5 pts=0
+
+=== ANALYSE SYNTHETIQUE ===
+Courses simulees: 50
+Voitures engagees: 478
+Abandons: 72 (15.1%)
+Succes AUDACE: 600/3859 (15.5%)
+Defenses reussies: 185
+Echecs pneus (generation de stacks usure): 2023
+
+Par circuit:
+- Monaco: courses=17, voitures=178, DNF=28 (15.7%), AUDACE=129/1421 (9.1%), DEFENSE succes=48, PNEUS echecs=792
+- Suzuka: courses=17, voitures=164, DNF=30 (18.3%), AUDACE=234/1296 (18.1%), DEFENSE succes=73, PNEUS echecs=654
+- Interlagos: courses=16, voitures=136, DNF=14 (10.3%), AUDACE=237/1142 (20.8%), DEFENSE succes=64, PNEUS echecs=577
+
+Top 10 equipes (points):
+- Arc Nova 1: 107
+- Helios GP 1: 96
+- Crimson Torque 2: 93
+- Arc Nova 3: 89
+- Crimson Torque 1: 88
+- Titan Lane 1: 81
+- Falcon Works 2: 77
+- Arc Nova 2: 72
+- Iron Pulse 1: 68
+- Falcon Works 1: 65
+
+Top 10 pilotes (points):
+- T. Meyer #2A: 70
+- L. Martin #1A: 62
+- P. Novak #3A: 49
+- D. Costa #6B: 43
+- L. Martin #5B: 40
+- O. Kim #1B: 37
+- S. Kova #1B: 35
+- D. Costa #2B: 34
+- E. Hayashi #2A: 34
+- L. Martin #5A: 33
+
+=== ANALYSE CRITIQUE ET EXPERTE ===
+1) Lisibilite: le systeme reste lisible car les causes de mouvement sont identifiables (AUDACE/DEFENSE/PNEUS/ENDURANCE) dans les logs.
+2) Realisme: la regle pneus progressive est plus credible qu'un swap binaire, car l'effet de l'usure s'accumule tour apres tour.
+3) Coherence competition: DNF a 0 point renforce la logique sportive et reduit les situations contre-intuitives au classement.
+4) Equilibre actuel: AUDACE renforcee augmente le nombre de tentatives converties, mais DEFENSE conserve un role de contre-jeu utile.
+5) Risque de variance: avec 2 a 8 participants, certaines courses courtes (4 voitures) ont une variance forte sur le podium.
+6) Fiabilite mecanique: ENDURANCE reste un determinant majeur du resultat final car elle est testee a chaque tour.
+7) Impact circuit: les 3 circuits influencent bien les outcomes, mais un echantillon de 50 courses ne couvre pas encore toute la saison.
+8) Robustesse analytique: la taille d'echantillon est suffisante pour tendances globales, insuffisante pour micro-ajustements fins par stat unitaire.
+9) Realisme vs gameplay: l'etat actuel est bon compromis, avec une dynamique de peloton active sans regles externes (meteo/evenements).
+10) Recommandation: conserver l'architecture mais instrumenter davantage de metriques d'equilibrage avant tout nouveau changement structurel.

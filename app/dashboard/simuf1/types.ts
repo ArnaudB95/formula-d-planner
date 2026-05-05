@@ -61,6 +61,8 @@ export type SimuF1DiceLog = {
   roll: number | null;
   threshold: number | null;
   success: boolean;
+  pneusWearStacks?: number;
+  pneusPlaceDrop?: number;
   summary: string;
   createdAtISO: string;
 };

@@ -17,6 +17,7 @@ type RaceCar = {
   dnf: boolean;
   dnfLap: number | null;
   lastPneusResetLap: number;
+  pneusWearStacks: number;
 };
 
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
@@ -31,7 +32,7 @@ export const validateCarSetup = (car: SimuF1Entry["cars"][number]) => {
   const stats = [car.bloc, car.grip, car.audace, car.defense, car.endurance, car.pneus];
   const statsInRange = stats.every((v) => v >= 1 && v <= 10);
   const pitStopsOk = car.pitStops >= 0 && car.pitStops <= 3;
-  const pitLapsOk = car.pitLaps.length === car.pitStops && car.pitLaps.every((lap) => lap >= 1 && lap <= 10);
+  const pitLapsOk = car.pitLaps.length === car.pitStops && car.pitLaps.every((lap) => lap >= 1 && lap <= 9);
   const pitLapsStrictOrder = car.pitLaps.every((lap, i) => i === 0 || car.pitLaps[i - 1] < lap);
   return statsInRange && pitStopsOk && pitLapsOk && pitLapsStrictOrder && carBudgetUsed(car) === 31;
 };
@@ -53,8 +54,8 @@ const gripEffect = (grip: number) => {
 };
 
 const audaceChance = (audace: number) => {
-  if (audace >= 5) return 4 + (audace - 5) * 2;
-  return Math.max(0, 4 - (5 - audace));
+  if (audace >= 5) return 16 + (audace - 5) * 6.3;
+  return Math.max(5, 16 - (5 - audace) * 2.5);
 };
 
 const defenseChance = (defense: number) => {
@@ -63,8 +64,8 @@ const defenseChance = (defense: number) => {
 };
 
 const enduranceBreakChance = (endurance: number) => {
-  if (endurance >= 5) return Math.max(0, 5 - (endurance - 5));
-  return 5 + (5 - endurance) * 0.5;
+  if (endurance >= 5) return Math.max(0.95, 2.1 - (endurance - 5) * 0.22);
+  return 2.1 + (5 - endurance) * 0.4;
 };
 
 const pneusScore = (pneus: number) => 11 - pneus;
@@ -93,8 +94,8 @@ const gripFactorWithCircuit = (value: number, modifier: "boosted" | "penalized" 
 };
 
 const enduranceFactorWithCircuit = (modifier: "boosted" | "penalized" | "neutral") => {
-  if (modifier === "boosted") return 0.5;
-  if (modifier === "penalized") return 1.5;
+  if (modifier === "boosted") return 0.72;
+  if (modifier === "penalized") return 1.3;
   return 1;
 };
 
@@ -160,7 +161,7 @@ const applyGripGridMove = (
 };
 
 const assignF1Points = (position: number) => {
-  const table = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
+  const table = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
   return table[position - 1] || 0;
 };
 
@@ -204,6 +205,7 @@ export const simulateRaceFromEntries = (
         dnf: false,
         dnfLap: null,
         lastPneusResetLap: 1,
+        pneusWearStacks: 0,
       });
     });
   });
@@ -228,6 +230,19 @@ export const simulateRaceFromEntries = (
     threshold: null,
     success: true,
     summary: `Circuit ${circuit.circuitName} (${profileLabel(circuit.profile)}): boosts ${circuit.boosted.join(", ")} | penalites ${circuit.penalized.join(", ")}`,
+  });
+
+  pushLog({
+    phase: "qualif",
+    lap: null,
+    actorCarId: "system",
+    actorPilotName: "System",
+    stat: "pneus",
+    roll: null,
+    threshold: null,
+    success: true,
+    summary:
+      "Regle pneus progressive (course de 10 tours): a chaque echec pneus, +1 stack usure. Chaque 2 stacks font perdre 1 place (arrondi inferieur) a la fin du tour. Pit stop autorise tours 1 a 9, et reset des stacks.",
   });
 
   const statModifierText = (stat: SimuF1StatKey) => {
@@ -281,6 +296,19 @@ export const simulateRaceFromEntries = (
       if (car.dnf) continue;
       if (car.pitLaps.includes(lap)) {
         car.lastPneusResetLap = lap + 1;
+        car.pneusWearStacks = 0;
+        pushLog({
+          phase: "course",
+          lap,
+          actorCarId: car.carId,
+          actorPilotName: car.pilotName,
+          stat: "pneus",
+          roll: null,
+          threshold: null,
+          success: true,
+          pneusWearStacks: car.pneusWearStacks,
+          summary: `${car.pilotName} passe au stand: stacks pneus reset a 0`,
+        });
       }
       const breakChance = Math.min(
         100,
@@ -366,6 +394,7 @@ export const simulateRaceFromEntries = (
       const threshold = Math.min(100, effectivePneusScore * effectiveLap);
       const roll = d100();
       const success = roll <= threshold;
+      if (success) car.pneusWearStacks += 1;
       pushLog({
         phase: "course",
         lap,
@@ -375,15 +404,34 @@ export const simulateRaceFromEntries = (
         roll,
         threshold,
         success,
+        pneusWearStacks: car.pneusWearStacks,
         summary: success
-            ? `${car.pilotName} perd l'adherence (PNEUS, ${statModifierText("pneus")})`
-            : `${car.pilotName} gere ses pneus (PNEUS, ${statModifierText("pneus")})`,
+            ? `${car.pilotName} use ses pneus: stack ${car.pneusWearStacks} (PNEUS, ${statModifierText("pneus")})`
+            : `${car.pilotName} gere ses pneus: stack ${car.pneusWearStacks} (PNEUS, ${statModifierText("pneus")})`,
       });
-      if (success && i < active.length - 1) {
-        const tmp = active[i + 1];
-        active[i + 1] = car;
-        active[i] = tmp;
-      }
+    }
+
+    for (let i = active.length - 1; i >= 0; i -= 1) {
+      const car = active[i];
+      const drop = Math.floor(car.pneusWearStacks / 2);
+      if (drop <= 0) continue;
+      const nextIndex = clamp(i + drop, 0, active.length - 1);
+      if (nextIndex === i) continue;
+      active.splice(i, 1);
+      active.splice(nextIndex, 0, car);
+      pushLog({
+        phase: "course",
+        lap,
+        actorCarId: car.carId,
+        actorPilotName: car.pilotName,
+        stat: "pneus",
+        roll: null,
+        threshold: null,
+        success: true,
+        pneusWearStacks: car.pneusWearStacks,
+        pneusPlaceDrop: drop,
+        summary: `${car.pilotName} perd ${drop} place(s) sur usure progressive (stack ${car.pneusWearStacks})`,
+      });
     }
 
     grid = [...active, ...dnfs];
@@ -405,7 +453,7 @@ export const simulateRaceFromEntries = (
     position: idx + 1,
     dnf: car.dnf,
     dnfLap: car.dnfLap,
-    points: assignF1Points(idx + 1),
+    points: car.dnf ? 0 : assignF1Points(idx + 1),
   }));
 
   return {

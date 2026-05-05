@@ -23,8 +23,10 @@ import type {
   SimuF1SeasonStandings,
 } from "./types";
 
-const isoWeekKey = (date: Date) => {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+const PARIS_TZ = "Europe/Paris";
+
+const isoWeekKeyFromUtcDate = (date: Date) => {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
   const dayNum = d.getUTCDay() || 7;
   d.setUTCDate(d.getUTCDate() + 4 - dayNum);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
@@ -32,57 +34,142 @@ const isoWeekKey = (date: Date) => {
   return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
 };
 
-const sundayDateISO = (date: Date) => {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = 7 - day;
-  d.setDate(d.getDate() + (diff === 7 ? 0 : diff));
-  return d.toISOString().slice(0, 10);
+const getParisNowParts = (date = new Date()) => {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: PARIS_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    weekday: "short",
+    hourCycle: "h23",
+  }).formatToParts(date);
+
+  const get = (type: string) => parts.find((p) => p.type === type)?.value || "";
+
+  return {
+    year: Number(get("year")),
+    month: Number(get("month")),
+    day: Number(get("day")),
+    hour: Number(get("hour")),
+    minute: Number(get("minute")),
+    second: Number(get("second")),
+    weekday: get("weekday"),
+  };
 };
 
-const entryDocId = (email: string) => email.replaceAll("/", "_").replaceAll(".", "_");
+const weekdayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
 
-export const ensureCurrentWeeklyRace = async (seasonYear: number) => {
+const getOffsetMinutesParis = (date: Date) => {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: PARIS_TZ, timeZoneName: "shortOffset" }).formatToParts(date);
+  const raw = parts.find((p) => p.type === "timeZoneName")?.value || "GMT+1";
+  const m = raw.match(/GMT([+-])(\d{1,2})(?::?(\d{2}))?/i);
+  if (!m) return 60;
+  const sign = m[1] === "-" ? -1 : 1;
+  const hh = Number(m[2] || "0");
+  const mm = Number(m[3] || "0");
+  return sign * (hh * 60 + mm);
+};
+
+const parisLocalToUtc = (year: number, month: number, day: number, hour: number, minute: number, second: number) => {
+  let guess = Date.UTC(year, month - 1, day, hour, minute, second);
+  for (let i = 0; i < 3; i += 1) {
+    const offset = getOffsetMinutesParis(new Date(guess));
+    guess = Date.UTC(year, month - 1, day, hour, minute, second) - offset * 60_000;
+  }
+  return new Date(guess);
+};
+
+const parisDateOnlyUtc = (date = new Date()) => {
+  const p = getParisNowParts(date);
+  return new Date(Date.UTC(p.year, p.month - 1, p.day));
+};
+
+const weekInfoFromParis = (date = new Date(), weekOffset = 0) => {
+  const base = parisDateOnlyUtc(date);
+  const p = getParisNowParts(date);
+  const weekday = weekdayMap[p.weekday] ?? 0;
+  const daysUntilSunday = (7 - weekday) % 7;
+
+  const sunday = new Date(base);
+  sunday.setUTCDate(sunday.getUTCDate() + daysUntilSunday + weekOffset * 7);
+
+  const monday = new Date(sunday);
+  monday.setUTCDate(monday.getUTCDate() - 6);
+
+  const weekKey = isoWeekKeyFromUtcDate(monday);
+  const sundayDateISO = sunday.toISOString().slice(0, 10);
+  return { weekKey, sundayDateISO };
+};
+
+const isRaceDueInParis = (sundayDateISO: string) => {
+  const [y, m, d] = String(sundayDateISO || "").split("-").map(Number);
+  if (!y || !m || !d) return false;
+  const target = parisLocalToUtc(y, m, d, 12, 0, 0);
+  return Date.now() >= target.getTime();
+};
+
+const upsertWeeklyRace = async (seasonYear: number, weekOffset = 0) => {
   const db = getFirestore();
   if (!db) throw new Error("Firestore indisponible");
 
-  const now = new Date();
-  const weekKey = isoWeekKey(now);
+  const { weekKey, sundayDateISO } = weekInfoFromParis(new Date(), weekOffset);
   const raceId = `${seasonYear}-${weekKey}`;
   const circuit = getCircuitConfigForWeekKey(weekKey);
   const raceRef = doc(db, "simuf1Races", raceId);
 
   const snapshot = await getDoc(raceRef);
+  const payload = {
+    id: raceId,
+    seasonYear,
+    weekKey,
+    sundayDateISO,
+    circuitName: circuit.circuitName,
+    circuitProfile: profileLabel(circuit.profile),
+    boostedStats: circuit.boosted,
+    penalizedStats: circuit.penalized,
+    updatedAt: serverTimestamp(),
+  };
+
   if (!snapshot.exists()) {
-    const payload: SimuF1Race = {
-      id: raceId,
-      seasonYear,
-      weekKey,
-      sundayDateISO: sundayDateISO(now),
-      circuitName: circuit.circuitName,
-      circuitProfile: profileLabel(circuit.profile),
-      boostedStats: circuit.boosted,
-      penalizedStats: circuit.penalized,
+    await setDoc(raceRef, {
+      ...payload,
       status: "open",
       createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    };
-    await setDoc(raceRef, payload as any, { merge: true });
+    } as SimuF1Race, { merge: true });
   } else {
-    await setDoc(
-      raceRef,
-      {
-        circuitName: circuit.circuitName,
-        circuitProfile: profileLabel(circuit.profile),
-        boostedStats: circuit.boosted,
-        penalizedStats: circuit.penalized,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
+    await setDoc(raceRef, payload, { merge: true });
   }
 
-  return raceId;
+  return {
+    raceId,
+    snapshot,
+    weekKey,
+    sundayDateISO,
+  };
+};
+
+const entryDocId = (email: string) => email.replaceAll("/", "_").replaceAll(".", "_");
+
+export const ensureCurrentWeeklyRace = async (seasonYear: number) => {
+  const current = await upsertWeeklyRace(seasonYear, 0);
+  const currentData = current.snapshot.exists() ? (current.snapshot.data() as Partial<SimuF1Race>) : null;
+  const currentStatus = String(currentData?.status || "open");
+  const currentSunday = String(currentData?.sundayDateISO || current.sundayDateISO);
+
+  if (currentStatus === "published" && isRaceDueInParis(currentSunday)) {
+    const next = await upsertWeeklyRace(seasonYear, 1);
+    return next.raceId;
+  }
+
+  return current.raceId;
+};
+
+export const ensureNextWeeklyRace = async (seasonYear: number) => {
+  const next = await upsertWeeklyRace(seasonYear, 1);
+  return next.raceId;
 };
 
 export const subscribeRace = (raceId: string, cb: (race: SimuF1Race | null) => void) => {
@@ -275,6 +362,7 @@ export const runRaceSimulationAndPersist = async (raceId: string, seasonYear: nu
 
   const raceSnap = await getDoc(doc(db, "simuf1Races", raceId));
   const weekKey = (raceSnap.exists() ? (raceSnap.data() as SimuF1Race).weekKey : "") || "";
+  const raceSundayDateISO = (raceSnap.exists() ? (raceSnap.data() as SimuF1Race).sundayDateISO : "") || "";
   const result = simulateRaceFromEntries(raceId, seasonYear, entries, weekKey);
 
   await setDoc(doc(db, "simuf1Races", raceId, "results", "latest"), {
@@ -282,28 +370,16 @@ export const runRaceSimulationAndPersist = async (raceId: string, seasonYear: nu
     generatedAt: serverTimestamp(),
   });
 
-  const seasonRef = doc(db, "simuf1Seasons", String(seasonYear));
-  const seasonSnap = await getDoc(seasonRef);
-  const current = (seasonSnap.exists() ? seasonSnap.data() : {}) as Partial<SimuF1SeasonStandings>;
-  const teams = { ...(current.teams || {}) } as Record<string, number>;
-  const drivers = { ...(current.drivers || {}) } as Record<string, number>;
-
-  result.cars.forEach((car) => {
-    teams[car.teamName] = (teams[car.teamName] || 0) + car.points;
-    drivers[car.pilotName] = (drivers[car.pilotName] || 0) + car.points;
-  });
-
-  await setDoc(seasonRef, {
-    seasonYear,
-    teams,
-    drivers,
-    updatedAt: serverTimestamp(),
-  } as SimuF1SeasonStandings, { merge: true });
-
   await setDoc(doc(db, "simuf1Races", raceId), {
     status: "published",
     updatedAt: serverTimestamp(),
   }, { merge: true });
+
+  await recomputeSeasonStandings(seasonYear);
+
+  if (isRaceDueInParis(String(raceSundayDateISO))) {
+    await ensureNextWeeklyRace(seasonYear);
+  }
 
   return result;
 };

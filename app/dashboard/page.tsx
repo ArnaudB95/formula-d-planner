@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getAuth, getFirestore } from "@/lib/firebase";
@@ -120,6 +120,7 @@ export default function Dashboard() {
   }>({ raceName: "Monaco", sundayDateISO: null, participating: false });
 
   const [tab, setTab] = useState("events");
+  const [selectedResultKey, setSelectedResultKey] = useState("");
 
   const [selectedDate, setSelectedDate] = useState("");
   const [chatInput, setChatInput] = useState("");
@@ -260,7 +261,12 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const requestedTab = new URLSearchParams(window.location.search).get("tab");
+    const query = new URLSearchParams(window.location.search);
+    const requestedTab = query.get("tab");
+    const requestedResult = query.get("result");
+
+    setSelectedResultKey(String(requestedResult || "").trim());
+
     if (!requestedTab) return;
     const allowedTabs = new Set(["events", "proposition", "chat", "results", "members", "circuits", "simuf1"]);
     if (!allowedTabs.has(requestedTab)) return;
@@ -675,16 +681,8 @@ export default function Dashboard() {
     return onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
       setEvolutionRequests(data);
-      if (data.length === 0) {
-        setSelectedEvolutionId(null);
-        return;
-      }
-      const firstOpen = data.find((item: any) => (item.status || "en-cours") === "en-cours");
-      if (!selectedEvolutionId || !data.some((item: any) => item.id === selectedEvolutionId)) {
-        setSelectedEvolutionId((firstOpen || data[0]).id);
-      }
     });
-  }, [selectedEvolutionId]);
+  }, []);
 
   useEffect(() => {
     if (chatView !== "evolution") return;
@@ -1321,7 +1319,7 @@ export default function Dashboard() {
         );
         if (exists) {
           return (
-            <span key={`${part}-${idx}`} className="text-[#d31f28] font-bold">
+            <span key={`${part}-${idx}`} className="text-[#e10600] font-bold">
               {part}
             </span>
           );
@@ -1509,7 +1507,7 @@ export default function Dashboard() {
     if (normalized === "non-retenu") {
       return {
         label: "Non retenu",
-        badgeClass: "border-[#d31f28]/60 bg-[#d31f28]/15 text-[#ff7b82]",
+        badgeClass: "border-[#e10600]/60 bg-[#e10600]/15 text-[#ff7b82]",
       };
     }
     if (normalized === "traite") {
@@ -1572,9 +1570,9 @@ export default function Dashboard() {
 
   const navItems = [
     { key: "events", label: "Parties", icon: CalendarDays },
-    { key: "proposition", label: "Propositions", icon: ClipboardList },
-    { key: "chat", label: "Chat", icon: MessageCircle },
+    { key: "proposition", label: "Propos", icon: ClipboardList },
     { key: "results", label: "Resultats", icon: Trophy },
+    { key: "chat", label: "Chat", icon: MessageCircle },
     { key: "members", label: "Pilotes", icon: Users },
     { key: "circuits", label: "Circuits", icon: Route },
     { key: "simuf1", label: "SimuF1", icon: Gamepad2 },
@@ -1589,7 +1587,7 @@ export default function Dashboard() {
       image:
         "https://cdn.discordapp.com/attachments/1068885680568148019/1495199476682457249/FD1.png?ex=69e56086&is=69e40f06&hm=6d8080959f88b13dca33d35e1fbd302ced8319d366623342aa0a293037be5c82&",
       imagePosition: "50% 38%",
-      href: "/dashboard/results/team-s2-2026-2027",
+      href: "/dashboard?tab=results&result=team-s2-2026-2027",
     },
     {
       key: "individual-s1-2024-2026",
@@ -1599,7 +1597,8 @@ export default function Dashboard() {
       image:
         "https://cdn.discordapp.com/attachments/1068885680568148019/1495199499360927744/FD2.png?ex=69e5608c&is=69e40f0c&hm=2dcbb39083245c6e7d77dfe1924ebbb9d79228f9cbef9d23e1224df7ff13286a&",
       imagePosition: "50% 44%",
-      href: "/dashboard/results/individual-s1-2024-2026",
+      href: "/dashboard?tab=results&result=individual-s1-2024-2026",
+      resultImage: "/I09.png",
     },
     {
       key: "team-s1-2024-2025",
@@ -1609,7 +1608,8 @@ export default function Dashboard() {
       image:
         "https://cdn.discordapp.com/attachments/1068885680568148019/1495199525089054731/FD3.png?ex=69e56092&is=69e40f12&hm=2160f83b6b67f694871d11f10b803a05baa425fcaa28daf4382100c06ee9f622&",
       imagePosition: "50% 42%",
-      href: "/dashboard/results/team-s1-2024-2025",
+      href: "/dashboard?tab=results&result=team-s1-2024-2025",
+      resultImage: "/E12.png",
     },
     {
       key: "team-s0-2015-2017",
@@ -1619,9 +1619,11 @@ export default function Dashboard() {
       image:
         "https://cdn.discordapp.com/attachments/1068885680568148019/1495199545888477417/FD4.png?ex=69e56097&is=69e40f17&hm=45c81c3fa167bdcfa359b292a63165548bd1df5095dcc1cba030d9c8ce4d9e52&",
       imagePosition: "50% 46%",
-      href: "/dashboard/results/team-s0-2015-2017",
+      href: "/dashboard?tab=results&result=team-s0-2015-2017",
     },
   ];
+
+  const selectedResultsCategory = resultsCategories.find((category) => category.key === selectedResultKey) || null;
 
   const renderResultsTitle = (title: string) => {
     const segments = title.split(/(Championnat|Équipe|Individuel|Saison\s+\d+|-\s*\d{4}\s*\/\s*\d{4}|\d{4}\s*\/\s*\d{4})/g).filter(Boolean);
@@ -1653,7 +1655,7 @@ export default function Dashboard() {
         return (
           <span
             key={`${segment}-${index}`}
-            className="relative inline-block bg-gradient-to-r from-[#ff8a90] via-[#ff5961] to-[#ff8a90] bg-clip-text text-transparent [text-shadow:0_0_16px_rgba(211,31,40,0.35)] after:absolute after:-bottom-[2px] after:left-0 after:h-[2px] after:w-full after:origin-left after:bg-gradient-to-r after:from-[#d31f28]/85 after:via-[#ff5961]/40 after:to-transparent"
+            className="relative inline-block bg-gradient-to-r from-[#ff6a60] via-[#ff3b30] to-[#ff6a60] bg-clip-text text-transparent [text-shadow:0_0_16px_rgba(211,31,40,0.35)] after:absolute after:-bottom-[2px] after:left-0 after:h-[2px] after:w-full after:origin-left after:bg-gradient-to-r after:from-[#e10600]/85 after:via-[#ff3b30]/40 after:to-transparent"
           >
             {segment}
           </span>
@@ -1864,7 +1866,7 @@ export default function Dashboard() {
   const getColor = (eventVotes: any, email: string) => {
     const status = getVoteStatus(eventVotes[email]);
     if (status === "present") return "text-[#409b48]";
-    if (status === "absent") return "text-[#d31f28]";
+    if (status === "absent") return "text-[#e10600]";
     return "text-gray-400";
   };
 
@@ -1895,9 +1897,9 @@ export default function Dashboard() {
   const resolvedAvatar = ((profile?.avatar as string) || (user?.photoURL as string) || "").trim();
 
   return (
-    <main className="min-h-screen bg-[#000e22] text-white">
+    <main className="min-h-screen bg-[#0f1014] text-white">
       {/* F1 top accent bar */}
-      <div className="h-1 w-full bg-[#d31f28]" />
+      <div className="h-1 w-full bg-[#e10600]" />
       <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-6 pb-40 sm:pb-20">
         <header className="flex items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
@@ -1914,7 +1916,7 @@ export default function Dashboard() {
               />
             </button>
 
-            <div className="info-laser-border h-14 flex-1 min-w-0 max-w-[640px] bg-[#010d1e] px-3 sm:px-4 flex items-center overflow-hidden py-0 sm:py-0">
+            <div className="info-laser-border h-14 flex-1 min-w-0 max-w-[640px] bg-[#121419] px-3 sm:px-4 flex items-center overflow-hidden py-0 sm:py-0">
               {!currentInfoLine ? (
                 <p className="text-[11px] sm:text-xs uppercase tracking-[0.14em] text-gray-500">Aucune info urgente</p>
               ) : (
@@ -1922,12 +1924,12 @@ export default function Dashboard() {
                   <p className="text-[11px] sm:text-xs uppercase tracking-[0.14em] text-gray-200 leading-4 whitespace-normal break-words">
                     {currentInfoLine?.funPseudo ? (
                       <>
-                        <span className="text-[#d31f28] mr-1">{currentInfoLine.funPseudo}</span>
+                        <span className="text-[#e10600] mr-1">{currentInfoLine.funPseudo}</span>
                         {currentInfoLine.text.slice(currentInfoLine.funPseudo.length)}
                       </>
                     ) : (
                       <>
-                        <span className="text-[#d31f28] mr-2">{currentInfoLine?.source}</span>
+                        <span className="text-[#e10600] mr-2">{currentInfoLine?.source}</span>
                         {currentInfoLine?.text}
                       </>
                     )}
@@ -1943,7 +1945,7 @@ export default function Dashboard() {
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className="w-9 h-9 sm:w-14 sm:h-14 rounded-[2px] p-[2px] bg-black transition"
               >
-                <div className="w-full h-full rounded-[2px] overflow-hidden bg-[#d31f28] [transform:translateZ(0)] [-webkit-mask-image:-webkit-radial-gradient(white,black)] [mask-image:radial-gradient(white,black)] flex items-center justify-center">
+                <div className="w-full h-full rounded-[2px] overflow-hidden bg-[#e10600] [transform:translateZ(0)] [-webkit-mask-image:-webkit-radial-gradient(white,black)] [mask-image:radial-gradient(white,black)] flex items-center justify-center">
                   {resolvedAvatar ? (
                     <div
                       aria-label="Avatar"
@@ -1963,11 +1965,11 @@ export default function Dashboard() {
                 </svg>
               </div>
               {isMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-[min(32rem,calc(100vw-2rem))] bg-[#001122] border border-white/20 rounded-lg shadow-xl z-50">
+                <div className="absolute right-0 top-full mt-2 w-[min(32rem,calc(100vw-2rem))] bg-[#13151b] border border-white/20 rounded-lg shadow-xl z-50">
                   <div className="p-4">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-12 h-12 rounded-[2px] p-[2px] bg-black">
-                        <div className="w-full h-full bg-[#d31f28] rounded-[2px] flex items-center justify-center overflow-hidden [transform:translateZ(0)] [-webkit-mask-image:-webkit-radial-gradient(white,black)] [mask-image:radial-gradient(white,black)]">
+                        <div className="w-full h-full bg-[#e10600] rounded-[2px] flex items-center justify-center overflow-hidden [transform:translateZ(0)] [-webkit-mask-image:-webkit-radial-gradient(white,black)] [mask-image:radial-gradient(white,black)]">
                           {resolvedAvatar ? (
                             <div
                               aria-label="Avatar"
@@ -2043,7 +2045,7 @@ export default function Dashboard() {
                             autoComplete="off"
                           />
                           {addressSuggestions.length > 0 && (
-                            <div className="absolute z-50 mt-1 w-full rounded-md border border-white/20 bg-[#021126] shadow-xl overflow-hidden">
+                            <div className="absolute z-50 mt-1 w-full rounded-md border border-white/20 bg-[#161920] shadow-xl overflow-hidden">
                               {addressSuggestions.map((suggestion) => (
                                 <button
                                   key={suggestion}
@@ -2092,7 +2094,7 @@ export default function Dashboard() {
                             value={editNotificationEmail}
                             onChange={(e) => setEditNotificationEmail(e.target.value)}
                             placeholder="nom@outlook.com, nom@gmail.com, etc."
-                            className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded text-white placeholder-gray-500 text-sm focus:outline-none focus:border-[#d31f28]"
+                            className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded text-white placeholder-gray-500 text-sm focus:outline-none focus:border-[#e10600]"
                           />
                           <p className="mt-1 text-xs text-gray-400">
                             Laisse vide pour utiliser {user?.email}
@@ -2103,7 +2105,7 @@ export default function Dashboard() {
                         type="button"
                         onClick={saveProfile}
                         disabled={isSavingProfile}
-                        className="w-full bg-[#d31f28] disabled:bg-[#7a1b20] hover:bg-[#b81d23] text-white px-4 py-2 rounded-md transition"
+                        className="w-full bg-[#e10600] disabled:bg-[#7a1b20] hover:bg-[#ba0500] text-white px-4 py-2 rounded-md transition"
                       >
                         {isSavingProfile ? "Enregistrement..." : "Sauvegarder"}
                       </button>
@@ -2127,25 +2129,25 @@ export default function Dashboard() {
         </header>
 
         <div className="mt-4 sm:mt-6">
-          <section className={`border border-white/10 bg-[#010d1e] ${tab === "chat" ? "px-0 py-4 sm:p-6" : "p-4 sm:p-6"}`}>
-            <div className={`flex flex-wrap items-center justify-between gap-3 pb-5 border-b border-white/10 mb-6 ${tab === "chat" ? "px-3 sm:px-0" : ""}`}>
+          <section className={`border border-[#2a2d36] ${tab === "events" || tab === "proposition" || tab === "chat" ? "bg-[#15171d] shadow-[0_14px_36px_rgba(0,0,0,0.26)]" : "bg-[#15171d]"} ${tab === "chat" ? "px-0 py-4 sm:p-6" : "p-4 sm:p-6"}`}>
+            <div className={`flex flex-wrap items-center justify-between gap-3 border-b border-[#343845] pb-5 mb-6 ${tab === "chat" ? "px-3 sm:px-0" : ""}`}>
               <div className="flex items-center gap-3">
-                <div className="w-1 h-8 bg-[#d31f28]" />
-                <p className="text-xs font-black uppercase tracking-[0.25em] text-gray-400">
-                  {tab === "events" && <>Parties a venir — <span className="text-[#d31f28]">{nextEventDays !== null ? `J-${nextEventDays}` : "—"}</span></>}
+                <div className="w-1 h-8 bg-[#e10600]" />
+                <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-[0.09em] text-white">
+                  {tab === "events" && <>Parties a venir — <span className="text-[#e10600]">{nextEventDays !== null ? `J-${nextEventDays}` : "—"}</span></>}
                   {tab === "proposition" && <>Propositions de dates</>}
                   {tab === "chat" && <>{chatView === "evolution" ? "Evolution Appli" : "Chat"}</>}
                   {tab === "results" && <>Resultats</>}
-                  {tab === "members" && <>Participants</>}
+                  {tab === "members" && <>Pilotes</>}
                   {tab === "circuits" && <>Circuits</>}
                   {tab === "simuf1" && <>SimuF1</>}
-                </p>
+                </h2>
               </div>
               {tab === "chat" && (
                 <button
                   type="button"
                   onClick={() => setChatView(chatView === "chat" ? "evolution" : "chat")}
-                  className={`border px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] transition ${chatView === "chat" ? "border-[#d31f28] bg-[#d31f28] text-white hover:bg-[#b81d23]" : "border-white/20 text-gray-200 hover:text-white hover:border-white/40"}`}
+                  className={`border px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] transition ${chatView === "chat" ? "border-[#e10600] bg-[#e10600] text-white hover:bg-[#ba0500]" : "border-white/20 text-gray-200 hover:text-white hover:border-white/40"}`}
                 >
                   <span className="inline-flex items-center gap-2">
                     {chatView === "chat" ? "Evolution Appli" : "← Retour Chat"}
@@ -2161,7 +2163,7 @@ export default function Dashboard() {
 
             {tab === "events" && (
               <div className="space-y-5">
-                <div className="border border-white/10 bg-black/25 px-3 py-2 sm:px-4 sm:py-3">
+                <div className="border border-[#313541] bg-[#181c23]/85 px-3 py-2 sm:px-4 sm:py-3">
                   <p className="text-[10px] sm:text-[11px] text-gray-500 leading-4">
                     Info session: 2 courses prévues (14h-17h puis 17h-21h), horaires indicatifs pouvant bouger de 1h à 2h selon le circuit. Par défaut, un pilote présent est considéré présent sur les 2 courses; si besoin, ajuste 14h/17h.
                   </p>
@@ -2184,7 +2186,7 @@ export default function Dashboard() {
                     const venueHostAddress = venueHostMember?.address || null;
 
                     return (
-                      <div key={event.id} className="border-l-4 border-[#d31f28] bg-white/5 border border-white/10 p-4 sm:p-6">
+                      <div key={event.id} className="border-l-4 border-[#e10600] border border-[#313541] bg-[#1b1f27]/90 p-4 sm:p-6 shadow-[0_8px_20px_rgba(0,0,0,0.2)]">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <div>
                             <p className="text-xs text-gray-500 uppercase tracking-[0.3em] font-bold">Session validée</p>
@@ -2200,7 +2202,7 @@ export default function Dashboard() {
                                         href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venueHostAddress)}`}
                                         target="_blank"
                                         rel="noreferrer"
-                                        className="ml-2 inline-flex items-center gap-1 text-[11px] normal-case text-[#4a9ff7] hover:underline"
+                                        className="ml-2 inline-flex items-center gap-1 text-[11px] normal-case text-[#ff5d64] hover:underline"
                                         title={venueHostAddress}
                                       >
                                         <svg className="h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
@@ -2228,13 +2230,13 @@ export default function Dashboard() {
                               <>
                                 <button
                                   onClick={() => toggleRacePresence(event.id, "slot14")}
-                                  className={`flex-1 sm:flex-none text-center px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] transition ${currentSlots.slot14 ? "bg-[#409b48] text-white hover:bg-[#37853e]" : "bg-[#d31f28] text-white hover:bg-[#b81d23]"}`}
+                                  className={`flex-1 sm:flex-none text-center px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] transition ${currentSlots.slot14 ? "bg-[#409b48] text-white hover:bg-[#37853e]" : "bg-[#e10600] text-white hover:bg-[#ba0500]"}`}
                                 >
                                   14h
                                 </button>
                                 <button
                                   onClick={() => toggleRacePresence(event.id, "slot17")}
-                                  className={`flex-1 sm:flex-none text-center px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] transition ${currentSlots.slot17 ? "bg-[#409b48] text-white hover:bg-[#37853e]" : "bg-[#d31f28] text-white hover:bg-[#b81d23]"}`}
+                                  className={`flex-1 sm:flex-none text-center px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] transition ${currentSlots.slot17 ? "bg-[#409b48] text-white hover:bg-[#37853e]" : "bg-[#e10600] text-white hover:bg-[#ba0500]"}`}
                                 >
                                   17h
                                 </button>
@@ -2248,7 +2250,7 @@ export default function Dashboard() {
                             </button>
                             <button
                               onClick={() => vote(event.id, "absent")}
-                              className="flex-1 sm:flex-none text-center bg-[#d31f28] px-5 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-[#b81d23] transition"
+                              className="flex-1 sm:flex-none text-center bg-[#e10600] px-5 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-[#ba0500] transition"
                             >
                               Absent
                             </button>
@@ -2264,7 +2266,7 @@ export default function Dashboard() {
                         </div>
 
                         <div className="mt-5 grid gap-px sm:grid-cols-3 bg-white/10">
-                          <div className="bg-[#010d1e] p-4">
+                          <div className="bg-[#121419] p-4">
                             <p className="text-xs uppercase tracking-[0.3em] text-[#409b48] font-black">Présents — {present.length}</p>
                             <p className="mt-2 text-sm text-[#409b48]">
                               {present.length === 0
@@ -2281,12 +2283,12 @@ export default function Dashboard() {
                                   })}
                             </p>
                           </div>
-                          <div className="bg-[#010d1e] p-4">
+                          <div className="bg-[#121419] p-4">
                             <p className="text-xs uppercase tracking-[0.3em] text-gray-500 font-black">En attente — {waiting.length}</p>
                           </div>
-                          <div className="bg-[#010d1e] p-4">
-                            <p className="text-xs uppercase tracking-[0.3em] text-[#d31f28] font-black">Absents — {absent.length}</p>
-                            <p className="mt-2 text-sm text-[#d31f28]">{absent.map(m => getPseudo(m.email)).join(', ') || '—'}</p>
+                          <div className="bg-[#121419] p-4">
+                            <p className="text-xs uppercase tracking-[0.3em] text-[#e10600] font-black">Absents — {absent.length}</p>
+                            <p className="mt-2 text-sm text-[#e10600]">{absent.map(m => getPseudo(m.email)).join(', ') || '—'}</p>
                           </div>
                         </div>
                       </div>
@@ -2298,10 +2300,10 @@ export default function Dashboard() {
 
             {tab === "proposition" && (
               <div className="space-y-6">
-                <div className="border border-white/10 bg-[#010d1e] p-4 sm:p-6">
+                <div className="border border-[#313541] bg-[#181c23]/90 p-4 sm:p-6 shadow-[0_8px_20px_rgba(0,0,0,0.2)]">
                   <p className="text-xs font-black uppercase tracking-[0.3em] text-gray-500 mb-4">Nouvelle proposition</p>
                   
-                  <div className="bg-white/5 p-4 sm:p-6">
+                  <div className="border border-[#2a2d36] bg-[#1d2129]/80 p-4 sm:p-6">
                     <div className="flex items-center justify-between mb-6">
                       <button
                         onClick={handlePrevMonth}
@@ -2344,7 +2346,7 @@ export default function Dashboard() {
                             disabled={isPast}
                             className={`py-2 text-sm font-bold transition ${
                               isSelected
-                                ? "bg-[#d31f28] text-white"
+                                ? "bg-[#e10600] text-white"
                                 : isToday
                                 ? "bg-gray-600 text-white"
                                 : isPast
@@ -2367,14 +2369,14 @@ export default function Dashboard() {
 
                   <button
                     onClick={createEvent}
-                    className="mt-4 w-full bg-[#d31f28] px-5 py-4 text-xs font-black uppercase tracking-[0.3em] text-white hover:bg-[#b81d23] transition"
+                    className="mt-4 w-full bg-[#e10600] px-5 py-4 text-xs font-black uppercase tracking-[0.3em] text-white hover:bg-[#ba0500] transition"
                   >
                     + Créer proposition
                   </button>
                 </div>
 
                 {pendingEvents.length === 0 ? (
-                  <div className="border border-white/10 bg-[#010d1e] p-6 text-center text-xs uppercase tracking-widest text-gray-500">
+                  <div className="border border-white/10 bg-[#121419] p-6 text-center text-xs uppercase tracking-widest text-gray-500">
                     Aucune proposition en attente.
                   </div>
                 ) : (
@@ -2385,7 +2387,7 @@ export default function Dashboard() {
                     const waiting = members.filter((m) => !eventVotes[m.email]);
 
                     return (
-                      <div key={event.id} className="border-l-4 border-yellow-500 bg-white/5 border border-white/10 p-4 sm:p-6">
+                      <div key={event.id} className="border-l-4 border-yellow-500 border border-[#313541] bg-[#1c2028]/90 p-4 sm:p-6 shadow-[0_8px_20px_rgba(0,0,0,0.2)]">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <div>
                             <p className="text-xs text-yellow-500 uppercase tracking-[0.3em] font-black">Vote en cours</p>
@@ -2400,7 +2402,7 @@ export default function Dashboard() {
                             </button>
                             <button
                               onClick={() => vote(event.id, "absent")}
-                              className="flex-1 sm:flex-none text-center bg-[#d31f28] px-5 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-[#b81d23] transition"
+                              className="flex-1 sm:flex-none text-center bg-[#e10600] px-5 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-[#ba0500] transition"
                             >
                               Absent
                             </button>
@@ -2424,16 +2426,16 @@ export default function Dashboard() {
                         </div>
 
                         <div className="mt-5 grid gap-px sm:grid-cols-3 bg-white/10">
-                          <div className="bg-[#010d1e] p-4">
+                          <div className="bg-[#121419] p-4">
                             <p className="text-xs uppercase tracking-[0.3em] text-[#409b48] font-black">Présents — {present.length}</p>
                             <p className="mt-2 text-sm text-[#409b48]">{present.map(m => getPseudo(m.email)).join(', ') || '—'}</p>
                           </div>
-                          <div className="bg-[#010d1e] p-4">
+                          <div className="bg-[#121419] p-4">
                             <p className="text-xs uppercase tracking-[0.3em] text-gray-500 font-black">En attente — {waiting.length}</p>
                           </div>
-                          <div className="bg-[#010d1e] p-4">
-                            <p className="text-xs uppercase tracking-[0.3em] text-[#d31f28] font-black">Absents — {absent.length}</p>
-                            <p className="mt-2 text-sm text-[#d31f28]">{absent.map(m => getPseudo(m.email)).join(', ') || '—'}</p>
+                          <div className="bg-[#121419] p-4">
+                            <p className="text-xs uppercase tracking-[0.3em] text-[#e10600] font-black">Absents — {absent.length}</p>
+                            <p className="mt-2 text-sm text-[#e10600]">{absent.map(m => getPseudo(m.email)).join(', ') || '—'}</p>
                           </div>
                         </div>
                       </div>
@@ -2445,51 +2447,105 @@ export default function Dashboard() {
 
             {tab === "results" && (
               <div className="space-y-2 sm:space-y-3">
-                {resultsCategories.map((category) => (
-                  <Link
-                    key={category.key}
-                    href={category.href}
-                    className="group relative block overflow-hidden rounded-[6px]"
-                  >
-                    <div className="relative min-h-[96px] sm:min-h-[126px]">
-                      <img
-                        src={category.image}
-                        alt={category.title}
-                        className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-[1.025]"
-                        style={{ objectPosition: category.imagePosition }}
-                      />
-                      <div className="absolute inset-x-0 bottom-0 h-[84%] sm:h-[72%] bg-gradient-to-t from-[#00050d]/90 via-[#00050d]/56 to-transparent transition group-hover:from-[#00050d]/82 group-hover:via-[#00050d]/46" />
-
-                      <div className="pointer-events-none absolute right-1.5 top-1.5 z-20 sm:right-2 sm:top-2">
-                        <span className={`relative block -skew-x-[18deg] overflow-hidden border px-2.5 py-1 shadow-[0_10px_22px_rgba(0,0,0,0.45)] backdrop-blur-[6px] sm:px-3.5 sm:py-1.5 ${category.statusClass}`}>
-                          <span className="absolute inset-0 bg-gradient-to-r from-white/24 via-white/0 to-black/22" aria-hidden="true" />
-                          <span className="relative z-10 flex items-center gap-1.5 skew-x-[18deg]">
-                            <span className="h-1.5 w-1.5 rounded-full bg-current opacity-95" aria-hidden="true" />
-                            <span className="text-[8px] font-black uppercase tracking-[0.15em] [font-variant-numeric:tabular-nums] sm:text-[10px] sm:tracking-[0.2em]">
-                              {category.status}
-                            </span>
-                          </span>
-                        </span>
+                {selectedResultsCategory ? (
+                  <div className="border border-[#2d303a] bg-[#161920] p-4 sm:p-6">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#2e323b] pb-4">
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#a8afbd]">Standings</p>
+                        <h3 className="mt-1 text-lg sm:text-2xl font-black uppercase tracking-[0.06em] text-white break-words">
+                          {renderResultsTitle(selectedResultsCategory.title)}
+                        </h3>
                       </div>
-
-                      <div className="relative z-10 flex min-h-[96px] sm:min-h-[126px] items-end p-2.5 sm:p-3.5">
-                        <div className="pr-[4.5rem] sm:pr-[6rem] max-w-full">
-                          <p className="text-[11px] sm:text-[14px] font-black uppercase tracking-[0.16em] sm:tracking-[0.19em] text-[#ff5961]">Resultats</p>
-                          <h3 className="mt-1 text-[16px] sm:text-[28px] font-black uppercase tracking-[0.02em] sm:tracking-[0.04em] text-white leading-[1.08] break-words">
-                            {renderResultsTitle(category.title)}
-                          </h3>
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center border px-2 py-1 text-[9px] font-black uppercase tracking-[0.14em] sm:text-[10px] sm:tracking-[0.18em] ${selectedResultsCategory.statusClass}`}>
+                          {selectedResultsCategory.status}
+                        </span>
+                        <Link
+                          href="/dashboard?tab=results"
+                          onClick={() => setSelectedResultKey("")}
+                          className="inline-flex w-auto items-center justify-center border border-[#d65a62]/45 bg-[#5b2024]/35 px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#ffd3d0] transition hover:border-[#ff6f66]/55 hover:bg-[#692329]/45 hover:text-white"
+                        >
+                          Retour
+                        </Link>
                       </div>
                     </div>
-                  </Link>
-                ))}
+
+                    {selectedResultsCategory.resultImage ? (
+                      <div className="mt-4 border border-[#2e323b] bg-[#181b22] p-4 sm:p-5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-xs uppercase tracking-[0.14em] text-[#9da5b3]">Mobile: pincez pour zoomer ou glissez horizontalement</p>
+                          <a
+                            href={selectedResultsCategory.resultImage}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="border border-[#434957] bg-[#1c1f27] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-[#eef1f6] hover:border-[#676f82] hover:text-white transition"
+                          >
+                            Ouvrir en plein ecran
+                          </a>
+                        </div>
+
+                        <div className="mt-3 border border-[#2a2d35] bg-[#1c1f27] p-2 sm:p-3 overflow-x-auto">
+                          <img
+                            src={selectedResultsCategory.resultImage}
+                            alt={selectedResultsCategory.title}
+                            className="h-auto w-full min-w-[920px] sm:min-w-0 object-contain"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-4 border border-[#2e323b] bg-[#181b22] p-6 sm:p-8 text-center">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-[#a8afbd]">Team Standings</p>
+                        <p className="mt-3 text-sm uppercase tracking-[0.16em] text-gray-300">En cours de construction</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  resultsCategories.map((category, idx) => (
+                    <Link
+                      key={category.key}
+                      href={category.href}
+                      onClick={() => setSelectedResultKey(category.key)}
+                      className="group relative block overflow-hidden border border-[#2a2d36] bg-[#1a1d25]"
+                    >
+                      <div className="relative min-h-[108px] sm:min-h-[126px]">
+                        <img
+                          src={category.image}
+                          alt={category.title}
+                          className="absolute inset-0 h-full w-full object-cover opacity-25 saturate-75 transition duration-300 group-hover:scale-[1.03] group-hover:opacity-35"
+                          style={{ objectPosition: category.imagePosition }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#1a1d25]/96 via-[#1f222b]/88 to-[#1a1d25]/94" />
+
+                        <div className="pointer-events-none absolute left-2 top-2 z-20 sm:left-3 sm:top-3">
+                          <span className="inline-flex h-8 min-w-8 items-center justify-center bg-[#f7f8fb] px-2 text-sm font-black text-[#1a1c22] sm:h-9 sm:min-w-9 sm:text-base">
+                            {idx + 1}
+                          </span>
+                        </div>
+
+                        <div className="relative z-10 flex min-h-[108px] sm:min-h-[126px] items-end p-2.5 sm:p-3.5">
+                          <div className="pr-[4.8rem] sm:pr-[7rem] max-w-full">
+                            <p className="text-[10px] sm:text-[12px] font-black uppercase tracking-[0.2em] text-[#a9afbd]">Standings</p>
+                            <h3 className="mt-1 text-[15px] sm:text-[24px] font-black uppercase tracking-[0.03em] text-white leading-[1.08] break-words">
+                              {renderResultsTitle(category.title)}
+                            </h3>
+                          </div>
+                          <div className="absolute bottom-2 right-2 sm:bottom-3 sm:right-3">
+                            <span className={`inline-flex items-center border px-2 py-1 text-[9px] font-black uppercase tracking-[0.14em] sm:text-[10px] sm:tracking-[0.18em] ${category.statusClass}`}>
+                              {category.status}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  ))
+                )}
               </div>
             )}
 
             {tab === "members" && (
               <div className="space-y-2">
                 {members.length === 0 ? (
-                  <div className="border border-white/10 bg-[#010d1e] p-6 text-center text-xs uppercase tracking-widest text-gray-500">
+                  <div className="border border-white/10 bg-[#121419] p-6 text-center text-xs uppercase tracking-widest text-gray-500">
                     Aucun membre trouvé.
                   </div>
                 ) : (
@@ -2509,11 +2565,11 @@ export default function Dashboard() {
                           setIsEditingMember(true);
                         }
                       }}
-                      className={`border border-white/10 bg-[#010d1e] px-4 sm:px-6 py-4 flex items-start sm:items-center gap-3 sm:gap-5 ${userRole === "superAdmin" ? "cursor-pointer hover:bg-white/5 transition" : ""}`}
+                      className={`border border-white/10 bg-[#121419] px-4 sm:px-6 py-4 flex items-start sm:items-center gap-3 sm:gap-5 ${userRole === "superAdmin" ? "cursor-pointer hover:bg-white/5 transition" : ""}`}
                     >
                       {/* avatar */}
                       <div className="w-12 h-12 rounded-[2px] p-[2px] bg-black flex-shrink-0">
-                        <div className="w-full h-full rounded-[2px] overflow-hidden bg-[#d31f28] [transform:translateZ(0)] [-webkit-mask-image:-webkit-radial-gradient(white,black)] [mask-image:radial-gradient(white,black)] flex items-center justify-center">
+                        <div className="w-full h-full rounded-[2px] overflow-hidden bg-[#e10600] [transform:translateZ(0)] [-webkit-mask-image:-webkit-radial-gradient(white,black)] [mask-image:radial-gradient(white,black)] flex items-center justify-center">
                           {m.avatar ? (
                             <img src={m.avatar} alt={m.pseudo || m.email} className="w-full h-full object-cover rounded-[inherit]" />
                           ) : (
@@ -2527,7 +2583,7 @@ export default function Dashboard() {
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-baseline gap-2">
                             <span
-                              className={`inline-block h-2.5 w-2.5 rounded-full ${onlineMemberEmails.has(m.email) ? "bg-[#22c55e]" : "bg-[#d31f28]"}`}
+                              className={`inline-block h-2.5 w-2.5 rounded-full ${onlineMemberEmails.has(m.email) ? "bg-[#22c55e]" : "bg-[#e10600]"}`}
                               title={onlineMemberEmails.has(m.email) ? "En ligne" : "Hors ligne"}
                               aria-label={onlineMemberEmails.has(m.email) ? "En ligne" : "Hors ligne"}
                             />
@@ -2575,7 +2631,7 @@ export default function Dashboard() {
             )}
 
             {tab === "circuits" && (
-              <div className="border border-white/10 bg-[#010d1e] p-6 sm:p-8 text-center">
+              <div className="border border-white/10 bg-[#121419] p-6 sm:p-8 text-center">
                 <h3 className="text-xl sm:text-2xl font-black uppercase tracking-[0.12em] text-white">Circuits</h3>
                 <p className="mt-4 text-sm sm:text-base text-gray-300">Page à venir avec la liste des circuits à notre disposition</p>
               </div>
@@ -2600,7 +2656,7 @@ export default function Dashboard() {
               >
                 {chatView === "chat" && (
                   <>
-                    <div ref={chatScrollRef} className="border-y border-white/10 sm:border bg-[#010d1e] p-2 sm:p-6 overflow-y-auto overflow-x-hidden min-h-0 flex-1">
+                    <div ref={chatScrollRef} className="border-y border-[#313541] sm:border bg-[#151920]/88 p-2 sm:p-6 overflow-y-auto overflow-x-hidden min-h-0 flex-1">
                       {chatMessages.length === 0 ? (
                         <p className="text-xs uppercase tracking-widest text-gray-500">Pas encore de messages. Lancez la discussion.</p>
                       ) : (
@@ -2612,7 +2668,7 @@ export default function Dashboard() {
                               <div key={m.id} data-chat-thread-item="true" className="mb-3 sm:mb-4 border-l-2 border-white/10 pl-2 sm:pl-3">
                                 <div className="flex items-start justify-between gap-2 sm:gap-3 min-w-0">
                                   <p className="min-w-0 flex-1 text-[10px] sm:text-[11px] uppercase tracking-[0.13em] sm:tracking-[0.15em] text-gray-500 mb-1 break-words [overflow-wrap:anywhere]">
-                                    <span className="text-[#d31f28]">{getPseudo(m.user)}</span> · {formatChatTime(m.createdAt)}
+                                    <span className="text-[#e10600]">{getPseudo(m.user)}</span> · {formatChatTime(m.createdAt)}
                                     {m.editedAt ? " · modifie" : ""}
                                   </p>
                                   <div className="flex items-center gap-1">
@@ -2645,7 +2701,7 @@ export default function Dashboard() {
                                         onClick={() => removeMessage(m.id, m.user)}
                                         title="Supprimer"
                                         aria-label="Supprimer"
-                                        className="group relative p-1 text-[#d31f28] hover:text-[#ff4c55] transition"
+                                        className="group relative p-1 text-[#e10600] hover:text-[#ff4c55] transition"
                                       >
                                         <Trash2 className="h-3.5 w-3.5" />
                                         <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-black/90 px-2 py-1 text-[10px] uppercase tracking-widest text-white opacity-0 transition group-hover:opacity-100">
@@ -2663,7 +2719,7 @@ export default function Dashboard() {
                                       <div key={reply.id} className="bg-black/30 border border-white/10 px-2 py-2 sm:px-3">
                                         <div className="mb-1 flex items-start justify-between gap-1.5 sm:gap-2 min-w-0">
                                           <p className="min-w-0 flex-1 text-[9px] sm:text-[10px] uppercase tracking-[0.13em] sm:tracking-[0.15em] text-gray-500 break-words [overflow-wrap:anywhere]">
-                                            <span className="text-[#d31f28]">{getPseudo(reply.user)}</span> · {formatChatTime(reply.createdAt)}
+                                            <span className="text-[#e10600]">{getPseudo(reply.user)}</span> · {formatChatTime(reply.createdAt)}
                                             {reply.editedAt ? " · modifie" : ""}
                                           </p>
                                           <div className="flex items-center gap-1">
@@ -2685,7 +2741,7 @@ export default function Dashboard() {
                                                 onClick={() => removeMessage(reply.id, reply.user)}
                                                 title="Supprimer"
                                                 aria-label="Supprimer"
-                                                className="group relative p-1 text-[#d31f28] hover:text-[#ff4c55] transition"
+                                                className="group relative p-1 text-[#e10600] hover:text-[#ff4c55] transition"
                                               >
                                                 <Trash2 className="h-3.5 w-3.5" />
                                                 <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-black/90 px-2 py-1 text-[10px] uppercase tracking-widest text-white opacity-0 transition group-hover:opacity-100">
@@ -2711,7 +2767,7 @@ export default function Dashboard() {
                     )}
 
                     {replyToMessageId && (
-                      <div className="mx-2 sm:mx-0 border border-[#d31f28]/40 bg-[#d31f28]/10 px-3 sm:px-4 py-3 flex items-center justify-between gap-3">
+                      <div className="mx-2 sm:mx-0 border border-[#e10600]/40 bg-[#e10600]/10 px-3 sm:px-4 py-3 flex items-center justify-between gap-3">
                         <p className="text-xs uppercase tracking-widest text-gray-300">Reponse en fil active</p>
                         <button
                           onClick={() => setReplyToMessageId(null)}
@@ -2728,7 +2784,7 @@ export default function Dashboard() {
                         <input
                           value={editingMessageText}
                           onChange={(e) => setEditingMessageText(e.target.value)}
-                          className="w-full border border-white/20 bg-transparent px-4 py-2 text-white text-sm outline-none focus:border-[#d31f28] transition"
+                          className="w-full border border-white/20 bg-transparent px-4 py-2 text-white text-sm outline-none focus:border-[#e10600] transition"
                         />
                         <div className="flex gap-2">
                           <button
@@ -2742,7 +2798,7 @@ export default function Dashboard() {
                           </button>
                           <button
                             onClick={saveEditedMessage}
-                            className="bg-[#d31f28] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-[#b81d23]"
+                            className="bg-[#e10600] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-[#ba0500]"
                           >
                             Sauvegarder
                           </button>
@@ -2763,12 +2819,12 @@ export default function Dashboard() {
                             sendChat();
                           }
                         }}
-                        className="flex-1 border border-white/20 bg-transparent px-3 sm:px-5 py-3 text-white text-sm outline-none focus:border-[#d31f28] transition"
+                        className="flex-1 border border-white/20 bg-transparent px-3 sm:px-5 py-3 text-white text-sm outline-none focus:border-[#e10600] transition"
                         placeholder="Ecrire un message... (utilisez @pseudo)"
                       />
                       <button
                         onClick={sendChat}
-                        className="w-full sm:w-auto bg-[#d31f28] px-6 sm:px-8 py-3 text-xs font-black uppercase tracking-[0.2em] text-white hover:bg-[#b81d23] transition"
+                        className="w-full sm:w-auto bg-[#e10600] px-6 sm:px-8 py-3 text-xs font-black uppercase tracking-[0.2em] text-white hover:bg-[#ba0500] transition"
                       >
                         Envoyer
                       </button>
@@ -2779,41 +2835,41 @@ export default function Dashboard() {
                 {chatView === "evolution" && (
                   <div className="grid gap-4 lg:grid-cols-[minmax(0,320px)_1fr]">
                     <div className="space-y-4">
-                      <div className="border border-white/10 bg-black/30 p-4 space-y-3">
+                      <div className="border border-[#313541] bg-[#1a1d24]/88 p-4 space-y-3">
                         <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400">Nouvelle demande</p>
                         <input
                           value={newEvolutionTitle}
                           onChange={(e) => setNewEvolutionTitle(e.target.value)}
-                          className="w-full border border-white/20 bg-transparent px-3 py-2 text-white text-sm outline-none focus:border-[#d31f28] transition"
+                          className="w-full border border-white/20 bg-transparent px-3 py-2 text-white text-sm outline-none focus:border-[#e10600] transition"
                           placeholder="Titre"
                         />
                         <textarea
                           value={newEvolutionBody}
                           onChange={(e) => setNewEvolutionBody(e.target.value)}
-                          className="w-full min-h-28 border border-white/20 bg-transparent px-3 py-2 text-white text-sm outline-none focus:border-[#d31f28] transition"
+                          className="w-full min-h-28 border border-white/20 bg-transparent px-3 py-2 text-white text-sm outline-none focus:border-[#e10600] transition"
                           placeholder="Detaille ta demande d'evolution..."
                         />
                         <button
                           onClick={createEvolutionRequest}
-                          className="w-full bg-[#d31f28] px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-white hover:bg-[#b81d23] transition"
+                          className="w-full bg-[#e10600] px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-white hover:bg-[#ba0500] transition"
                         >
                           Ouvrir une demande
                         </button>
                       </div>
 
-                      <div className="border border-white/10 bg-black/30 p-4">
+                      <div className="border border-[#313541] bg-[#1a1d24]/88 p-4">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                           <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400">Contributeurs</p>
                           <button
                             type="button"
                             onClick={() => setShowEvolutionArchives((current) => !current)}
-                            className={`w-full sm:w-auto border px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] whitespace-normal break-words text-center transition ${showEvolutionArchives ? "border-[#d31f28]/60 bg-[#d31f28]/15 text-white" : "border-white/20 text-gray-300 hover:text-white hover:border-white/40"}`}
+                            className={`w-full sm:w-auto border px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] whitespace-normal break-words text-center transition ${showEvolutionArchives ? "border-[#e10600]/60 bg-[#e10600]/15 text-white" : "border-white/20 text-gray-300 hover:text-white hover:border-white/40"}`}
                           >
                             <span className="inline-flex items-center justify-center gap-2">
                               {showEvolutionArchives ? "Retour demandes" : "Archives"}
                               {!showEvolutionArchives && archivedEvolutionUnreadCount > 0 && (
                                 <span
-                                  className="inline-flex min-w-5 items-center justify-center rounded-full bg-[#d31f28] px-1 py-[1px] text-[9px] font-black text-white"
+                                  className="inline-flex min-w-5 items-center justify-center rounded-full bg-[#e10600] px-1 py-[1px] text-[9px] font-black text-white"
                                   aria-label={`Notification ${archivedEvolutionUnreadCount}`}
                                   title={`Notification ${archivedEvolutionUnreadCount}`}
                                 >
@@ -2828,7 +2884,7 @@ export default function Dashboard() {
                             <p className="text-[11px] uppercase tracking-widest text-gray-500">Pas encore de statistiques.</p>
                           ) : (
                             topEvolutionContributors.map((item, index) => (
-                              <div key={item.email} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 border border-white/10 bg-[#010d1e] px-3 py-2">
+                              <div key={item.email} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 border border-white/10 bg-[#121419] px-3 py-2">
                                 <p className="text-xs text-gray-200 whitespace-normal break-words">
                                   {contributorMedals[index] ? <span className="mr-2">{contributorMedals[index]}</span> : null}
                                   {getPseudo(item.email)}
@@ -2840,7 +2896,7 @@ export default function Dashboard() {
                         </div>
                       </div>
 
-                      <div className="border border-white/10 bg-black/30 max-h-[45vh] overflow-y-auto">
+                      <div className="border border-[#313541] bg-[#1a1d24]/88 max-h-[45vh] overflow-y-auto">
                         {visibleEvolutionRequests.length === 0 ? (
                           <p className="p-4 text-[11px] uppercase tracking-widest text-gray-500">
                             {showEvolutionArchives ? "Aucune archive." : "Aucune demande en cours."}
@@ -2859,7 +2915,7 @@ export default function Dashboard() {
                                   setSelectedEvolutionId(request.id);
                                   cancelEvolutionEdit();
                                 }}
-                                className={`w-full text-left px-4 py-3 border-b border-white/10 transition ${selected ? "bg-[#d31f28]/15" : "hover:bg-white/5"}`}
+                                className={`w-full text-left px-4 py-3 border-b border-white/10 transition ${selected ? "bg-[#e10600]/15" : "hover:bg-white/5"}`}
                               >
                                 <p className="text-sm font-semibold text-white whitespace-normal break-words leading-5">{request.title}</p>
                                 <div className="mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -2867,7 +2923,7 @@ export default function Dashboard() {
                                     <p className="text-[10px] uppercase tracking-widest text-gray-500 whitespace-normal break-words">{exchangeCount} echange{exchangeCount > 1 ? "s" : ""}</p>
                                     {requestUnreadCount > 0 && (
                                       <span
-                                        className="inline-flex min-w-5 items-center justify-center rounded-full bg-[#d31f28] px-1 py-[1px] text-[9px] font-black text-white"
+                                        className="inline-flex min-w-5 items-center justify-center rounded-full bg-[#e10600] px-1 py-[1px] text-[9px] font-black text-white"
                                         aria-label={`Notification ${requestUnreadCount}`}
                                         title={`Notification ${requestUnreadCount}`}
                                       >
@@ -2886,7 +2942,7 @@ export default function Dashboard() {
                       </div>
                     </div>
 
-                    <div className="border border-white/10 bg-black/30 p-4 space-y-4 min-h-[240px]">
+                    <div className="border border-[#313541] bg-[#1a1d24]/88 p-4 space-y-4 min-h-[240px]">
                       {selectedEvolutionId ? (
                         (() => {
                           const currentRequest = evolutionRequests.find((r: any) => r.id === selectedEvolutionId);
@@ -2900,7 +2956,7 @@ export default function Dashboard() {
                             <>
                               <div className="flex items-start justify-between gap-3">
                                 <div>
-                                  <p className="text-xs uppercase tracking-[0.2em] text-[#d31f28]">Demande</p>
+                                  <p className="text-xs uppercase tracking-[0.2em] text-[#e10600]">Demande</p>
                                   <h3 className="text-lg font-black text-white mt-1">{currentRequest.title}</h3>
                                   <p className="text-[11px] uppercase tracking-widest text-gray-500 mt-1">{getPseudo(currentRequest.createdBy)} · {formatChatTime(currentRequest.createdAt)}{currentRequest.editedAt ? " · modifie" : ""}</p>
                                 </div>
@@ -2932,7 +2988,7 @@ export default function Dashboard() {
                                   {(userRole === "admin" || userRole === "superAdmin") && (
                                     <button
                                       onClick={() => deleteEvolutionRequest(currentRequest.id)}
-                                      className="border border-[#d31f28]/50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-[#ff5b63] hover:bg-[#d31f28]/10"
+                                      className="border border-[#e10600]/50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-[#ff5b63] hover:bg-[#e10600]/10"
                                     >
                                       Supprimer
                                     </button>
@@ -2940,26 +2996,26 @@ export default function Dashboard() {
                                 </div>
                               </div>
 
-                              <div className="border border-white/10 bg-[#010d1e] p-3">
+                              <div className="border border-white/10 bg-[#121419] p-3">
                                 {editingEvolutionTarget?.type === "request" && editingEvolutionTarget.id === currentRequest.id ? (
                                   <div className="space-y-3">
                                     <input
                                       value={editingEvolutionTitle}
                                       onChange={(e) => setEditingEvolutionTitle(e.target.value)}
-                                      className="w-full border border-white/20 bg-transparent px-4 py-2 text-white text-sm outline-none focus:border-[#d31f28] transition"
+                                      className="w-full border border-white/20 bg-transparent px-4 py-2 text-white text-sm outline-none focus:border-[#e10600] transition"
                                       placeholder="Titre de la demande"
                                     />
                                     <textarea
                                       value={editingEvolutionText}
                                       onChange={(e) => setEditingEvolutionText(e.target.value)}
                                       rows={5}
-                                      className="w-full border border-white/20 bg-transparent px-4 py-3 text-white text-sm outline-none focus:border-[#d31f28] transition resize-y"
+                                      className="w-full border border-white/20 bg-transparent px-4 py-3 text-white text-sm outline-none focus:border-[#e10600] transition resize-y"
                                       placeholder="Message de la demande"
                                     />
                                     <div className="flex flex-wrap gap-2">
                                       <button
                                         onClick={saveEditedEvolutionMessage}
-                                        className="bg-[#d31f28] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-[#b81d23]"
+                                        className="bg-[#e10600] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-[#ba0500]"
                                       >
                                         Enregistrer
                                       </button>
@@ -2978,7 +3034,7 @@ export default function Dashboard() {
 
                               <div ref={evolutionScrollRef} className="space-y-2 max-h-[32vh] overflow-y-auto pr-1">
                                 {replies.map((reply: any) => (
-                                  <div key={reply.id} className="border border-white/10 bg-[#010d1e] px-3 py-2">
+                                  <div key={reply.id} className="border border-white/10 bg-[#121419] px-3 py-2">
                                     <div className="mb-1 flex items-start justify-between gap-2">
                                       <p className="text-[10px] uppercase tracking-widest text-gray-500">{getPseudo(reply.user)} · {formatChatTime(reply.createdAt)}{reply.editedAt ? " · modifie" : ""}</p>
                                       {canEditEvolutionReply(reply) && (
@@ -2998,13 +3054,13 @@ export default function Dashboard() {
                                           value={editingEvolutionText}
                                           onChange={(e) => setEditingEvolutionText(e.target.value)}
                                           rows={4}
-                                          className="w-full border border-white/20 bg-transparent px-4 py-3 text-white text-sm outline-none focus:border-[#d31f28] transition resize-y"
+                                          className="w-full border border-white/20 bg-transparent px-4 py-3 text-white text-sm outline-none focus:border-[#e10600] transition resize-y"
                                           placeholder="Modifier la reponse"
                                         />
                                         <div className="flex flex-wrap gap-2">
                                           <button
                                             onClick={saveEditedEvolutionMessage}
-                                            className="bg-[#d31f28] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-[#b81d23]"
+                                            className="bg-[#e10600] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-[#ba0500]"
                                           >
                                             Enregistrer
                                           </button>
@@ -3024,7 +3080,7 @@ export default function Dashboard() {
                               </div>
 
                               {isArchivedRequest ? (
-                                <div className="border border-white/10 bg-[#010d1e] px-4 py-3">
+                                <div className="border border-white/10 bg-[#121419] px-4 py-3">
                                   <p className="text-[11px] uppercase tracking-[0.08em] sm:tracking-widest leading-5 whitespace-normal break-words text-gray-500">Discussion cloturee. Reponses desactivees. Je vous invite a creer une nouvelle demande</p>
                                 </div>
                               ) : (
@@ -3038,12 +3094,12 @@ export default function Dashboard() {
                                         sendEvolutionReply();
                                       }
                                     }}
-                                    className="flex-1 border border-white/20 bg-transparent px-4 py-2 text-white text-sm outline-none focus:border-[#d31f28] transition"
+                                    className="flex-1 border border-white/20 bg-transparent px-4 py-2 text-white text-sm outline-none focus:border-[#e10600] transition"
                                     placeholder="Repondre a cette demande..."
                                   />
                                   <button
                                     onClick={sendEvolutionReply}
-                                    className="bg-[#d31f28] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-[#b81d23]"
+                                    className="bg-[#e10600] px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-[#ba0500]"
                                   >
                                     Repondre
                                   </button>
@@ -3065,7 +3121,7 @@ export default function Dashboard() {
       </div>
 
       <div ref={bottomBarRef} className="fixed bottom-0 left-0 right-0 z-50">
-        <nav className="border-t border-white/10 bg-[#000a18]/95 backdrop-blur">
+        <nav className="border-t border-white/10 bg-[#0c0d11]/95 backdrop-blur">
           <div className="mx-auto max-w-7xl px-2 py-2">
             <div
               className={`grid gap-1 ${navItems.length === 7 ? "grid-cols-7" : navItems.length === 6 ? "grid-cols-6" : "grid-cols-5"}`}
@@ -3080,10 +3136,10 @@ export default function Dashboard() {
                     className={`flex flex-col items-center justify-center gap-1 px-1 py-2 transition ${isActive ? "text-white" : "text-gray-500"}`}
                   >
                     <span className="relative inline-flex">
-                      <Icon className={`w-4 h-4 ${isActive ? "text-[#d31f28]" : "text-gray-500"}`} />
+                      <Icon className={`w-4 h-4 ${isActive ? "text-[#e10600]" : "text-gray-500"}`} />
                       {item.key === "chat" && chatReadsLoaded && !suppressChatBadge && chatNotificationCount > 0 && (
                         <span
-                          className="absolute -right-3 -top-2 inline-flex min-w-5 items-center justify-center rounded-full bg-[#d31f28] px-1 py-[1px] text-[9px] font-black text-white"
+                          className="absolute -right-3 -top-2 inline-flex min-w-5 items-center justify-center rounded-full bg-[#e10600] px-1 py-[1px] text-[9px] font-black text-white"
                           aria-label={`Notification ${chatNotificationCount}`}
                           title={`Notification ${chatNotificationCount}`}
                         >
@@ -3091,7 +3147,7 @@ export default function Dashboard() {
                         </span>
                       )}
                     </span>
-                    <span className="text-[9px] font-black uppercase tracking-[0.08em] leading-none">{item.label}</span>
+                    <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.06em] leading-none">{item.label}</span>
                   </button>
                 );
               })}
@@ -3099,7 +3155,7 @@ export default function Dashboard() {
           </div>
         </nav>
 
-        <div className="border-t border-white/10 bg-[#000a18]/95">
+        <div className="border-t border-white/10 bg-[#0c0d11]/95">
           <div className="mx-auto max-w-7xl px-3 sm:px-6 py-1.5">
             <div className="flex flex-wrap justify-center items-center gap-x-2 gap-y-1 text-[9px] sm:text-[10px] uppercase tracking-[0.12em]">
               <a
@@ -3156,7 +3212,7 @@ export default function Dashboard() {
 
       {venueEditorEventId && venueEditorEvent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4" role="dialog" aria-modal="true">
-          <div className="w-full max-w-md border border-white/20 bg-[#001122] p-4 sm:p-5">
+          <div className="w-full max-w-md border border-white/20 bg-[#13151b] p-4 sm:p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Configuration du lieu</p>
@@ -3202,7 +3258,7 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={saveVenueEditor}
-                className="bg-[#d31f28] px-3 py-2 text-xs font-black uppercase tracking-[0.16em] text-white hover:bg-[#b81d23]"
+                className="bg-[#e10600] px-3 py-2 text-xs font-black uppercase tracking-[0.16em] text-white hover:bg-[#ba0500]"
               >
                 Enregistrer
               </button>
@@ -3213,14 +3269,14 @@ export default function Dashboard() {
 
       {isEditingMember && selectedMember && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#000e22] border-l-4 border-[#d31f28] border border-white/10 shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-[#0f1014] border-l-4 border-[#e10600] border border-white/10 shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="border-b border-white/10 px-6 py-4 flex items-center gap-3">
-              <div className="w-1 h-6 bg-[#d31f28]" />
+              <div className="w-1 h-6 bg-[#e10600]" />
               <h2 className="text-xs font-black uppercase tracking-[0.3em] text-white">Modifier le membre</h2>
             </div>
             <div className="p-6">
             <div className="mb-6 flex items-center gap-4 border border-white/10 p-4 bg-white/5">
-              <div className="w-12 h-12 bg-[#d31f28] flex items-center justify-center overflow-hidden flex-shrink-0">
+              <div className="w-12 h-12 bg-[#e10600] flex items-center justify-center overflow-hidden flex-shrink-0">
                 {selectedMember.avatar ? (
                   <img src={selectedMember.avatar} alt="" className="w-full h-full object-cover" />
                 ) : (
@@ -3238,7 +3294,7 @@ export default function Dashboard() {
               <select
                 value={tempMemberRole}
                 onChange={(e) => setTempMemberRole(e.target.value)}
-                className="w-full px-4 py-3 bg-[#d31f28] border-2 border-[#d31f28] rounded-lg text-white font-semibold hover:bg-[#b81d23] transition"
+                className="w-full px-4 py-3 bg-[#e10600] border-2 border-[#e10600] rounded-lg text-white font-semibold hover:bg-[#ba0500] transition"
               >
                 <option value="member" className="bg-gray-800 text-white">Membre</option>
                 <option value="admin" className="bg-gray-800 text-white">Admin</option>
@@ -3334,7 +3390,7 @@ export default function Dashboard() {
                     setSelectedMember(null);
                   }
                 }}
-                className="flex-1 bg-[#d31f28] px-4 py-3 text-xs font-black uppercase tracking-widest text-white hover:bg-[#b81d23] transition"
+                className="flex-1 bg-[#e10600] px-4 py-3 text-xs font-black uppercase tracking-widest text-white hover:bg-[#ba0500] transition"
               >
                 Sauvegarder
               </button>
@@ -3346,3 +3402,4 @@ export default function Dashboard() {
     </main>
   );
 }
+
