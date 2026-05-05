@@ -38,7 +38,7 @@ body {
     radial-gradient(900px 420px at 92% -12%, rgba(255, 255, 255, 0.06), transparent 70%),
     linear-gradient(180deg, #13151b 0%, #101218 46%, #0d0f14 100%);
   color: var(--foreground);
-  font-family: "Google Sans", "Google Sans Text", var(--font-noto-sans), "Segoe UI", sans-serif;
+  font-family: var(--font-noto-sans), "Segoe UI", sans-serif;
   letter-spacing: 0.01em;
   overflow-x: hidden;
   max-width: 100%;
