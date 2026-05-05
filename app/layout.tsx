@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Bebas_Neue, Noto_Sans } from "next/font/google";
+import { Bebas_Neue, Noto_Sans, Google_Sans } from "next/font/google";
 import "./globals.css";
 
 const bebasNeue = Bebas_Neue({
@@ -13,6 +13,13 @@ const notoSans = Noto_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
   variable: "--font-noto-sans",
+  display: "swap",
+});
+
+const googleSans = Google_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+  variable: "--font-google-sans",
   display: "swap",
 });
 
@@ -35,8 +42,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${bebasNeue.variable} ${notoSans.variable} h-full antialiased`}>
-      <body className={`${notoSans.className} min-h-full flex flex-col`}>{children}</body>
+    <html lang="en" className={`${bebasNeue.variable} ${notoSans.variable} ${googleSans.variable} h-full antialiased`}>
+      <body className={`${googleSans.className} min-h-full flex flex-col`}>{children}</body>
     </html>
   );
 }
