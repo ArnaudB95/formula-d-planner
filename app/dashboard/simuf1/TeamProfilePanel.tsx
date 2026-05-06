@@ -28,21 +28,91 @@ type TeamProfilePanelProps = {
 const BACK_BUTTON_CLASS =
   "inline-flex w-auto items-center justify-center border border-[#d65a62]/45 bg-[#5b2024]/35 px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#ffd3d0] transition hover:border-[#ff6f66]/55 hover:bg-[#692329]/45 hover:text-white";
 
-function HelmetIcon({ variant = 1 }: { variant?: 1 | 2 }) {
-  const shell = variant === 1 ? "#ff6f66" : "#5ad3d1";
-  const stripe = variant === 1 ? "#f7f8fb" : "#c7f9f8";
-  const visor = variant === 1 ? "#e10600" : "#159a98";
+const TEAM_ACCENTS = ["#ffb100", "#e10600", "#1f6feb", "#ffd60a", "#ff7fbf", "#9ca3af", "#22c55e", "#fb923c", "#06b6d4"];
+
+const clampByte = (value: number) => Math.max(0, Math.min(255, Math.round(value)));
+
+const hexToRgb = (hex: string): [number, number, number] => {
+  const clean = String(hex || "")
+    .trim()
+    .replace("#", "");
+  if (!/^[0-9a-fA-F]{6}$/.test(clean)) return [148, 163, 184];
+  return [
+    Number.parseInt(clean.slice(0, 2), 16),
+    Number.parseInt(clean.slice(2, 4), 16),
+    Number.parseInt(clean.slice(4, 6), 16),
+  ];
+};
+
+const rgbToHex = (r: number, g: number, b: number) =>
+  `#${clampByte(r).toString(16).padStart(2, "0")}${clampByte(g).toString(16).padStart(2, "0")}${clampByte(b)
+    .toString(16)
+    .padStart(2, "0")}`;
+
+const mixHex = (baseHex: string, withHex: string, amount: number) => {
+  const t = Math.max(0, Math.min(1, amount));
+  const [br, bg, bb] = hexToRgb(baseHex);
+  const [wr, wg, wb] = hexToRgb(withHex);
+  return rgbToHex(br + (wr - br) * t, bg + (wg - bg) * t, bb + (wb - bb) * t);
+};
+
+const getTeamAccentColor = (teamName: string) => {
+  const cleaned = String(teamName || "").trim().toLowerCase();
+  if (!cleaned || cleaned === "-") return "#94a3b8";
+  const compact = cleaned.replace(/[^a-z0-9]+/g, " ").trim();
+
+  if (compact === "bears fury crew" || compact === "bear s fury crew" || compact === "bear fury crew") return "#e10600";
+  if (compact === "tigers fury crew" || compact === "tiger s fury crew") return "#ff8a00";
+  if (compact === "frx") return "#22cfd0";
+
+  let hash = 0;
+  for (let i = 0; i < cleaned.length; i += 1) {
+    hash = (hash << 5) - hash + cleaned.charCodeAt(i);
+    hash |= 0;
+  }
+  return TEAM_ACCENTS[Math.abs(hash) % TEAM_ACCENTS.length];
+};
+
+function HelmetIcon({ baseColor, variant = 1 }: { baseColor: string; variant?: 1 | 2 }) {
+  const shell = variant === 1 ? mixHex(baseColor, "#ffffff", 0.1) : mixHex(baseColor, "#000000", 0.1);
+  const stripe = variant === 1 ? "#ffffff" : "#0a0a0a";
+  const visor = mixHex(baseColor, "#0b0d12", variant === 1 ? 0.58 : 0.66);
+  const visorTop = mixHex(baseColor, "#ffffff", variant === 1 ? 0.2 : 0.08);
+  const shellStroke = mixHex(baseColor, "#ffffff", 0.18);
+  const chin = variant === 1 ? mixHex(baseColor, "#ffffff", 0.16) : mixHex(baseColor, "#000000", 0.14);
+  const stripeOutline = variant === 1 ? "rgba(255,255,255,0.65)" : "rgba(255,255,255,0.28)";
 
   return (
-    <svg viewBox="0 0 28 28" className="h-5 w-5" aria-hidden="true">
-      <path d="M3 15a11 11 0 0 1 22 0v5H6a3 3 0 0 1-3-3v-2Z" fill={shell} />
-      <path d="M12 9h10.3A8.1 8.1 0 0 0 12 2.7V9Z" fill={stripe} opacity="0.95" />
-      <path d="M11.2 11.7H25v4.2H11.2z" fill={visor} />
-      <path d="M6.7 19.3h5.1" stroke="#0f1014" strokeWidth="1.7" strokeLinecap="round" />
-      <path d="M8.5 7.4c1.4-1 3-1.6 4.7-1.8" stroke={stripe} strokeWidth="1.7" strokeLinecap="round" />
+    <svg viewBox="0 0 32 32" className="h-7 w-7" aria-hidden="true">
+      <path
+        d="M3.5 17.8c0-7 5.6-12.6 12.6-12.6 6.8 0 12.4 5.3 12.6 12.1v5.4H8.4c-2.7 0-4.9-2.2-4.9-4.9z"
+        fill={shell}
+        stroke={shellStroke}
+        strokeWidth="1"
+      />
+      <path d="M17.2 5.5c2.6.3 5.2 1.7 7.1 4.2l-2.8 1.8c-1.5-2-3.4-3-5.2-3.2z" fill={stripe} opacity="0.95" />
+      <path d="M17.1 6.7c2 .3 3.8 1.2 5.2 3" stroke={stripeOutline} strokeWidth="0.95" strokeLinecap="round" opacity="0.9" />
+      <path d="M11.5 12.9h17.2v5.1H11.5z" fill={visor} />
+      <path d="M11.5 12.9h17.2v1.3H11.5z" fill={visorTop} opacity="0.92" />
+      <path d="M7.9 21.2h6.4" stroke="#0f1014" strokeWidth="1.8" strokeLinecap="round" opacity="0.7" />
+      <path d="M8.9 9.2c1.5-1.1 3.2-1.7 5-1.9" stroke={stripe} strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M16.8 22.7h5.3" stroke={chin} strokeWidth="1.6" strokeLinecap="round" opacity="0.9" />
     </svg>
   );
 }
+
+const isPlaceholderPilotName = (name: string) => {
+  const normalized = String(name || "")
+    .trim()
+    .toLowerCase();
+  return /^pilote\s*[0-9]*$/i.test(normalized) || normalized === "pilot" || /^pilot\s*[0-9]*$/i.test(normalized);
+};
+
+const getCarSlotIndex = (carId: string) => {
+  const match = String(carId || "").match(/__(\d+)$/);
+  const index = Number(match?.[1] || 0) - 1;
+  return index >= 0 && index <= 1 ? index : -1;
+};
 
 export default function TeamProfilePanel({ teamSlug, onBack }: TeamProfilePanelProps) {
   const [history, setHistory] = useState<SimuF1RaceHistoryItem[]>([]);
@@ -101,6 +171,8 @@ export default function TeamProfilePanel({ teamSlug, onBack }: TeamProfilePanelP
     return allKnownTeams.find((name) => slugifyTeamName(name) === teamSlug) || "";
   }, [allKnownTeams, teamSlug]);
 
+  const teamAccentColor = useMemo(() => getTeamAccentColor(teamName), [teamName]);
+
   const sortedRaceHistory = useMemo(
     () => [...history].sort((a, b) => String(b.sundayDateISO || "").localeCompare(String(a.sundayDateISO || ""))),
     [history]
@@ -115,18 +187,40 @@ export default function TeamProfilePanel({ teamSlug, onBack }: TeamProfilePanelP
   }, [entriesByRace, sortedRaceHistory, teamName]);
 
   const pilotNames = useMemo(() => {
-    if (latestTeamEntry?.cars?.length === 2) {
-      return [latestTeamEntry.cars[0].pilotName, latestTeamEntry.cars[1].pilotName];
-    }
-
-    const pilots = new Set<string>();
+    const racePilotsBySlot = ["", ""];
     Object.values(resultsByRace).forEach((result) => {
       result?.cars
         .filter((car) => car.teamName === teamName)
-        .forEach((car) => pilots.add(car.pilotName));
+        .forEach((car) => {
+          const name = String(car.pilotName || "").trim();
+          const slotIndex = getCarSlotIndex(car.carId);
+          if (slotIndex >= 0 && name && !isPlaceholderPilotName(name) && !racePilotsBySlot[slotIndex]) {
+            racePilotsBySlot[slotIndex] = name;
+          }
+        });
     });
 
-    return Array.from(pilots).slice(0, 2);
+    const entrySlots = latestTeamEntry?.cars?.map((car) => String(car.pilotName || "").trim()) || [];
+    const resolved: string[] = [];
+
+    for (let i = 0; i < 2; i += 1) {
+      const slotName = entrySlots[i] || "";
+      if (slotName && !isPlaceholderPilotName(slotName) && !resolved.includes(slotName)) {
+        resolved.push(slotName);
+        continue;
+      }
+
+      const raceSlotName = racePilotsBySlot[i] || "";
+      if (raceSlotName && !resolved.includes(raceSlotName)) {
+        resolved.push(raceSlotName);
+        continue;
+      }
+
+      const fallback = slotName || `Pilote ${i + 1}`;
+      resolved.push(fallback);
+    }
+
+    return resolved;
   }, [latestTeamEntry, resultsByRace, teamName]);
 
   const teamPoints = useMemo(() => {
@@ -234,8 +328,14 @@ export default function TeamProfilePanel({ teamSlug, onBack }: TeamProfilePanelP
           <article key={driver.name} className="border border-[#3a3034] bg-[#1f232b] px-4 py-4 sm:py-5">
             <p className="text-[10px] uppercase tracking-[0.18em] text-[#9aa1b0]">Pilote {index + 1}</p>
             <p className="mt-2 flex items-center gap-2 text-sm font-black uppercase tracking-[0.08em] text-white">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#d65a62]/45 bg-[#5b2024]/45 text-[#ffd3d0] shadow-[0_0_16px_rgba(225,6,0,0.22)]">
-                <HelmetIcon variant={index % 2 === 0 ? 1 : 2} />
+              <span
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border text-[#ffd3d0] shadow-[0_0_18px_rgba(0,0,0,0.3)]"
+                style={{
+                  borderColor: `${mixHex(teamAccentColor, "#ffffff", 0.34)}88`,
+                  backgroundColor: "transparent",
+                }}
+              >
+                <HelmetIcon baseColor={teamAccentColor} variant={index % 2 === 0 ? 1 : 2} />
               </span>
               {driver.name}
             </p>
@@ -288,7 +388,22 @@ export default function TeamProfilePanel({ teamSlug, onBack }: TeamProfilePanelP
 
                   {entry?.cars?.length === 2 && (
                     <p className="mt-2 text-[11px] uppercase tracking-[0.12em] text-gray-500">
-                      Pilotes déclarés: {entry.cars[0].pilotName} • {entry.cars[1].pilotName}
+                      {(() => {
+                        const declared = entry.cars.map((car) => String(car.pilotName || "").trim());
+                        const raceKnown = ["", ""];
+                        cars.forEach((car) => {
+                          const slotIndex = getCarSlotIndex(car.carId);
+                          const name = String(car.pilotName || "").trim();
+                          if (slotIndex >= 0 && name && !isPlaceholderPilotName(name) && !raceKnown[slotIndex]) {
+                            raceKnown[slotIndex] = name;
+                          }
+                        });
+                        const shown = declared.map((name, idx) => {
+                          if (!name || isPlaceholderPilotName(name)) return raceKnown[idx] || name || `Pilote ${idx + 1}`;
+                          return name;
+                        });
+                        return `Pilotes déclarés: ${shown[0]} • ${shown[1]}`;
+                      })()}
                     </p>
                   )}
                 </div>

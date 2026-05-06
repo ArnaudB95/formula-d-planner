@@ -160,8 +160,9 @@ const applyGripGridMove = (
   };
 };
 
-const assignF1Points = (position: number) => {
-  const table = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+const assignF1Points = (position: number, dnf = false) => {
+  if (dnf) return 0;
+  const table = [10, 8, 6, 5, 4, 3, 2, 1];
   return table[position - 1] || 0;
 };
 

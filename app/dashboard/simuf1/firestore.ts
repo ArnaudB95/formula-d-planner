@@ -282,7 +282,8 @@ const recomputeSeasonStandings = async (seasonYear: number) => {
     if (!resultSnap.exists()) continue;
     const result = resultSnap.data() as SimuF1RaceResult;
     result.cars.forEach((car) => {
-      teams[car.teamName] = (teams[car.teamName] || 0) + car.points;
+      const teamName = String(car.teamName || "").trim() || "Ecurie sans nom";
+      teams[teamName] = (teams[teamName] || 0) + car.points;
       drivers[car.pilotName] = (drivers[car.pilotName] || 0) + car.points;
     });
   }
@@ -294,8 +295,7 @@ const recomputeSeasonStandings = async (seasonYear: number) => {
       teams,
       drivers,
       updatedAt: serverTimestamp(),
-    } as SimuF1SeasonStandings,
-    { merge: true }
+    } as SimuF1SeasonStandings
   );
 };
 
@@ -351,6 +351,57 @@ export const applyPilotNamesRetroactively = async (
   }
 
   await recomputeSeasonStandings(seasonYear);
+};
+
+export const applyTeamNameRetroactively = async (userEmail: string, nextTeamName: string) => {
+  const db = getFirestore();
+  if (!db) throw new Error("Firestore indisponible");
+
+  const normalizedEmail = String(userEmail || "").trim();
+  const normalizedTeamName = String(nextTeamName || "").trim();
+  if (!normalizedEmail || !normalizedTeamName) return;
+
+  const raceSnap = await getDocs(collection(db, "simuf1Races"));
+  const races = raceSnap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+  const impactedSeasonYears = new Set<number>();
+
+  for (const race of races) {
+    const raceId = String(race.id);
+    const seasonYear = Number(race.seasonYear || 0);
+
+    const entryRef = doc(db, "simuf1Races", raceId, "entries", entryDocId(normalizedEmail));
+    const entrySnap = await getDoc(entryRef);
+    if (entrySnap.exists()) {
+      const entry = entrySnap.data() as SimuF1Entry;
+      if (String(entry.teamName || "").trim() !== normalizedTeamName) {
+        await setDoc(entryRef, { ...entry, teamName: normalizedTeamName, updatedAt: serverTimestamp() }, { merge: true });
+        if (Number.isFinite(seasonYear) && seasonYear > 0) impactedSeasonYears.add(seasonYear);
+      }
+    }
+
+    const resultRef = doc(db, "simuf1Races", raceId, "results", "latest");
+    const resultSnap = await getDoc(resultRef);
+    if (resultSnap.exists()) {
+      const result = resultSnap.data() as SimuF1RaceResult;
+      let changed = false;
+      const cars = result.cars.map((car) => {
+        const ownerMatches = String(car.ownerEmail || "").trim() === normalizedEmail;
+        if (!ownerMatches) return car;
+        if (String(car.teamName || "").trim() === normalizedTeamName) return car;
+        changed = true;
+        return { ...car, teamName: normalizedTeamName };
+      });
+
+      if (changed) {
+        await setDoc(resultRef, { ...result, cars, generatedAt: serverTimestamp() }, { merge: true });
+        if (Number.isFinite(seasonYear) && seasonYear > 0) impactedSeasonYears.add(seasonYear);
+      }
+    }
+  }
+
+  for (const seasonYear of impactedSeasonYears) {
+    await recomputeSeasonStandings(seasonYear);
+  }
 };
 
 export const runRaceSimulationAndPersist = async (raceId: string, seasonYear: number) => {

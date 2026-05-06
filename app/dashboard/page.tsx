@@ -21,6 +21,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CalendarDays, ClipboardList, MessageCircle, Pencil, Reply, Trash2, Trophy, Users, Route, Gamepad2 } from "lucide-react";
 import SimuF1Panel from "./simuf1/SimuF1Panel";
+import { applyTeamNameRetroactively } from "./simuf1/firestore";
 
 const FUN_INFO_TEMPLATES = [
   "[Pseudo] vise le podium... ou pas",
@@ -261,16 +262,25 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const query = new URLSearchParams(window.location.search);
-    const requestedTab = query.get("tab");
-    const requestedResult = query.get("result");
-
-    setSelectedResultKey(String(requestedResult || "").trim());
-
-    if (!requestedTab) return;
     const allowedTabs = new Set(["events", "proposition", "chat", "results", "members", "circuits", "simuf1"]);
-    if (!allowedTabs.has(requestedTab)) return;
-    setTab((prev) => (prev === requestedTab ? prev : requestedTab));
+
+    const syncStateFromUrl = () => {
+      const query = new URLSearchParams(window.location.search);
+      const requestedTab = String(query.get("tab") || "").trim();
+      const requestedResult = String(query.get("result") || "").trim();
+
+      setSelectedResultKey(requestedResult);
+
+      if (!requestedTab || !allowedTabs.has(requestedTab)) return;
+      setTab((prev) => (prev === requestedTab ? prev : requestedTab));
+    };
+
+    syncStateFromUrl();
+    window.addEventListener("popstate", syncStateFromUrl);
+
+    return () => {
+      window.removeEventListener("popstate", syncStateFromUrl);
+    };
   }, []);
 
   // 🔐 AUTH
@@ -969,6 +979,8 @@ export default function Dashboard() {
     }
 
     try {
+      const nextTeamName = String(editTeam || "").trim();
+
       console.log("Saving profile to Firestore...", {
         pseudo: editPseudo || null,
         team: editTeam || null,
@@ -987,6 +999,11 @@ export default function Dashboard() {
         },
         { merge: true }
       );
+
+      if (nextTeamName && user.email) {
+        setProfileSaveMessage("Profil enregistré. Synchronisation SimuF1 en cours...");
+        await applyTeamNameRetroactively(user.email, nextTeamName);
+      }
 
       console.log("Profile saved successfully");
       resetSaving("Profil enregistré avec succès.");
@@ -1584,9 +1601,6 @@ export default function Dashboard() {
       title: "Championnat Équipe Saison 2 - 2026 / 2027",
       status: "En cours",
       statusClass: "border-[#78de86]/45 bg-[#409b48]/72 text-white",
-      image:
-        "https://cdn.discordapp.com/attachments/1068885680568148019/1495199476682457249/FD1.png?ex=69e56086&is=69e40f06&hm=6d8080959f88b13dca33d35e1fbd302ced8319d366623342aa0a293037be5c82&",
-      imagePosition: "50% 38%",
       href: "/dashboard?tab=results&result=team-s2-2026-2027",
     },
     {
@@ -1594,9 +1608,6 @@ export default function Dashboard() {
       title: "Championnat Individuel Saison 1 - 2024 / 2026",
       status: "En cours",
       statusClass: "border-[#78de86]/45 bg-[#409b48]/72 text-white",
-      image:
-        "https://cdn.discordapp.com/attachments/1068885680568148019/1495199499360927744/FD2.png?ex=69e5608c&is=69e40f0c&hm=2dcbb39083245c6e7d77dfe1924ebbb9d79228f9cbef9d23e1224df7ff13286a&",
-      imagePosition: "50% 44%",
       href: "/dashboard?tab=results&result=individual-s1-2024-2026",
       resultImage: "/I09.png",
     },
@@ -1605,9 +1616,6 @@ export default function Dashboard() {
       title: "Championnat Équipe Saison 1 - 2024 / 2025",
       status: "Terminé",
       statusClass: "border-white/25 bg-black/74 text-[#ff4a52]",
-      image:
-        "https://cdn.discordapp.com/attachments/1068885680568148019/1495199525089054731/FD3.png?ex=69e56092&is=69e40f12&hm=2160f83b6b67f694871d11f10b803a05baa425fcaa28daf4382100c06ee9f622&",
-      imagePosition: "50% 42%",
       href: "/dashboard?tab=results&result=team-s1-2024-2025",
       resultImage: "/E12.png",
     },
@@ -1616,9 +1624,6 @@ export default function Dashboard() {
       title: "Championnat Équipe Saison 0 - 2015 / 2017",
       status: "Terminé",
       statusClass: "border-white/25 bg-black/74 text-[#ff4a52]",
-      image:
-        "https://cdn.discordapp.com/attachments/1068885680568148019/1495199545888477417/FD4.png?ex=69e56097&is=69e40f17&hm=45c81c3fa167bdcfa359b292a63165548bd1df5095dcc1cba030d9c8ce4d9e52&",
-      imagePosition: "50% 46%",
       href: "/dashboard?tab=results&result=team-s0-2015-2017",
     },
   ];
@@ -1644,7 +1649,7 @@ export default function Dashboard() {
         return (
           <span
             key={`${segment}-${index}`}
-            className="relative inline-block bg-gradient-to-r from-white via-[#d8e2ff] to-white bg-clip-text text-transparent [text-shadow:0_0_18px_rgba(255,255,255,0.2)] after:absolute after:-bottom-[2px] after:left-0 after:h-[2px] after:w-full after:origin-left after:bg-gradient-to-r after:from-white/70 after:via-white/25 after:to-transparent"
+            className="relative inline-block text-white [text-shadow:0_0_10px_rgba(255,255,255,0.12)] after:absolute after:-bottom-[1px] after:left-0 after:h-[1px] after:w-full after:origin-left after:bg-gradient-to-r after:from-white/85 after:via-white/45 after:to-transparent"
           >
             {segment}
           </span>
@@ -1677,16 +1682,44 @@ export default function Dashboard() {
     });
   };
 
+  const renderResultRowLights = (status: string) => {
+    const isActive = status === "En cours";
+
+    return (
+      <div className="inline-flex items-center gap-1.5" aria-hidden="true">
+        <span className={`inline-flex h-2.5 w-2.5 rounded-full ${isActive ? "bg-[#52da63] shadow-[0_0_10px_rgba(82,218,99,0.55)]" : "bg-[#2a303a]"}`} />
+        <span className={`inline-flex h-2.5 w-2.5 rounded-full ${isActive ? "bg-[#2a303a]" : "bg-[#ff4a52] shadow-[0_0_10px_rgba(255,74,82,0.5)]"}`} />
+      </div>
+    );
+  };
+
+  const syncDashboardQuery = (nextTab: string) => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    params.set("tab", nextTab);
+
+    // A click on any bottom-tab icon should return to that tab's root state.
+    params.delete("result");
+    params.delete("team");
+    params.delete("simuView");
+    params.delete("simuRace");
+    setSelectedResultKey("");
+
+    window.history.pushState({}, "", `/dashboard?${params.toString()}`);
+  };
+
   const handleTabChange = (nextTab: string) => {
     if (nextTab === "chat") {
       // Avoid transient badge flicker while read state syncs.
       setSuppressChatBadge(true);
       setChatReadAt(new Date());
       setUnreadCount(0);
+      setChatView("chat");
       void markChatAsRead();
     } else {
       setSuppressChatBadge(false);
     }
+    syncDashboardQuery(nextTab);
     setTab(nextTab);
   };
 
@@ -1905,7 +1938,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
             <button
               type="button"
-              onClick={() => setTab("events")}
+              onClick={() => handleTabChange("events")}
               aria-label="Aller aux Parties"
               className="shrink-0"
             >
@@ -2446,20 +2479,26 @@ export default function Dashboard() {
             )}
 
             {tab === "results" && (
-              <div className="space-y-2 sm:space-y-3">
+              <div className="space-y-1 sm:space-y-1.5">
                 {selectedResultsCategory ? (
                   <div className="border border-[#2d303a] bg-[#161920] p-4 sm:p-6">
                     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#2e323b] pb-4">
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#a8afbd]">Standings</p>
-                        <h3 className="mt-1 text-lg sm:text-2xl font-black uppercase tracking-[0.06em] text-white break-words">
+                      <div className="min-w-0 flex items-center gap-4">
+                        <div className="shrink-0">
+                          {renderResultRowLights(selectedResultsCategory.status)}
+                        </div>
+                        <h3
+                          className="text-lg sm:text-2xl font-black uppercase tracking-[0.04em] text-white break-words leading-[1.22] overflow-hidden"
+                          style={{
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                          }}
+                        >
                           {renderResultsTitle(selectedResultsCategory.title)}
                         </h3>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`inline-flex items-center border px-2 py-1 text-[9px] font-black uppercase tracking-[0.14em] sm:text-[10px] sm:tracking-[0.18em] ${selectedResultsCategory.statusClass}`}>
-                          {selectedResultsCategory.status}
-                        </span>
                         <Link
                           href="/dashboard?tab=results"
                           onClick={() => setSelectedResultKey("")}
@@ -2494,45 +2533,29 @@ export default function Dashboard() {
                       </div>
                     ) : (
                       <div className="mt-4 border border-[#2e323b] bg-[#181b22] p-6 sm:p-8 text-center">
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-[#a8afbd]">Team Standings</p>
                         <p className="mt-3 text-sm uppercase tracking-[0.16em] text-gray-300">En cours de construction</p>
                       </div>
                     )}
                   </div>
                 ) : (
-                  resultsCategories.map((category, idx) => (
+                  resultsCategories.map((category) => (
                     <Link
                       key={category.key}
                       href={category.href}
                       onClick={() => setSelectedResultKey(category.key)}
-                      className="group relative block overflow-hidden border border-[#2a2d36] bg-[#1a1d25]"
+                      className="group relative block overflow-hidden border border-[#2a2d36] bg-[#1a1d25] transition-colors hover:border-[#3a3f4d]"
                     >
-                      <div className="relative min-h-[108px] sm:min-h-[126px]">
-                        <img
-                          src={category.image}
-                          alt={category.title}
-                          className="absolute inset-0 h-full w-full object-cover opacity-25 saturate-75 transition duration-300 group-hover:scale-[1.03] group-hover:opacity-35"
-                          style={{ objectPosition: category.imagePosition }}
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-r from-[#1a1d25]/96 via-[#1f222b]/88 to-[#1a1d25]/94" />
-
-                        <div className="pointer-events-none absolute left-2 top-2 z-20 sm:left-3 sm:top-3">
-                          <span className="inline-flex h-8 min-w-8 items-center justify-center bg-[#f7f8fb] px-2 text-sm font-black text-[#1a1c22] sm:h-9 sm:min-w-9 sm:text-base">
-                            {idx + 1}
-                          </span>
-                        </div>
-
-                        <div className="relative z-10 flex min-h-[108px] sm:min-h-[126px] items-end p-2.5 sm:p-3.5">
-                          <div className="pr-[4.8rem] sm:pr-[7rem] max-w-full">
-                            <p className="text-[10px] sm:text-[12px] font-black uppercase tracking-[0.2em] text-[#a9afbd]">Standings</p>
-                            <h3 className="mt-1 text-[15px] sm:text-[24px] font-black uppercase tracking-[0.03em] text-white leading-[1.08] break-words">
-                              {renderResultsTitle(category.title)}
-                            </h3>
-                          </div>
-                          <div className="absolute bottom-2 right-2 sm:bottom-3 sm:right-3">
-                            <span className={`inline-flex items-center border px-2 py-1 text-[9px] font-black uppercase tracking-[0.14em] sm:text-[10px] sm:tracking-[0.18em] ${category.statusClass}`}>
-                              {category.status}
-                            </span>
+                      <div className="relative min-h-[44px] sm:h-[40px] px-2 sm:px-2.5 py-1 sm:py-0">
+                        <div className="flex h-full items-center justify-start pl-1 sm:pl-2">
+                          <div className="flex w-full max-w-[980px] items-center gap-5">
+                            <div className="flex w-[22px] shrink-0 items-center justify-center">
+                              {renderResultRowLights(category.status)}
+                            </div>
+                            <div className="flex min-w-0 flex-1 items-center">
+                              <h3 className="block w-full whitespace-normal text-[14px] sm:text-[17px] font-black uppercase tracking-[0.01em] text-white leading-[1.24] text-left break-words" title={category.title}>
+                                {renderResultsTitle(category.title)}
+                              </h3>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -3201,7 +3224,7 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={openReleaseNotes}
-                className="text-[8px] sm:text-[9px] font-medium tracking-[0.28em] text-white/28 hover:text-white/45 transition whitespace-normal break-words"
+                className="normal-case text-[8px] sm:text-[9px] font-medium tracking-[0.28em] text-white/28 hover:text-white/45 transition whitespace-normal break-words"
               >
                 AB 2026 v2
               </button>

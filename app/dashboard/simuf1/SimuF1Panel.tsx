@@ -323,14 +323,14 @@ const StandingsRow = ({
         </span>
         <span className={`rounded-full ${compact ? "h-7 w-[3px]" : "h-8 w-[3px]"}`} style={{ backgroundColor: accentColor }} />
         <div className="min-w-0">
-          <p className={`truncate uppercase leading-none text-white ${compact ? "text-sm font-bold tracking-[0.02em]" : "text-lg sm:text-2xl font-semibold"}`}>{title}</p>
+          <p className={`truncate uppercase leading-[1.05] text-white ${compact ? "text-sm font-bold tracking-[0.02em]" : "text-sm sm:text-2xl font-semibold"}`}>{title}</p>
           {subtitle ? (
-            <p className={`truncate uppercase ${compact ? "text-[10px] tracking-[0.14em] text-[#a7aebb]" : "text-sm font-medium tracking-[0.08em] text-[#9aa1b0]"}`}>{subtitle}</p>
+            <p className={`truncate uppercase ${compact ? "text-[10px] tracking-[0.14em] text-[#a7aebb]" : "text-[10px] sm:text-sm font-medium tracking-[0.08em] text-[#9aa1b0]"}`}>{subtitle}</p>
           ) : null}
         </div>
       </div>
       <div className="ml-2 flex shrink-0 items-center gap-2">
-        <p className={`font-semibold leading-[0.85] text-[#f6f8fc] ${compact ? "text-[30px]" : "text-[36px] sm:text-[58px]"}`}>{points}</p>
+        <p className={`font-semibold leading-[0.9] text-[#f6f8fc] ${compact ? "text-[30px]" : "text-[24px] sm:text-[58px]"}`}>{points}</p>
         {rightAddon}
       </div>
     </div>
@@ -372,13 +372,15 @@ const getTeamPageHref = (teamName: string) => `/dashboard?tab=simuf1&team=${slug
 const BACK_BUTTON_CLASS =
   "inline-flex w-auto items-center justify-center border border-[#d65a62]/45 bg-[#5b2024]/35 px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#ffd3d0] transition hover:border-[#ff6f66]/55 hover:bg-[#692329]/45 hover:text-white";
 
+type SimuView = "home" | "setup" | "lastgp" | "standings" | "race-detail" | "team-profile";
+
 
 export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, isSuperAdmin }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const teamSlugFromQuery = String(searchParams.get("team") || "").trim();
   const fallbackTeamName = getDefaultTeamName(defaultTeamName, userPseudo, userEmail);
-  const [view, setView] = useState<"home" | "setup" | "lastgp" | "standings" | "race-detail" | "team-profile">("home");
+  const [view, setView] = useState<SimuView>("home");
   const [raceId, setRaceId] = useState<string>("");
   const [race, setRace] = useState<SimuF1Race | null>(null);
   const [entries, setEntries] = useState<SimuF1Entry[]>([]);
@@ -394,6 +396,34 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
   const [message, setMessage] = useState<string>("");
   const [nowTick, setNowTick] = useState(Date.now());
   const autoRunRef = useRef<string | null>(null);
+
+  const syncViewInQuery = (nextView: SimuView, nextRaceId = "") => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", "simuf1");
+    params.delete("team");
+
+    if (nextView === "home") {
+      params.delete("simuView");
+      params.delete("simuRace");
+    } else {
+      params.set("simuView", nextView);
+      if (nextView === "race-detail" && nextRaceId) {
+        params.set("simuRace", nextRaceId);
+      } else {
+        params.delete("simuRace");
+      }
+    }
+
+    router.push(`/dashboard?${params.toString()}`);
+  };
+
+  const goToView = (nextView: SimuView, nextRaceId = "") => {
+    if (nextView === "race-detail" && nextRaceId) {
+      setSelectedRaceId(nextRaceId);
+    }
+    setView(nextView);
+    syncViewInQuery(nextView, nextRaceId);
+  };
 
   const activeCircuit = useMemo(() => getCircuitConfigForWeekKey(race?.weekKey || ""), [race?.weekKey]);
 
@@ -448,6 +478,24 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
       teamName: String(prev.teamName || "").trim() || fallbackTeamName,
     }));
   }, [userPseudo, fallbackTeamName]);
+
+  useEffect(() => {
+    if (teamSlugFromQuery) return;
+
+    const requestedView = String(searchParams.get("simuView") || "").trim() as SimuView;
+    const requestedRace = String(searchParams.get("simuRace") || "").trim();
+    const allowedViews: SimuView[] = ["home", "setup", "lastgp", "standings", "race-detail", "team-profile"];
+
+    if (!requestedView || !allowedViews.includes(requestedView)) {
+      if (view !== "home") setView("home");
+      return;
+    }
+
+    if (view !== requestedView) setView(requestedView);
+    if (requestedView === "race-detail" && requestedRace && selectedRaceId !== requestedRace) {
+      setSelectedRaceId(requestedRace);
+    }
+  }, [searchParams, teamSlugFromQuery, view, selectedRaceId]);
 
   useEffect(() => {
     if (!pilotProfile) return;
@@ -547,7 +595,7 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
     if (!cleaned || cleaned === "—") return "#94a3b8";
     const compact = cleaned.replace(/[^a-z0-9]+/g, " ").trim();
 
-    if (compact === "bears fury crew" || compact === "bear s fury crew") return "#e10600";
+    if (compact === "bears fury crew" || compact === "bear s fury crew" || compact === "bear fury crew") return "#e10600";
     if (compact === "tigers fury crew" || compact === "tiger s fury crew") return "#ff8a00";
     if (compact === "frx") return "#22cfd0";
 
@@ -567,7 +615,7 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
   };
 
   const backFromTeamProfile = () => {
-    router.push("/dashboard?tab=simuf1");
+    goToView("home");
   };
 
   const generateRaceAnalysis = (result: SimuF1RaceResult | null, raceInfo: typeof latestPublishedRace | null, raceEntries: SimuF1Entry[]) => {
@@ -861,7 +909,7 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
               type="button"
               onClick={() => {
                 setDraft((prev) => ({ ...prev, participating: true }));
-                setView("setup");
+                goToView("setup");
               }}
               className="group relative overflow-hidden border border-[#e10600]/60 bg-gradient-to-br from-[#e10600]/25 via-[#8f0f17]/20 to-[#121419] p-6 text-left"
             >
@@ -888,14 +936,12 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
               tabIndex={0}
               onClick={() => {
                 if (!latestPublishedRace?.id) return;
-                setSelectedRaceId(latestPublishedRace.id);
-                setView("race-detail");
+                goToView("race-detail", latestPublishedRace.id);
               }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   if (!latestPublishedRace?.id) return;
-                  setSelectedRaceId(latestPublishedRace.id);
-                  setView("race-detail");
+                  goToView("race-detail", latestPublishedRace.id);
                 }
               }}
               className="border border-white/15 bg-[#121419] p-4 sm:p-5 text-left hover:border-white/30 transition cursor-pointer"
@@ -908,8 +954,8 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
               ) : (
                 <div className="mt-2 space-y-2">
                   <p className="text-xs uppercase tracking-[0.16em] text-gray-400">{latestPublishedRace.circuitName || getCircuitConfigForWeekKey(latestPublishedRace.weekKey).circuitName}</p>
-                  <div className="border border-white/10 bg-[#0f1117] p-2 sm:p-2.5">
-                    <div className="flex items-end justify-center gap-2 sm:gap-4">
+                  <div className="border border-white/10 bg-[#0f1117] p-2 sm:p-2.5 overflow-hidden">
+                    <div className="flex items-end justify-center gap-1.5 sm:gap-4">
                       {[1, 0, 2].map((podiumIndex) => {
                         const car = lastGpResult.cars[podiumIndex];
                         if (!car) return null;
@@ -939,12 +985,12 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
                             : "text-[8px] sm:text-[9px]";
 
                         return (
-                          <div key={car.carId} className="flex w-[31%] max-w-[170px] min-w-[92px] flex-col items-center">
+                          <div key={car.carId} className="flex w-[31%] max-w-[170px] min-w-0 flex-col items-center">
                             <div className="mb-1 flex flex-col items-center text-center">
                               <button
                                 type="button"
                                 onClick={(e) => goToTeamPage(car.teamName, e)}
-                                className="text-[10px] sm:text-[11px] font-semibold text-white truncate hover:text-[#ff6f66] w-full text-center"
+                                className="text-[10px] sm:text-[11px] font-semibold text-white truncate hover:text-[#ff6f66] w-full text-center px-1"
                                 title={`Voir l'écurie ${car.teamName}`}
                               >
                                 {car.pilotName}
@@ -952,13 +998,13 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
                               <button
                                 type="button"
                                 onClick={(e) => goToTeamPage(car.teamName, e)}
-                                className="text-[9px] sm:text-[10px] font-normal text-gray-400 truncate hover:text-[#ff9a94] w-full text-center"
+                                className="text-[9px] sm:text-[10px] font-normal text-gray-400 truncate hover:text-[#ff9a94] w-full text-center px-1"
                                 title={`Voir l'écurie ${car.teamName}`}
                               >
                                 {car.teamName}
                               </button>
                             </div>
-                            <div className={`w-full border ${toneClass} ${heightClass} flex flex-col items-center justify-end px-2 py-1.5 sm:py-2`}>
+                            <div className={`w-full border ${toneClass} ${heightClass} flex flex-col items-center justify-end px-1.5 py-1.5 sm:px-2 sm:py-2`}>
                               {order === 1 && (
                                 <span className="mb-0.5 inline-flex items-center" aria-label="Couronne première place" title="Couronne première place">
                                   <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -987,7 +1033,7 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
               </div>
               <button
                 type="button"
-                onClick={() => setView("standings")}
+                onClick={() => goToView("standings")}
                 className="border border-[#3b404d] bg-[#1b1f29] px-3 py-2 text-[11px] font-black uppercase tracking-[0.14em] text-[#eef1f6] hover:border-[#676f82] hover:text-white"
               >
                 Vue détaillée championnat
@@ -1009,7 +1055,7 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
                       points={row.points}
                       accentColor={getTeamAccent(row.team)}
                       compact
-                      onClick={() => (row.team && row.team !== "—" ? goToTeamPage(row.team) : setView("standings"))}
+                      onClick={() => (row.team && row.team !== "—" ? goToTeamPage(row.team) : goToView("standings"))}
                       staggerIndex={idx}
                     />
                   ))
@@ -1046,7 +1092,7 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
               <h4 className="text-lg font-black uppercase tracking-[0.12em] text-white">Dernier Grand Prix</h4>
               <button
                 type="button"
-                onClick={() => setView("home")}
+                onClick={() => goToView("home")}
                 className={BACK_BUTTON_CLASS}
               >
                 ← Retour
@@ -1106,7 +1152,7 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
               <h4 className="f1-title text-2xl sm:text-3xl font-black uppercase tracking-[0.08em] text-white">Championnat 2026</h4>
               <button
                 type="button"
-                onClick={() => setView("home")}
+                onClick={() => goToView("home")}
                 className={BACK_BUTTON_CLASS}
               >
                 ← Retour
@@ -1190,8 +1236,7 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
                           key={gp.id}
                           type="button"
                           onClick={() => {
-                            setSelectedRaceId(gp.id);
-                            setView("race-detail");
+                            goToView("race-detail", gp.id);
                           }}
                           className={`w-full border px-4 py-3 text-left transition-all ${statusColor}`}
                         >
@@ -1230,7 +1275,7 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
               </div>
               <button
                 type="button"
-                onClick={() => setView("standings")}
+                onClick={() => goToView("standings")}
                 className={BACK_BUTTON_CLASS}
               >
                 ← Retour
@@ -1395,7 +1440,7 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
           </div>
           <button
             type="button"
-            onClick={() => setView("home")}
+            onClick={() => goToView("home")}
             className={BACK_BUTTON_CLASS}
           >
             ← Retour

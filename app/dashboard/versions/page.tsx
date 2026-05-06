@@ -10,6 +10,15 @@ import { getAuth, getFirestore } from "@/lib/firebase";
 
 const releaseNotes = [
   {
+    version: "v2.3.0",
+    timestamp: "06/05/2026 · 22h30",
+    details: [
+      "Mobile: Resultats + SimuF1 corriges (titres propres, 2 lignes max, podium recadre, classements lisibles).",
+      "Fiche ecurie: casques redesign couleur ecurie + bande P1/P2 nette; noms pilotes fiabilises (plus de doublons placeholder).",
+      "Notes de version: page harmonisee dashboard (menu/labels, boite message, typo mobile, texte Systeme).",
+    ],
+  },
+  {
     version: "v2.2.0",
     timestamp: "05/05/2026 · 19h00",
     details: [
@@ -175,7 +184,7 @@ export default function VersionsPage() {
 
   const navItems = [
     { key: "events", label: "Parties", icon: CalendarDays },
-    { key: "proposition", label: "Propositions", icon: ClipboardList },
+    { key: "proposition", label: "Propos", icon: ClipboardList },
     { key: "results", label: "Resultats", icon: Trophy },
     { key: "chat", label: "Chat", icon: MessageCircle },
     { key: "members", label: "Pilotes", icon: Users },
@@ -243,11 +252,13 @@ export default function VersionsPage() {
               />
             </Link>
 
-            <div className="info-laser-border h-14 flex-1 min-w-0 max-w-[640px] bg-[#121419] px-3 sm:px-4 flex items-center overflow-hidden">
-              <p className="text-[11px] sm:text-xs uppercase tracking-[0.14em] text-gray-200 leading-4 whitespace-normal break-words">
-                <span className="text-[#e10600] mr-2">Systeme</span>
-                Historique des mises a jour Formula D Planner.
-              </p>
+            <div className="info-laser-border h-14 flex-1 min-w-0 max-w-[640px] bg-[#121419] px-3 sm:px-4 flex items-center overflow-hidden py-0 sm:py-0">
+              <div className="w-full">
+                <p className="text-[10px] sm:text-xs uppercase tracking-[0.14em] text-gray-200 leading-4 whitespace-normal break-words">
+                  <span className="text-[#e10600] mr-2">Systeme</span>
+                  Historique des mises a jour
+                </p>
+              </div>
             </div>
           </div>
 
@@ -317,8 +328,8 @@ export default function VersionsPage() {
 
         <section className="mt-4 border-l-4 border-[#e10600] border border-white/10 bg-black/30 p-4 sm:p-6">
           <div className="border border-white/10 bg-[#121419] p-4 sm:p-6">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-[#e10600]">Notes de version</p>
-            <p className="mt-3 text-sm text-gray-300">
+            <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-[#e10600]">Notes de version</p>
+            <p className="mt-3 text-xs sm:text-sm text-gray-300">
               Version actuelle : <span className="text-white font-bold">v2.2.0</span>
             </p>
 
@@ -330,12 +341,12 @@ export default function VersionsPage() {
               {releaseNotes.map((item) => (
                 <li key={item.version} className="border-l-2 border-[#e10600]/70 pl-3">
                   <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 sm:gap-3">
-                    <p className="text-sm font-bold text-white whitespace-normal break-words">{item.version}</p>
+                    <p className="text-xs sm:text-sm font-bold text-white whitespace-normal break-words">{item.version}</p>
                     <p className="text-[10px] uppercase tracking-[0.08em] sm:tracking-[0.12em] text-gray-500 whitespace-normal break-words">{item.timestamp}</p>
                   </div>
                   <ul className="mt-2 space-y-1">
                     {item.details.map((line) => (
-                      <li key={line} className="text-sm text-gray-300 whitespace-normal break-words leading-5">
+                      <li key={line} className="text-xs sm:text-sm text-gray-300 whitespace-normal break-words leading-[1.35] sm:leading-5">
                         {line}
                       </li>
                     ))}
@@ -355,14 +366,15 @@ export default function VersionsPage() {
             >
               {navItems.map((item) => {
                 const Icon = item.icon;
+                const isActive = item.key === "events";
                 return (
                   <Link
                     key={item.key}
                     href={`/dashboard?tab=${item.key}`}
-                    className="flex flex-col items-center justify-center gap-1 px-1 py-2 transition text-gray-500 hover:text-white"
+                    className={`flex flex-col items-center justify-center gap-1 px-1 py-2 transition ${isActive ? "text-white" : "text-gray-500 hover:text-white"}`}
                   >
-                    <Icon className="w-4 h-4 text-gray-500" />
-                    <span className="text-[9px] font-black uppercase tracking-[0.08em] leading-none">{item.label}</span>
+                    <Icon className={`w-4 h-4 ${isActive ? "text-[#e10600]" : "text-gray-500"}`} />
+                    <span className="text-[8px] sm:text-[9px] font-medium uppercase tracking-[0.06em] leading-none">{item.label}</span>
                   </Link>
                 );
               })}
@@ -413,7 +425,7 @@ export default function VersionsPage() {
                 FDWC (Formula D World Championship)
               </a>
               <span className="text-white/20">|</span>
-              <span className="text-[8px] sm:text-[9px] font-medium tracking-[0.28em] text-white/28 whitespace-normal break-words">
+              <span className="normal-case text-[8px] sm:text-[9px] font-medium tracking-[0.28em] text-white/28 whitespace-normal break-words">
                 AB 2026 v2
               </span>
             </div>

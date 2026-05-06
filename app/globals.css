@@ -26,12 +26,29 @@
 
 /* Keep layout width stable when pages/tabs gain or lose vertical scrollbar. */
 html {
-  overflow-y: scroll;
-  scrollbar-gutter: stable both-edges;
+  overflow-y: auto;
+  scrollbar-gutter: auto;
   overflow-x: hidden;
   max-width: 100%;
 }
+/* Keep scrollbar visuals aligned with the app dark background. */
+* {
+  scrollbar-color: #2a303a #0f1014;
+}
 
+*::-webkit-scrollbar {
+  width: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #0f1014;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #2a303a;
+  border-radius: 999px;
+  border: 2px solid #0f1014;
+}
 body {
   background:
     radial-gradient(980px 420px at 10% -20%, rgba(225, 6, 0, 0.13), transparent 62%),
@@ -76,7 +93,7 @@ body {
   animation-delay: var(--fd-row-delay, 0ms);
 }
 
-/* iOS Safari can create horizontal overflow with stable both-edges; disable it on narrow screens. */
+/* iOS Safari can create horizontal overflow with stable gutters; disable it on narrow screens. */
 @media (max-width: 767px) {
   html {
     scrollbar-gutter: auto;
@@ -168,3 +185,5 @@ body {
     box-shadow: none;
   }
 }
+
+
