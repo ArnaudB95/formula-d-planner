@@ -66,6 +66,142 @@ const FUN_INFO_TEMPLATES = [
   "[Pseudo] joue gros cette saison",
 ];
 
+const TEAM_S1_RACES = [
+  { key: "E01", place: "Spa-Francorchamps", date: "2024-12-07", winner: "Sébastien", winnerPoints: 11 },
+  { key: "E02", place: "Monza", date: "2024-12-07", winner: "Arnaud", winnerPoints: 13 },
+  { key: "E03", place: "Monaco", date: "2025-01-11", winner: "Sébastien", winnerPoints: 14 },
+  { key: "E04", place: "Melbourne", date: "2025-02-15", winner: "Alain", winnerPoints: 18 },
+  { key: "E05", place: "Sepang", date: "2025-03-22", winner: "Arnaud", winnerPoints: 16 },
+  { key: "E06", place: "Interlagos", date: "2025-04-26", winner: "Sébastien", winnerPoints: 16 },
+  { key: "E07", place: "Montréal", date: "2025-06-28", winner: "Arnaud", winnerPoints: 14 },
+  { key: "E08", place: "Hockenheim", date: "2025-07-26", winner: "Sébastien", winnerPoints: 10 },
+  { key: "E09", place: "Magny Cours", date: "2025-10-04", winner: "Arnaud", winnerPoints: 18 },
+  { key: "E10", place: "Sebring", date: "2025-10-04", winner: "Arnaud", winnerPoints: 15 },
+  { key: "E11", place: "Valencia", date: "2025-12-06", winner: "Sébastien", winnerPoints: 14 },
+  { key: "E12", place: "San Marino", date: "2025-12-06", winner: "Bogs", winnerPoints: 16 },
+] as const;
+
+const TEAM_S1_STANDINGS = [
+  {
+    rank: 1,
+    player: "Arnaud",
+    total: 117,
+    average: 10.64,
+    appearances: 11,
+    races: { E01: 10, E02: 13, E03: 8, E04: 11, E05: 16, E06: null, E07: 14, E08: 6, E09: 18, E10: 15, E11: 6, E12: 0 },
+  },
+  {
+    rank: 2,
+    player: "Sébastien",
+    total: 112,
+    average: 9.33,
+    appearances: 12,
+    races: { E01: 11, E02: 10, E03: 14, E04: 3, E05: 13, E06: 16, E07: 2, E08: 10, E09: 11, E10: 8, E11: 14, E12: 0 },
+  },
+  {
+    rank: 3,
+    player: "Alain",
+    total: 64,
+    average: 9.14,
+    appearances: 7,
+    races: { E01: null, E02: null, E03: 6, E04: 18, E05: null, E06: 11, E07: 11, E08: 5, E09: null, E10: null, E11: 0, E12: 13 },
+  },
+  {
+    rank: 4,
+    player: "Bogs",
+    total: 52,
+    average: 6.5,
+    appearances: 8,
+    races: { E01: 11, E02: 10, E03: 5, E04: null, E05: 4, E06: null, E07: null, E08: null, E09: 0, E10: 0, E11: 6, E12: 16 },
+  },
+  {
+    rank: 5,
+    player: "Valérian",
+    total: 26,
+    average: 4.33,
+    appearances: 6,
+    races: { E01: 4, E02: 5, E03: 0, E04: 3, E05: null, E06: 6, E07: null, E08: 8, E09: null, E10: null, E11: null, E12: null },
+  },
+  {
+    rank: 6,
+    player: "William",
+    total: 24,
+    average: 8,
+    appearances: 3,
+    races: { E01: null, E02: null, E03: null, E04: null, E05: null, E06: null, E07: 11, E08: null, E09: null, E10: null, E11: 13, E12: 0 },
+  },
+  {
+    rank: 7,
+    player: "Laetitia",
+    total: 19,
+    average: 6.33,
+    appearances: 3,
+    races: { E01: null, E02: null, E03: null, E04: 4, E05: null, E06: 5, E07: null, E08: 10, E09: null, E10: null, E11: null, E12: null },
+  },
+  {
+    rank: 8,
+    player: "Yann",
+    total: 10,
+    average: 5,
+    appearances: 2,
+    races: { E01: null, E02: null, E03: null, E04: null, E05: null, E06: null, E07: null, E08: null, E09: 4, E10: 6, E11: null, E12: null },
+  },
+  {
+    rank: 9,
+    player: "Romain",
+    total: 0,
+    average: 0,
+    appearances: 1,
+    races: { E01: null, E02: null, E03: null, E04: null, E05: 0, E06: null, E07: null, E08: null, E09: null, E10: null, E11: null, E12: null },
+  },
+  {
+    rank: 10,
+    player: "Eiffeline",
+    total: 0,
+    average: 0,
+    appearances: 0,
+    races: { E01: null, E02: null, E03: null, E04: null, E05: null, E06: null, E07: null, E08: null, E09: null, E10: null, E11: null, E12: null },
+  },
+] as const;
+
+const TEAM_S1_HIGHLIGHTS = [
+  {
+    label: "Meilleur pilote",
+    value: "Arnaud",
+    detail: "Pilote 1, 6.0 pts de moyenne et victoire finale.",
+    accentClass: "from-[#fff0ec] via-[#ffd1c7] to-[#ff9b86] text-[#43110f]",
+  },
+  {
+    label: "Meilleure debutante",
+    value: "Laetitia",
+    detail: "Pilote 2, 6.33 pts de moyenne sur ses apparitions.",
+    accentClass: "from-[#f7f4ff] via-[#d4d6ff] to-[#9aa6ff] text-[#171b46]",
+  },
+  {
+    label: "Meilleure ecurie",
+    value: "Arnaud",
+    detail: "117 points, 11 courses disputees, 5 victoires d etape.",
+    accentClass: "from-[#ffe8ea] via-[#ffb8bc] to-[#ff6a73] text-[#420d13]",
+  },
+] as const;
+
+const formatTeamS1Date = (isoDate: string) =>
+  new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(`${isoDate}T00:00:00`));
+
+const normalizeEmail = (value: string | null | undefined) => String(value || "").trim().toLowerCase();
+
+const pickFirstNonEmpty = (...values: any[]) => {
+  for (const value of values) {
+    const text = String(value || "").trim();
+    if (text) return text;
+  }
+  return "";
+};
+
 export default function Dashboard() {
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const chatPanelRef = useRef<HTMLDivElement | null>(null);
@@ -168,6 +304,10 @@ export default function Dashboard() {
   const [tempTeamSeasons, setTempTeamSeasons] = useState("");
   const [tempCrowns, setTempCrowns] = useState("");
   const [tempCrownSeasons, setTempCrownSeasons] = useState("");
+  const [tempMemberPseudo, setTempMemberPseudo] = useState("");
+  const [tempMemberTeam, setTempMemberTeam] = useState("");
+  const [tempMemberAvatar, setTempMemberAvatar] = useState("");
+  const [tempMemberAvatarUrlInput, setTempMemberAvatarUrlInput] = useState("");
   const [venueEditorEventId, setVenueEditorEventId] = useState<string | null>(null);
   const [venueEditorValue, setVenueEditorValue] = useState("");
 
@@ -296,14 +436,13 @@ export default function Dashboard() {
 
       setUser(u);
 
-      const isSuperAdmin =
-        u.email === "beaudouin.arnaud@gmail.com" ||
-        u.displayName === "Arnaud";
+      const normalizedEmail = normalizeEmail(u.email);
+      const isSuperAdmin = normalizedEmail === "beaudouin.arnaud@gmail.com";
 
       await setDoc(
-        doc(firestore, "members", u.email!),
+        doc(firestore, "members", normalizedEmail),
         {
-          email: u.email,
+          email: normalizedEmail,
           role: isSuperAdmin ? "superAdmin" : "member",
         },
         { merge: true }
@@ -419,31 +558,54 @@ export default function Dashboard() {
     cleanupFictiveMembers();
 
     return onSnapshot(collection(firestore, "members"), (snapshot) => {
-      const membersData = snapshot.docs.map((d) => ({
-        email: d.id,
-        ...d.data(),
-      }));
+      const byEmail = new Map<string, any>();
+
+      snapshot.docs.forEach((d) => {
+        const raw = { email: d.id, ...d.data() } as any;
+        const key = normalizeEmail(raw.email || d.id);
+        const previous = byEmail.get(key);
+
+        if (!previous) {
+          byEmail.set(key, {
+            ...raw,
+            email: key,
+          });
+          return;
+        }
+
+        byEmail.set(key, {
+          ...previous,
+          ...raw,
+          email: key,
+          pseudo: pickFirstNonEmpty(raw.pseudo, previous.pseudo),
+          team: pickFirstNonEmpty(raw.team, previous.team),
+          avatar: pickFirstNonEmpty(raw.avatar, previous.avatar),
+          role: raw.role || previous.role || "member",
+        });
+      });
+
+      const membersData = Array.from(byEmail.values());
       setMembers(membersData);
 
       // Set user role
       if (user) {
-        const currentMember = snapshot.docs.find(d => d.id === user.email);
+        const currentMember = byEmail.get(normalizeEmail(user.email));
         if (currentMember) {
-          setUserRole(currentMember.data().role || "member");
+          setUserRole(currentMember.role || "member");
           setProfile({
-            pseudo: currentMember.data().pseudo || "",
-            team: currentMember.data().team || "",
-            avatar: currentMember.data().avatar || "",
-            address: currentMember.data().address || "",
-            emailNotifications: currentMember.data().emailNotifications === true,
-            notificationEmail: currentMember.data().notificationEmail || "",
+            pseudo: currentMember.pseudo || "",
+            team: currentMember.team || "",
+            avatar: currentMember.avatar || "",
+            address: currentMember.address || "",
+            emailNotifications: currentMember.emailNotifications === true,
+            notificationEmail: currentMember.notificationEmail || "",
           });
-          setEditPseudo(currentMember.data().pseudo || "");
-          setEditTeam(currentMember.data().team || "");
-          setEditAvatar(currentMember.data().avatar || "");
-          setEditAddress(currentMember.data().address || "");
-          setEditEmailNotifications(currentMember.data().emailNotifications === true);
-          setEditNotificationEmail(currentMember.data().notificationEmail || "");
+          setEditPseudo(currentMember.pseudo || "");
+          setEditTeam(currentMember.team || "");
+          setEditAvatar(currentMember.avatar || "");
+          setEditAddress(currentMember.address || "");
+          setEditEmailNotifications(currentMember.emailNotifications === true);
+          setEditNotificationEmail(currentMember.notificationEmail || "");
         }
       }
     });
@@ -505,10 +667,10 @@ export default function Dashboard() {
         const data: any = d.data();
         const updatedMs = data?.updatedAt?.toDate?.()?.getTime?.() || 0;
         if (now - updatedMs < onlineWindowMs) {
-          onlineEmails.add(d.id);
+          onlineEmails.add(normalizeEmail(d.id));
         }
       });
-      onlineEmails.add(user.email);
+      onlineEmails.add(normalizeEmail(user.email));
 
       setTypingUsers(active);
       setOnlineMembersCount(onlineEmails.size);
@@ -928,19 +1090,19 @@ export default function Dashboard() {
 
   // 🔧 PROMOTE / DEMOTE MEMBER
   const updateMemberRole = async (memberEmail: string, role: string) => {
-    if (userRole !== "superAdmin") return;
+    if (!(userRole === "superAdmin" && user?.email === "beaudouin.arnaud@gmail.com")) return;
     const firestore = getFirestore();
     if (!firestore) return;
 
-    await setDoc(doc(firestore, "members", memberEmail), { role }, { merge: true });
+    await setDoc(doc(firestore, "members", normalizeEmail(memberEmail)), { role }, { merge: true });
   };
 
   const updateMemberDetails = async (memberEmail: string, payload: any) => {
-    if (userRole !== "superAdmin") return;
+    if (!(userRole === "superAdmin" && user?.email === "beaudouin.arnaud@gmail.com")) return;
     const firestore = getFirestore();
     if (!firestore) return;
 
-    await setDoc(doc(firestore, "members", memberEmail), payload, { merge: true });
+    await setDoc(doc(firestore, "members", normalizeEmail(memberEmail)), payload, { merge: true });
   };
 
   // 💾 SAVE PROFILE
@@ -961,7 +1123,7 @@ export default function Dashboard() {
     }
 
     const firestore = getFirestore();
-    let avatarUrl = avatarUrlInput || editAvatar;
+    let avatarUrl = String(avatarUrlInput || editAvatar || "").trim();
 
     console.log("saveProfile start", {
       userEmail: user.email,
@@ -988,7 +1150,7 @@ export default function Dashboard() {
       });
 
       await setDoc(
-        doc(firestore, "members", user.email!),
+        doc(firestore, "members", normalizeEmail(user.email)),
         {
           pseudo: editPseudo || null,
           team: editTeam || null,
@@ -1318,6 +1480,27 @@ export default function Dashboard() {
   const getPseudo = (email: string) =>
     members.find((m) => m.email === email)?.pseudo || email;
 
+  const openMemberProfile = (member: any) => {
+    setSelectedMember(member);
+    setIsEditingMember(false);
+  };
+
+  const openMemberEditor = (member: any) => {
+    setSelectedMember(member);
+    setTempMemberRole(member.role || "member");
+    setTempPilotStars(String(member.pilotStars || ""));
+    setTempPilotSeasons(String(member.pilotStarSeasons || ""));
+    setTempTeamStars(String(member.teamStars || ""));
+    setTempTeamSeasons(String(member.teamStarSeasons || ""));
+    setTempCrowns(String(member.crowns || ""));
+    setTempCrownSeasons(String(member.crownSeasons || ""));
+    setTempMemberPseudo(String(member.pseudo || ""));
+    setTempMemberTeam(String(member.team || ""));
+    setTempMemberAvatar(String(member.avatar || ""));
+    setTempMemberAvatarUrlInput("");
+    setIsEditingMember(true);
+  };
+
   const formatTypingLabel = () => {
     if (typingUsers.length === 0) return "";
     const pseudos = typingUsers.map((u: any) => getPseudo(u.email));
@@ -1356,6 +1539,11 @@ export default function Dashboard() {
   const currentUserEmail = user?.email || "";
 
   const isSuperAdmin = userRole === "superAdmin";
+  const canManageMemberProfiles = isSuperAdmin && currentUserEmail === "beaudouin.arnaud@gmail.com";
+  const selectedMemberLive = useMemo(() => {
+    if (!selectedMember?.email) return null;
+    return members.find((m) => normalizeEmail(m.email) === normalizeEmail(selectedMember.email)) || selectedMember;
+  }, [members, selectedMember]);
 
   const participatedEvolutionRequestIds = useMemo(() => {
     if (!currentUserEmail) return new Set<string>();
@@ -1598,7 +1786,7 @@ export default function Dashboard() {
   const resultsCategories = [
     {
       key: "team-s2-2026-2027",
-      title: "Championnat Équipe Saison 2 - 2026 / 2027",
+      title: "Championnat Écurie Saison 2 - 2026 / 2027",
       status: "En cours",
       statusClass: "border-[#78de86]/45 bg-[#409b48]/72 text-white",
       href: "/dashboard?tab=results&result=team-s2-2026-2027",
@@ -1613,7 +1801,7 @@ export default function Dashboard() {
     },
     {
       key: "team-s1-2024-2025",
-      title: "Championnat Équipe Saison 1 - 2024 / 2025",
+      title: "Championnat Écurie Saison 1 - 2024 / 2025",
       status: "Terminé",
       statusClass: "border-white/25 bg-black/74 text-[#ff4a52]",
       href: "/dashboard?tab=results&result=team-s1-2024-2025",
@@ -1621,7 +1809,7 @@ export default function Dashboard() {
     },
     {
       key: "team-s0-2015-2017",
-      title: "Championnat Équipe Saison 0 - 2015 / 2017",
+      title: "Championnat Écurie Saison 0 - 2015 / 2017",
       status: "Terminé",
       statusClass: "border-white/25 bg-black/74 text-[#ff4a52]",
       href: "/dashboard?tab=results&result=team-s0-2015-2017",
@@ -1692,6 +1880,143 @@ export default function Dashboard() {
       </div>
     );
   };
+
+  const renderTeamS1Result = () => (
+    <div className="mt-4 overflow-hidden border border-[#322329] bg-[#120d11] text-white shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+      <div className="relative overflow-hidden border-b border-[#38262b] bg-[radial-gradient(circle_at_top_left,_rgba(255,106,115,0.22),_transparent_38%),radial-gradient(circle_at_top_right,_rgba(255,255,255,0.1),_transparent_24%),linear-gradient(135deg,_#160f14_0%,_#100c10_55%,_#19080b_100%)] px-4 py-5 sm:px-6 sm:py-6">
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.05)_50%,transparent_100%)] opacity-30" />
+        <div className="relative flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+          <div className="max-w-3xl">
+            <p className="text-[10px] font-black uppercase tracking-[0.42em] text-[#ff9aa0] sm:text-xs">Formula D</p>
+            <h4 className="mt-2 text-3xl font-black uppercase tracking-[0.03em] text-white sm:text-5xl">Championnat Ecurie Saison #1</h4>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-[#d6c9cf] sm:text-[15px]">
+              Premiere archive native du championnat equipe, reconstruite depuis le classeur source pour remplacer le visuel statique et garder le detail des 12 courses directement dans l application.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3 xl:w-[480px] xl:grid-cols-1">
+            {TEAM_S1_HIGHLIGHTS.map((highlight) => (
+              <div
+                key={highlight.label}
+                className="overflow-hidden rounded-[18px] border border-white/10 bg-black/30 shadow-[0_12px_32px_rgba(0,0,0,0.24)] backdrop-blur-sm"
+              >
+                <div className={`bg-gradient-to-r px-4 py-4 ${highlight.accentClass}`}>
+                  <p className="text-[10px] font-black uppercase tracking-[0.28em]">{highlight.label}</p>
+                  <p className="mt-2 text-2xl font-black uppercase leading-none">{highlight.value}</p>
+                  <p className="mt-2 text-xs font-bold leading-5 opacity-80">{highlight.detail}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 bg-[#151018] p-4 sm:p-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.9fr)]">
+        <section className="overflow-hidden rounded-[20px] border border-[#34262d] bg-[#18121b]">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#30242a] px-4 py-4 sm:px-5">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#ff8d95]">Classement general</p>
+              <h5 className="mt-1 text-lg font-black uppercase tracking-[0.04em] text-white sm:text-xl">Tableau ecuries</h5>
+            </div>
+            <div className="rounded-full border border-[#4b3138] bg-[#20161b] px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] text-[#e7cfd5]">
+              12 courses
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <div className="min-w-[980px]">
+              <div className="grid grid-cols-[72px_minmax(180px,1.4fr)_110px_110px_120px_repeat(12,minmax(58px,1fr))] border-b border-[#30242a] bg-[#120d13] text-[10px] font-black uppercase tracking-[0.18em] text-[#8f7e87]">
+                <div className="px-3 py-3">Rang</div>
+                <div className="px-3 py-3">Equipe</div>
+                <div className="px-3 py-3 text-[#ff9aa0]">Moy.</div>
+                <div className="px-3 py-3">Total</div>
+                <div className="px-3 py-3">Courses</div>
+                {TEAM_S1_RACES.map((race) => (
+                  <div key={race.key} className="px-2 py-3 text-center text-[#ff9aa0]">
+                    {race.key}
+                  </div>
+                ))}
+              </div>
+
+              {[...TEAM_S1_STANDINGS].sort((a, b) => b.average - a.average).map((team, idx) => {
+                const displayRank = idx + 1;
+                return (
+                <div
+                  key={team.player}
+                  className={`grid grid-cols-[72px_minmax(180px,1.4fr)_110px_110px_120px_repeat(12,minmax(58px,1fr))] border-b border-[#271d22] text-sm ${displayRank <= 3 ? "bg-[linear-gradient(90deg,rgba(255,255,255,0.04),transparent_22%)]" : "bg-[#18121b]"}`}
+                >
+                  <div className="flex items-center px-3 py-3">
+                    <span className={`inline-flex min-w-[40px] items-center justify-center rounded-full border px-2 py-1 text-xs font-black ${displayRank === 1 ? "border-[#ffd27d]/55 bg-[#6a4a13]/35 text-[#ffe8b3]" : displayRank === 2 ? "border-[#d9dde5]/40 bg-[#39414c]/30 text-[#eef2fa]" : displayRank === 3 ? "border-[#efab86]/45 bg-[#693523]/30 text-[#ffd6c2]" : "border-[#3a2d35] bg-[#20161b] text-[#c7b2bb]"}`}>
+                      #{displayRank}
+                    </span>
+                  </div>
+                  <div className="px-3 py-3">
+                    <p className="text-[15px] font-black uppercase tracking-[0.03em] text-white">{team.player}</p>
+                    <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8d7a82]">Championnat ecurie</p>
+                  </div>
+                  <div className="flex items-center px-3 py-3 text-sm font-black text-[#ff9aa0]">{team.average.toFixed(2)}</div>
+                  <div className="flex items-center px-3 py-3 text-base font-black text-white">{team.total}</div>
+                  <div className="flex items-center px-3 py-3 text-sm font-bold text-[#c8b7bf]">{team.appearances}</div>
+                  {TEAM_S1_RACES.map((race) => {
+                    const points = team.races[race.key as keyof typeof team.races];
+                    const isWinner = points === race.winnerPoints && team.player === race.winner;
+                    return (
+                      <div key={`${team.player}-${race.key}`} className="flex items-center justify-center px-1 py-3">
+                        {points === null ? (
+                          <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#4c3c44]">--</span>
+                        ) : (
+                          <span className={`inline-flex min-w-[38px] items-center justify-center rounded-[10px] border px-2 py-1 text-xs font-black ${isWinner ? "border-[#ff9aa0]/60 bg-[#6b1f27]/55 text-white shadow-[0_0_18px_rgba(225,6,0,0.2)]" : points === 0 ? "border-[#433138] bg-[#21161b] text-[#927f88]" : "border-[#3b2d35] bg-[#20161b] text-[#f6e8eb]"}`}>
+                            {points}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <div className="space-y-4">
+          <section className="overflow-hidden rounded-[20px] border border-[#34262d] bg-[#18121b]">
+            <div className="border-b border-[#30242a] px-4 py-4 sm:px-5">
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#ff8d95]">Calendrier</p>
+              <h5 className="mt-1 text-lg font-black uppercase tracking-[0.04em] text-white">Toutes les courses</h5>
+            </div>
+            <div className="divide-y divide-[#271d22]">
+              {TEAM_S1_RACES.map((race) => (
+                <div key={race.key} className="grid grid-cols-[68px_minmax(0,1fr)] gap-3 px-4 py-3 sm:px-5">
+                  <div className="flex flex-col items-center justify-center rounded-[14px] border border-[#4b3138] bg-[#21161b] px-2 py-2 text-center">
+                    <span className="text-[10px] font-black uppercase tracking-[0.24em] text-[#ff9aa0]">{race.key}</span>
+                    <span className="mt-1 text-[10px] font-bold uppercase tracking-[0.1em] text-[#b29ea6]">{formatTeamS1Date(race.date)}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-black uppercase tracking-[0.03em] text-white">{race.place}</p>
+                    <p className="mt-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#8e7a83]">Vainqueur d etape: {race.winner}</p>
+                    <p className="mt-1 text-xs leading-5 text-[#d4c6cc]">{race.winnerPoints} points marques sur cette manche.</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="overflow-hidden rounded-[20px] border border-[#34262d] bg-[#18121b]">
+            <div className="border-b border-[#30242a] px-4 py-4 sm:px-5">
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#ff8d95]">Lecture rapide</p>
+              <h5 className="mt-1 text-lg font-black uppercase tracking-[0.04em] text-white">Ce que dit la saison</h5>
+            </div>
+            <div className="space-y-3 px-4 py-4 text-sm leading-6 text-[#d8cbd1] sm:px-5">
+              <p>Arnaud termine champion avec 117 points et un pic net sur le dernier tiers de saison, notamment Magny Cours et Sebring.</p>
+              <p>Sébastien reste au contact jusqu'au bout avec 112 points et la meilleure constance globale sur 12 courses disputees.</p>
+              <p>Le tableau conserve toutes les manches E01 a E12, avec les absences laissees vides et les zero affiches explicitement.</p>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  );
 
   const syncDashboardQuery = (nextTab: string) => {
     if (typeof window === "undefined") return;
@@ -1928,6 +2253,20 @@ export default function Dashboard() {
   };
 
   const resolvedAvatar = ((profile?.avatar as string) || (user?.photoURL as string) || "").trim();
+  const resolvedPseudo = String((profile?.pseudo as string) || user?.displayName || user?.email || "Utilisateur").trim();
+  const resolvedTeam = String((profile?.team as string) || "").trim();
+
+  const getAdaptivePseudoStyle = (pseudo: string, baseSize = 34) => {
+    const len = String(pseudo || "").trim().length;
+    const minSize = 13;
+    const computedSize = Math.max(minSize, baseSize - Math.max(0, len - 12) * 1.25);
+    const spacing = len <= 16 ? 0.06 : len <= 24 ? 0.04 : len <= 32 ? 0.025 : 0.012;
+    return {
+      fontSize: `${computedSize}px`,
+      letterSpacing: `${spacing}em`,
+      lineHeight: 0.95,
+    } as const;
+  };
 
   return (
     <main className="min-h-screen bg-[#0f1014] text-white">
@@ -1980,10 +2319,13 @@ export default function Dashboard() {
               >
                 <div className="w-full h-full rounded-[2px] overflow-hidden bg-[#e10600] [transform:translateZ(0)] [-webkit-mask-image:-webkit-radial-gradient(white,black)] [mask-image:radial-gradient(white,black)] flex items-center justify-center">
                   {resolvedAvatar ? (
-                    <div
-                      aria-label="Avatar"
-                      className="w-full h-full rounded-[inherit] bg-center bg-cover"
-                      style={{ backgroundImage: `url("${resolvedAvatar}")` }}
+                    <img
+                      src={resolvedAvatar}
+                      alt="Avatar profil"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
                     />
                   ) : (
                     <svg className="w-6 h-6 sm:w-12 sm:h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -1998,27 +2340,44 @@ export default function Dashboard() {
                 </svg>
               </div>
               {isMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-[min(32rem,calc(100vw-2rem))] bg-[#13151b] border border-white/20 rounded-lg shadow-xl z-50">
+                <div className="absolute right-0 top-full mt-2 w-[min(64rem,calc(100vw-2rem))] bg-[#13151b] border border-white/20 rounded-lg shadow-xl z-50">
                   <div className="p-4">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-12 h-12 rounded-[2px] p-[2px] bg-black">
+                    <div className="mb-5 flex items-center gap-4 border border-white/10 bg-[#10131a] p-4 sm:p-5">
+                      <div className="w-[168px] h-[168px] sm:w-[180px] sm:h-[180px] rounded-[2px] p-[2px] bg-black shrink-0">
                         <div className="w-full h-full bg-[#e10600] rounded-[2px] flex items-center justify-center overflow-hidden [transform:translateZ(0)] [-webkit-mask-image:-webkit-radial-gradient(white,black)] [mask-image:radial-gradient(white,black)]">
                           {resolvedAvatar ? (
-                            <div
-                              aria-label="Avatar"
-                              className="w-full h-full rounded-[inherit] bg-center bg-cover"
-                              style={{ backgroundImage: `url("${resolvedAvatar}")` }}
+                            <img
+                              src={resolvedAvatar}
+                              alt="Avatar profil"
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
                             />
                           ) : (
-                            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-[72px] h-[72px] text-white" fill="currentColor" viewBox="0 0 24 24">
                               <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                             </svg>
                           )}
                         </div>
                       </div>
-                      <div>
-                        <p className="font-semibold">{user?.displayName || "Utilisateur"}</p>
-                        <p className="text-sm text-gray-400">{user?.email}</p>
+                      <div className="min-w-0 flex-1 overflow-hidden">
+                        <p
+                          className="text-white uppercase whitespace-nowrap"
+                          style={{
+                            fontFamily: "var(--font-bebas-neue), sans-serif",
+                            ...getAdaptivePseudoStyle(resolvedPseudo, 34),
+                          }}
+                          title={resolvedPseudo}
+                        >
+                          {resolvedPseudo}
+                        </p>
+                        {resolvedTeam ? (
+                          <p className="mt-1 text-[11px] text-[#ff8b92] uppercase tracking-[0.2em]">{resolvedTeam}</p>
+                        ) : (
+                          <p className="mt-1 text-[11px] text-gray-500 uppercase tracking-[0.2em]">Sans ecurie</p>
+                        )}
+                        <p className="mt-2 text-xs text-gray-400 break-all">{user?.email}</p>
                       </div>
                     </div>
                     <div className="space-y-3">
@@ -2509,7 +2868,9 @@ export default function Dashboard() {
                       </div>
                     </div>
 
-                    {selectedResultsCategory.resultImage ? (
+                    {selectedResultsCategory.key === "team-s1-2024-2025" ? (
+                      renderTeamS1Result()
+                    ) : selectedResultsCategory.resultImage ? (
                       <div className="mt-4 border border-[#2e323b] bg-[#181b22] p-4 sm:p-5">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <p className="text-xs uppercase tracking-[0.14em] text-[#9da5b3]">Mobile: pincez pour zoomer ou glissez horizontalement</p>
@@ -2567,7 +2928,54 @@ export default function Dashboard() {
 
             {tab === "members" && (
               <div className="space-y-2">
-                {members.length === 0 ? (
+                {selectedMemberLive ? (
+                  <div className="border border-white/10 bg-[#121419] p-4 sm:p-6 space-y-6">
+                    <div className="flex items-center justify-between gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedMember(null);
+                          setIsEditingMember(false);
+                        }}
+                        className="inline-flex items-center gap-2 border border-white/20 px-3 py-2 text-[10px] sm:text-xs font-black uppercase tracking-[0.16em] text-gray-300 hover:text-white hover:border-white/40 transition"
+                      >
+                        <span aria-hidden="true">←</span>
+                        Retour
+                      </button>
+                      {canManageMemberProfiles && (
+                        <button
+                          type="button"
+                          onClick={() => openMemberEditor(selectedMemberLive)}
+                          className="inline-flex items-center gap-2 bg-[#e10600] px-3 py-2 text-[10px] sm:text-xs font-black uppercase tracking-[0.16em] text-white hover:bg-[#ba0500] transition"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Modifier
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="border border-white/10 bg-black/20 p-4 sm:p-5 flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
+                      <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-[2px] p-[2px] bg-black flex-shrink-0">
+                        <div className="w-full h-full rounded-[2px] overflow-hidden bg-[#e10600] flex items-center justify-center">
+                          {String(selectedMemberLive.avatar || "").trim() ? (
+                            <img src={String(selectedMemberLive.avatar || "").trim()} alt={selectedMemberLive.pseudo || selectedMemberLive.email} className="w-full h-full object-cover rounded-[inherit]" />
+                          ) : (
+                            <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                            </svg>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="f1-title text-[24px] sm:text-[30px] font-black uppercase text-white leading-[0.92] break-words">
+                          {selectedMemberLive.pseudo || selectedMemberLive.email}
+                        </p>
+                        <p className="mt-1 text-xs uppercase tracking-widest text-gray-500">{selectedMemberLive.team || "Sans écurie"}</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : members.length === 0 ? (
                   <div className="border border-white/10 bg-[#121419] p-6 text-center text-xs uppercase tracking-widest text-gray-500">
                     Aucun membre trouvé.
                   </div>
@@ -2575,28 +2983,16 @@ export default function Dashboard() {
                   members.map((m) => (
                     <div 
                       key={m.email} 
-                      onClick={() => {
-                        if (userRole === "superAdmin") {
-                          setSelectedMember(m);
-                          setTempMemberRole(m.role || "member");
-                          setTempPilotStars(String(m.pilotStars || ""));
-                          setTempPilotSeasons(String(m.pilotStarSeasons || ""));
-                          setTempTeamStars(String(m.teamStars || ""));
-                          setTempTeamSeasons(String(m.teamStarSeasons || ""));
-                          setTempCrowns(String(m.crowns || ""));
-                          setTempCrownSeasons(String(m.crownSeasons || ""));
-                          setIsEditingMember(true);
-                        }
-                      }}
-                      className={`border border-white/10 bg-[#121419] px-4 sm:px-6 py-4 flex items-start sm:items-center gap-3 sm:gap-5 ${userRole === "superAdmin" ? "cursor-pointer hover:bg-white/5 transition" : ""}`}
+                      onClick={() => openMemberProfile(m)}
+                      className="border border-white/10 bg-[#121419] px-4 sm:px-6 py-4 flex items-start sm:items-center gap-4 sm:gap-6 cursor-pointer hover:bg-white/5 transition"
                     >
                       {/* avatar */}
-                      <div className="w-12 h-12 rounded-[2px] p-[2px] bg-black flex-shrink-0">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-[2px] p-[2px] bg-black flex-shrink-0">
                         <div className="w-full h-full rounded-[2px] overflow-hidden bg-[#e10600] [transform:translateZ(0)] [-webkit-mask-image:-webkit-radial-gradient(white,black)] [mask-image:radial-gradient(white,black)] flex items-center justify-center">
-                          {m.avatar ? (
-                            <img src={m.avatar} alt={m.pseudo || m.email} className="w-full h-full object-cover rounded-[inherit]" />
+                          {String(m.avatar || "").trim() ? (
+                            <img src={String(m.avatar || "").trim()} alt={m.pseudo || m.email} className="w-full h-full object-cover rounded-[inherit]" />
                           ) : (
-                            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-9 h-9 sm:w-10 sm:h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
                               <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                             </svg>
                           )}
@@ -2606,11 +3002,15 @@ export default function Dashboard() {
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-baseline gap-2">
                             <span
-                              className={`inline-block h-2.5 w-2.5 rounded-full ${onlineMemberEmails.has(m.email) ? "bg-[#22c55e]" : "bg-[#e10600]"}`}
-                              title={onlineMemberEmails.has(m.email) ? "En ligne" : "Hors ligne"}
-                              aria-label={onlineMemberEmails.has(m.email) ? "En ligne" : "Hors ligne"}
+                              className={`inline-block h-2.5 w-2.5 rounded-full ${onlineMemberEmails.has(normalizeEmail(m.email)) ? "bg-[#22c55e]" : "bg-[#e10600]"}`}
+                              title={onlineMemberEmails.has(normalizeEmail(m.email)) ? "En ligne" : "Hors ligne"}
+                              aria-label={onlineMemberEmails.has(normalizeEmail(m.email)) ? "En ligne" : "Hors ligne"}
                             />
-                            <p className="text-sm font-black uppercase tracking-wide text-white">{m.pseudo || m.email}</p>
+                            <p
+                              className="f1-title text-[20px] sm:text-[24px] leading-[0.95] font-black uppercase tracking-[0.09em] text-white"
+                            >
+                              {m.pseudo || m.email}
+                            </p>
                             {hasMemberStats(m) && (
                               <div className="flex items-center gap-1 text-[11px] relative top-[-14px]">
                                 {Number(m.pilotStars) > 0 && (
@@ -2642,11 +3042,9 @@ export default function Dashboard() {
                           </div>
                           <p className="text-xs text-gray-500 uppercase tracking-widest mt-0.5">{m.team || "Sans écurie"}</p>
                         </div>
-                        {userRole === "superAdmin" && (
-                          <svg className="w-4 h-4 text-gray-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        )}
+                        <svg className="w-4 h-4 text-gray-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
                     </div>
                   ))
                 )}
@@ -2665,7 +3063,7 @@ export default function Dashboard() {
                 <SimuF1Panel
                   userEmail={user?.email || ""}
                   userPseudo={profile?.pseudo || user?.displayName || user?.email || "Pilote"}
-                  defaultTeamName={profile?.team || "Ecurie inconnue"}
+                  defaultTeamName={profile?.team || ""}
                   isSuperAdmin={userRole === "superAdmin"}
                 />
               </div>
@@ -3290,25 +3688,31 @@ export default function Dashboard() {
         </div>
       )}
 
-      {isEditingMember && selectedMember && (
+      {isEditingMember && selectedMember && canManageMemberProfiles && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#0f1014] border-l-4 border-[#e10600] border border-white/10 shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-[#0f1014] border-l-4 border-[#e10600] border border-white/10 shadow-2xl max-w-[64rem] w-full max-h-[90vh] overflow-y-auto">
             <div className="border-b border-white/10 px-6 py-4 flex items-center gap-3">
               <div className="w-1 h-6 bg-[#e10600]" />
               <h2 className="text-xs font-black uppercase tracking-[0.3em] text-white">Modifier le membre</h2>
             </div>
             <div className="p-6">
             <div className="mb-6 flex items-center gap-4 border border-white/10 p-4 bg-white/5">
-              <div className="w-12 h-12 bg-[#e10600] flex items-center justify-center overflow-hidden flex-shrink-0">
-                {selectedMember.avatar ? (
-                  <img src={selectedMember.avatar} alt="" className="w-full h-full object-cover" />
+              <div className="w-[168px] h-[168px] sm:w-[180px] sm:h-[180px] bg-[#e10600] flex items-center justify-center overflow-hidden flex-shrink-0">
+                {tempMemberAvatar ? (
+                  <img src={tempMemberAvatar} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                  <svg className="w-[72px] h-[72px] text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
                 )}
               </div>
-              <div>
-                <p className="text-sm font-black uppercase tracking-wide text-white">{selectedMember.pseudo || selectedMember.email}</p>
-                <p className="text-xs text-gray-500 uppercase tracking-widest mt-0.5">{selectedMember.team || "Sans écurie"}</p>
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <p
+                  className="f1-title font-black text-white uppercase whitespace-nowrap"
+                  style={getAdaptivePseudoStyle(tempMemberPseudo || selectedMember.email, 34)}
+                  title={tempMemberPseudo || selectedMember.email}
+                >
+                  {tempMemberPseudo || selectedMember.email}
+                </p>
+                <p className="text-xs text-gray-500 uppercase tracking-widest mt-0.5">{tempMemberTeam || "Sans écurie"}</p>
               </div>
             </div>
 
@@ -3322,6 +3726,43 @@ export default function Dashboard() {
                 <option value="member" className="bg-gray-800 text-white">Membre</option>
                 <option value="admin" className="bg-gray-800 text-white">Admin</option>
               </select>
+            </div>
+
+            <div className="mb-6 grid grid-cols-1 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Pseudo</label>
+                <input
+                  type="text"
+                  value={tempMemberPseudo}
+                  onChange={(e) => setTempMemberPseudo(e.target.value)}
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white"
+                  placeholder="Pseudo du membre"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Écurie</label>
+                <input
+                  type="text"
+                  value={tempMemberTeam}
+                  onChange={(e) => setTempMemberTeam(e.target.value)}
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white"
+                  placeholder="Nom de l'écurie"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Avatar (URL)</label>
+                <input
+                  type="text"
+                  value={tempMemberAvatarUrlInput}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setTempMemberAvatarUrlInput(value);
+                    if (value.trim()) setTempMemberAvatar(value.trim());
+                  }}
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white"
+                  placeholder="https://..."
+                />
+              </div>
             </div>
 
             <div className="mb-6 grid grid-cols-1 gap-3">
@@ -3400,8 +3841,13 @@ export default function Dashboard() {
               <button
                 onClick={async () => {
                   if (selectedMember.email) {
+                    const nextTeamName = String(tempMemberTeam || "").trim();
+                    const previousTeamName = String(selectedMember.team || "").trim();
                     await updateMemberDetails(selectedMember.email, {
                       role: tempMemberRole,
+                      pseudo: tempMemberPseudo.trim() || null,
+                      team: nextTeamName || null,
+                      avatar: String(tempMemberAvatar || "").trim() || null,
                       pilotStars: tempPilotStars.trim(),
                       pilotStarSeasons: tempPilotSeasons.trim(),
                       teamStars: tempTeamStars.trim(),
@@ -3409,6 +3855,11 @@ export default function Dashboard() {
                       crowns: tempCrowns.trim(),
                       crownSeasons: tempCrownSeasons.trim(),
                     });
+
+                    if (selectedMember.email && nextTeamName && previousTeamName !== nextTeamName) {
+                      await applyTeamNameRetroactively(selectedMember.email, nextTeamName);
+                    }
+
                     setIsEditingMember(false);
                     setSelectedMember(null);
                   }

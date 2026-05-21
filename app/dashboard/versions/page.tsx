@@ -10,6 +10,32 @@ import { getAuth, getFirestore } from "@/lib/firebase";
 
 const releaseNotes = [
   {
+    version: "v2.6.0",
+    timestamp: "12/05/2026 · 22h30",
+    details: [
+      "Pilotes: page profil en lecture seule au clic (avatar, pseudo, ecurie), bouton Retour.",
+      "Avatars: emails normalises, deduplication Firestore, suppression des rewrites involontaires via photoURL Google.",
+    ],
+  },
+  {
+    version: "v2.5.0",
+    timestamp: "10/05/2026 · 23h59",
+    details: [
+      "SimuF1: noms pilotes+ecurie persistants, retrofix global, fallback ecurie uniforme.",
+      "Simulation: 2 voitures/ecurie forcees, entrees invalides bloquees, derniere course regeneree (FRX x2).",
+      "Profil UX: popups profil+admin elargies, avatar agrandi, pseudo F1 auto-ajuste sans debordement.",
+    ],
+  },
+  {
+    version: "v2.4.0",
+    timestamp: "06/05/2026 · 23h00",
+    details: [
+      "Resultats: remplacement de l image statique Ecurie S1 par un renderer natif complet (tableau 12 courses, tri par moyenne, cartes highlights).",
+      "Terminologie: equipe renommee ecurie dans tous les titres de championnats et le renderer.",
+      "Procedure: methode documentee pour reproduire le renderer sur tous les futurs championnats a partir d un classeur Excel.",
+    ],
+  },
+  {
     version: "v2.3.0",
     timestamp: "06/05/2026 · 22h30",
     details: [
@@ -280,10 +306,13 @@ export default function VersionsPage() {
               >
                 <div className="w-full h-full rounded-[2px] overflow-hidden bg-[#e10600] flex items-center justify-center">
                   {resolvedAvatar ? (
-                    <div
-                      aria-label="Avatar"
-                      className="w-full h-full rounded-[inherit] bg-center bg-cover"
-                      style={{ backgroundImage: `url("${resolvedAvatar}")` }}
+                    <img
+                      src={resolvedAvatar}
+                      alt="Avatar profil"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
                     />
                   ) : (
                     <svg className="w-5 h-5 sm:w-8 sm:h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -330,7 +359,7 @@ export default function VersionsPage() {
           <div className="border border-white/10 bg-[#121419] p-4 sm:p-6">
             <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-[#e10600]">Notes de version</p>
             <p className="mt-3 text-xs sm:text-sm text-gray-300">
-              Version actuelle : <span className="text-white font-bold">v2.2.0</span>
+              Version actuelle : <span className="text-white font-bold">v2.6.0</span>
             </p>
 
           </div>
