@@ -1,0 +1,148 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function normalizeEmail(value) {
+      return value is string ? lower(value) : "";
+    }
+
+    function userEmail() {
+      return normalizeEmail(request.auth.token.email);
+    }
+
+    function isSuperAdmin() {
+      return signedIn() && userEmail() == "beaudouin.arnaud@gmail.com";
+    }
+
+    function isAdmin() {
+      return isSuperAdmin() || (
+        signedIn() &&
+        exists(/databases/$(database)/documents/members/$(userEmail())) &&
+        get(/databases/$(database)/documents/members/$(userEmail())).data.role in ["admin", "superAdmin"]
+      );
+    }
+
+    match /members/{memberId} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+        && normalizeEmail(memberId) == userEmail()
+        && (
+          !("role" in request.resource.data) ||
+          request.resource.data.role == "member" ||
+          isSuperAdmin()
+        );
+
+      allow update: if (
+          signedIn()
+          && normalizeEmail(memberId) == userEmail()
+          && (
+            !("role" in request.resource.data) ||
+            request.resource.data.role == resource.data.role
+          )
+        ) || isSuperAdmin();
+
+      allow delete: if isSuperAdmin();
+    }
+
+    match /events/{eventId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && normalizeEmail(request.resource.data.createdBy) == userEmail();
+      allow update: if isAdmin() || (signedIn() && normalizeEmail(resource.data.createdBy) == userEmail());
+      allow delete: if isAdmin() || (signedIn() && normalizeEmail(resource.data.createdBy) == userEmail());
+    }
+
+    match /votes/{voteId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && normalizeEmail(request.resource.data.userEmail) == userEmail();
+      allow update: if signedIn()
+        && normalizeEmail(resource.data.userEmail) == userEmail()
+        && normalizeEmail(request.resource.data.userEmail) == normalizeEmail(resource.data.userEmail)
+        && request.resource.data.eventId == resource.data.eventId;
+      allow delete: if signedIn() && normalizeEmail(resource.data.userEmail) == userEmail();
+    }
+
+    match /chat/{messageId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && normalizeEmail(request.resource.data.user) == userEmail();
+      allow update: if isAdmin();
+      allow delete: if isAdmin() || (signedIn() && normalizeEmail(resource.data.user) == userEmail());
+    }
+
+    match /chatTyping/{userId} {
+      allow read: if signedIn();
+      allow create, update, delete: if signedIn() && normalizeEmail(userId) == userEmail();
+    }
+
+    match /chatReads/{userId} {
+      allow read, create, update, delete: if signedIn() && normalizeEmail(userId) == userEmail();
+    }
+
+    match /evolutionReads/{userId} {
+      allow read, create, update, delete: if signedIn() && normalizeEmail(userId) == userEmail();
+    }
+
+    match /evolutionRequests/{requestId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && normalizeEmail(request.resource.data.createdBy) == userEmail();
+      allow update: if isAdmin() || (signedIn() && normalizeEmail(resource.data.createdBy) == userEmail());
+      allow delete: if isAdmin();
+    }
+
+    match /evolutionReplies/{replyId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && normalizeEmail(request.resource.data.user) == userEmail();
+      allow update: if isAdmin() || (signedIn() && normalizeEmail(resource.data.user) == userEmail());
+      allow delete: if isAdmin() || (signedIn() && normalizeEmail(resource.data.user) == userEmail());
+    }
+
+    match /settings/{docId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /infoMessages/{messageId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /simuf1Races/{raceId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+
+      match /entries/{entryId} {
+        allow read: if signedIn();
+        allow create: if signedIn() && normalizeEmail(request.resource.data.userEmail) == userEmail();
+        allow update: if signedIn()
+          && (normalizeEmail(resource.data.userEmail) == userEmail() || isAdmin())
+          && normalizeEmail(request.resource.data.userEmail) == normalizeEmail(resource.data.userEmail);
+        allow delete: if isAdmin() || (signedIn() && normalizeEmail(resource.data.userEmail) == userEmail());
+      }
+
+      match /results/{resultId} {
+        allow read: if signedIn();
+        allow write: if isAdmin();
+      }
+    }
+
+    match /simuf1Seasons/{seasonId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /simuf1Profiles/{profileId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && normalizeEmail(request.resource.data.userEmail) == userEmail();
+      allow update: if (signedIn() && normalizeEmail(resource.data.userEmail) == userEmail()) || isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

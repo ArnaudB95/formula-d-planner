@@ -5,6 +5,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   applyPilotNamesRetroactively,
+  applyTeamNameRetroactively,
+  getAllSimuF1Profiles,
+  repairPlayerData,
   ensureCurrentWeeklyRace,
   runRaceSimulationAndPersist,
   savePilotProfile,
@@ -53,6 +56,14 @@ const defaultCar = (pilotName: string): SimuF1CarSetup => ({
 const QUALIF_STATS: Array<keyof SimuF1CarSetup> = ["bloc", "grip"];
 const COURSE_STATS: Array<keyof SimuF1CarSetup> = ["audace", "defense", "endurance", "pneus"];
 const PARIS_TZ = "Europe/Paris";
+const TIGER_FURY_TEAM_NAME = "Tiger Fury Crew";
+
+const normalizeName = (value: string) => String(value || "").trim().toLowerCase();
+
+const isTigerFuryPilot = (pilotName: string) => {
+  const normalized = normalizeName(pilotName);
+  return normalized === "fast" || normalized === "furious";
+};
 
 const nextSundayISO = () => {
   const now = new Date();
@@ -364,7 +375,7 @@ const getMemberDisplayName = (userPseudo: string, userEmail: string) => {
 const getDefaultTeamName = (defaultTeamName: string, userPseudo: string, userEmail: string) => {
   const explicitTeamName = String(defaultTeamName || "").trim();
   if (explicitTeamName) return explicitTeamName;
-  return `Écurie de ${getMemberDisplayName(userPseudo, userEmail)}`;
+  return `Écurie ${getMemberDisplayName(userPseudo, userEmail)}`;
 };
 
 const getTeamPageHref = (teamName: string) => `/dashboard?tab=simuf1&team=${slugifyTeamName(teamName)}`;
@@ -396,6 +407,14 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
   const [message, setMessage] = useState<string>("");
   const [nowTick, setNowTick] = useState(Date.now());
   const autoRunRef = useRef<string | null>(null);
+
+  // SuperAdmin repair tool state
+  const [adminProfiles, setAdminProfiles] = useState<SimuF1PilotProfile[]>([]);
+  const [adminLoadingProfiles, setAdminLoadingProfiles] = useState(false);
+  const [adminRepairTarget, setAdminRepairTarget] = useState<SimuF1PilotProfile | null>(null);
+  const [adminRepairFields, setAdminRepairFields] = useState({ pilot1Name: "", pilot2Name: "", teamName: "" });
+  const [adminRepairBusy, setAdminRepairBusy] = useState(false);
+  const [adminRepairMsg, setAdminRepairMsg] = useState("");
 
   const syncViewInQuery = (nextView: SimuView, nextRaceId = "") => {
     const params = new URLSearchParams(searchParams.toString());
@@ -445,7 +464,14 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
 
     const init = async () => {
       const seasonYear = 2026;
-      const id = await ensureCurrentWeeklyRace(seasonYear);
+      let id = "";
+      try {
+        id = await ensureCurrentWeeklyRace(seasonYear);
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : "Erreur d'initialisation SimuF1.";
+        setMessage(`Initialisation partielle: ${msg}`);
+        return;
+      }
       setRaceId(id);
       setDraft((prev) => ({ ...prev, raceId: id, seasonYear }));
 
@@ -503,9 +529,12 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
       const cars = [...prev.cars] as [SimuF1CarSetup, SimuF1CarSetup];
       cars[0] = { ...cars[0], pilotName: pilotProfile.pilot1Name || cars[0].pilotName };
       cars[1] = { ...cars[1], pilotName: pilotProfile.pilot2Name || cars[1].pilotName };
-      return { ...prev, cars };
+      const savedTeamName = String(pilotProfile.teamName || "").trim();
+      const currentTeamName = String(prev.teamName || "").trim();
+      const newTeamName = savedTeamName || currentTeamName || fallbackTeamName;
+      return { ...prev, cars, teamName: newTeamName };
     });
-  }, [pilotProfile]);
+  }, [pilotProfile, fallbackTeamName]);
 
   const participants = useMemo(() => entries.filter((e) => e.participating), [entries]);
   const validatedParticipantsCount = useMemo(() => {
@@ -567,6 +596,15 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
         if (!map.has(car.pilotName)) map.set(car.pilotName, car.teamName);
       });
     }
+
+    // Keep Fast/Furious grouped in Tiger Fury Crew regardless of historical aliases.
+    map.forEach((_, pilotName) => {
+      if (isTigerFuryPilot(pilotName)) map.set(pilotName, TIGER_FURY_TEAM_NAME);
+    });
+
+    map.set("Fast", TIGER_FURY_TEAM_NAME);
+    map.set("Furious", TIGER_FURY_TEAM_NAME);
+
     return map;
   }, [participants, lastGpResult, selectedRaceResult]);
 
@@ -577,7 +615,7 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
       .map(([pilot, points], idx) => ({
         pilot,
         points,
-        team: pilotTeamMapping.get(pilot) || "—",
+        team: isTigerFuryPilot(pilot) ? TIGER_FURY_TEAM_NAME : pilotTeamMapping.get(pilot) || "—",
         position: idx + 1,
       }));
   }, [seasonStandings, pilotTeamMapping]);
@@ -596,7 +634,7 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
     const compact = cleaned.replace(/[^a-z0-9]+/g, " ").trim();
 
     if (compact === "bears fury crew" || compact === "bear s fury crew" || compact === "bear fury crew") return "#e10600";
-    if (compact === "tigers fury crew" || compact === "tiger s fury crew") return "#ff8a00";
+    if (compact === "tigers fury crew" || compact === "tiger s fury crew" || compact === "tiger fury crew") return "#ff8a00";
     if (compact === "frx") return "#22cfd0";
 
     let hash = 0;
@@ -750,6 +788,9 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
   useEffect(() => {
     if (!raceId) return;
     if (typeof window === "undefined") return;
+    if (process.env.NODE_ENV !== "development") return;
+    const host = String(window.location.hostname || "").toLowerCase();
+    if (host !== "localhost" && host !== "127.0.0.1") return;
     const isArnaud = (userEmail || "").toLowerCase() === "beaudouin.arnaud@gmail.com" || (userPseudo || "").toLowerCase() === "arnaud";
     if (!isArnaud) return;
 
@@ -843,17 +884,9 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
     try {
       const pilot1Name = draft.cars[0].pilotName || "Pilote1";
       const pilot2Name = draft.cars[1].pilotName || "Pilote2";
+      const newTeamName = String(draft.teamName || "").trim() || fallbackTeamName;
 
-      await savePilotProfile(userEmail, pilot1Name, pilot2Name);
-
-      const shouldApplyRetroactive =
-        !pilotProfile ||
-        pilotProfile.pilot1Name !== pilot1Name ||
-        pilotProfile.pilot2Name !== pilot2Name;
-
-      if (shouldApplyRetroactive) {
-        await applyPilotNamesRetroactively(userEmail, pilot1Name, pilot2Name, race?.seasonYear || 2026);
-      }
+      await savePilotProfile(userEmail, pilot1Name, pilot2Name, newTeamName);
 
       await saveEntry(raceId, {
         ...draft,
@@ -861,9 +894,41 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
         seasonYear: race?.seasonYear || 2026,
         userEmail,
         userPseudo: draft.userPseudo || userEmail,
-        teamName: String(draft.teamName || "").trim() || fallbackTeamName,
+        teamName: newTeamName,
       });
-      setMessage("Configuration enregistrée. Les noms pilotes sont conservés pour tous les circuits (mise à jour rétroactive appliquée).");
+
+      const shouldApplyRetroactivePilots =
+        !pilotProfile ||
+        pilotProfile.pilot1Name !== pilot1Name ||
+        pilotProfile.pilot2Name !== pilot2Name;
+
+      const syncWarnings: string[] = [];
+
+      if (shouldApplyRetroactivePilots) {
+        try {
+          await applyPilotNamesRetroactively(userEmail, pilot1Name, pilot2Name, race?.seasonYear || 2026);
+        } catch {
+          syncWarnings.push("noms pilotes");
+        }
+      }
+
+      const savedTeamName = String(pilotProfile?.teamName || "").trim();
+      const shouldApplyRetroactiveTeam = savedTeamName !== newTeamName;
+      if (shouldApplyRetroactiveTeam) {
+        try {
+          await applyTeamNameRetroactively(userEmail, newTeamName);
+        } catch {
+          syncWarnings.push("écurie");
+        }
+      }
+
+      if (syncWarnings.length > 0) {
+        setMessage(
+          `Configuration enregistrée. Synchronisation rétroactive partielle (${syncWarnings.join(" + ")}) : une relance admin pourra compléter l'historique.`
+        );
+      } else {
+        setMessage("Configuration enregistrée. Les noms pilotes et l'écurie sont conservés pour tous les circuits (mise à jour rétroactive appliquée).");
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Erreur lors de l'enregistrement.";
       setMessage(message);
@@ -1659,7 +1724,139 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
         )}
       </div>
       )}
+
+      {view === "setup" && (
+      <div className="border border-white/10 bg-[#121419] p-4 sm:p-6">
+        <h4 className="text-sm font-black uppercase tracking-[0.12em] text-white mb-3">Résultat de la course</h4>
+        {!result || result.cars.length === 0 ? (
+          <p className="text-sm text-gray-400">Aucun résultat publié pour l'instant.</p>
+        ) : (
+          <div className="space-y-2">
+            {result.cars.map((car) => (
+              <div key={car.carId} className="flex items-center justify-between border border-white/10 bg-black/20 px-3 py-2 text-sm">
+                <div className="text-gray-200">
+                  P{car.position} • {car.pilotName} • {car.teamName}
+                  {car.dnf ? ` • DNF T${car.dnfLap}` : ""}
+                </div>
+                <div className="text-[#ff4d44] font-black">{car.points} pts</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      )}
+
+      {isSuperAdmin && userEmail === "beaudouin.arnaud@gmail.com" && (
+        <div className="border border-[#d65a62]/30 bg-[#0e0a0a] p-4 sm:p-6 mt-4">
+          <h4 className="text-sm font-black uppercase tracking-[0.12em] text-[#ff4d44] mb-3">⚙ Admin — Réparation données pilotes</h4>
+          <p className="text-xs text-gray-400 mb-3">
+            Corrige rétroactivement les noms de pilotes et l'écurie pour un joueur sur toutes les courses de la saison.
+          </p>
+          {adminRepairMsg && (
+            <p className="text-xs mb-3 text-[#90e59a]">{adminRepairMsg}</p>
+          )}
+          {adminProfiles.length === 0 ? (
+            <button
+              type="button"
+              disabled={adminLoadingProfiles}
+              onClick={async () => {
+                setAdminLoadingProfiles(true);
+                const profiles = await getAllSimuF1Profiles();
+                setAdminProfiles(profiles);
+                setAdminLoadingProfiles(false);
+              }}
+              className="inline-flex items-center border border-[#d65a62]/45 bg-[#5b2024]/35 px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#ffd3d0] hover:bg-[#692329]/45 transition"
+            >
+              {adminLoadingProfiles ? "Chargement…" : "Charger les profils"}
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                {adminProfiles.map((p) => (
+                  <button
+                    key={p.userEmail}
+                    type="button"
+                    onClick={() => {
+                      setAdminRepairTarget(p);
+                      setAdminRepairFields({
+                        pilot1Name: p.pilot1Name || "",
+                        pilot2Name: p.pilot2Name || "",
+                        teamName: p.teamName || "",
+                      });
+                      setAdminRepairMsg("");
+                    }}
+                    className={`border px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] transition ${
+                      adminRepairTarget?.userEmail === p.userEmail
+                        ? "border-[#ff4d44] bg-[#5b2024]/60 text-white"
+                        : "border-white/20 bg-black/30 text-gray-300 hover:border-white/40"
+                    }`}
+                  >
+                    {p.userEmail}
+                  </button>
+                ))}
+              </div>
+
+              {adminRepairTarget && (
+                <div className="border border-white/10 bg-black/30 p-4 space-y-3">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-[0.12em]">{adminRepairTarget.userEmail}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {(["pilot1Name", "pilot2Name", "teamName"] as const).map((field) => (
+                      <label key={field} className="text-xs text-gray-300">
+                        {field === "pilot1Name" ? "Pilote 1" : field === "pilot2Name" ? "Pilote 2" : "Écurie"}
+                        <input
+                          type="text"
+                          value={adminRepairFields[field]}
+                          onChange={(e) => setAdminRepairFields((prev) => ({ ...prev, [field]: e.target.value }))}
+                          className="mt-1 w-full border border-white/20 bg-black/40 px-2 py-1 text-white text-xs"
+                        />
+                      </label>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    disabled={adminRepairBusy}
+                    onClick={async () => {
+                      if (!adminRepairTarget) return;
+                      const { pilot1Name, pilot2Name, teamName } = adminRepairFields;
+                      if (!pilot1Name.trim() || !pilot2Name.trim() || !teamName.trim()) {
+                        setAdminRepairMsg("Tous les champs sont requis.");
+                        return;
+                      }
+                      setAdminRepairBusy(true);
+                      setAdminRepairMsg("");
+                      try {
+                        await repairPlayerData(
+                          adminRepairTarget.userEmail,
+                          pilot1Name.trim(),
+                          pilot2Name.trim(),
+                          teamName.trim(),
+                          2026
+                        );
+                        // Refresh profile in list
+                        setAdminProfiles((prev) =>
+                          prev.map((p) =>
+                            p.userEmail === adminRepairTarget.userEmail
+                              ? { ...p, pilot1Name: pilot1Name.trim(), pilot2Name: pilot2Name.trim(), teamName: teamName.trim() }
+                              : p
+                          )
+                        );
+                        setAdminRepairMsg(`✓ Réparation appliquée pour ${adminRepairTarget.userEmail} — noms et écurie propagés sur toutes les courses.`);
+                      } catch (err: unknown) {
+                        setAdminRepairMsg(`Erreur: ${err instanceof Error ? err.message : String(err)}`);
+                      } finally {
+                        setAdminRepairBusy(false);
+                      }
+                    }}
+                    className="inline-flex items-center border border-[#d65a62]/45 bg-[#5b2024]/35 px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#ffd3d0] hover:bg-[#692329]/45 transition disabled:opacity-50"
+                  >
+                    {adminRepairBusy ? "Correction en cours…" : "Appliquer la correction rétroactive"}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
-

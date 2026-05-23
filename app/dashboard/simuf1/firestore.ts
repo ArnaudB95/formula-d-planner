@@ -15,6 +15,7 @@ import {
 import { getCircuitConfigForWeekKey, profileLabel } from "./circuit-config";
 import { simulateRaceFromEntries } from "./simulator";
 import type {
+  SimuF1CarSetup,
   SimuF1Entry,
   SimuF1PilotProfile,
   SimuF1Race,
@@ -24,6 +25,12 @@ import type {
 } from "./types";
 
 const PARIS_TZ = "Europe/Paris";
+
+const isPermissionDeniedError = (error: unknown) => {
+  if (!error || typeof error !== "object") return false;
+  const code = String((error as { code?: unknown }).code || "").toLowerCase();
+  return code === "permission-denied" || code.endsWith("/permission-denied");
+};
 
 const isoWeekKeyFromUtcDate = (date: Date) => {
   const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
@@ -104,6 +111,11 @@ const weekInfoFromParis = (date = new Date(), weekOffset = 0) => {
   return { weekKey, sundayDateISO };
 };
 
+const buildRaceIdFromWeekOffset = (seasonYear: number, weekOffset: number) => {
+  const { weekKey } = weekInfoFromParis(new Date(), weekOffset);
+  return `${seasonYear}-${weekKey}`;
+};
+
 const isRaceDueInParis = (sundayDateISO: string) => {
   const [y, m, d] = String(sundayDateISO || "").split("-").map(Number);
   if (!y || !m || !d) return false;
@@ -151,25 +163,145 @@ const upsertWeeklyRace = async (seasonYear: number, weekOffset = 0) => {
   };
 };
 
-const entryDocId = (email: string) => email.replaceAll("/", "_").replaceAll(".", "_");
+const listSeasonRaces = async (seasonYear: number) => {
+  const db = getFirestore();
+  if (!db) throw new Error("Firestore indisponible");
 
-export const ensureCurrentWeeklyRace = async (seasonYear: number) => {
-  const current = await upsertWeeklyRace(seasonYear, 0);
-  const currentData = current.snapshot.exists() ? (current.snapshot.data() as Partial<SimuF1Race>) : null;
-  const currentStatus = String(currentData?.status || "open");
-  const currentSunday = String(currentData?.sundayDateISO || current.sundayDateISO);
+  const raceSnap = await getDocs(collection(db, "simuf1Races"));
+  return raceSnap.docs
+    .map((d) => ({ id: d.id, ...(d.data() as Partial<SimuF1Race>) }))
+    .filter((race) => Number(race.seasonYear || 0) === seasonYear)
+    .sort((a, b) => String(a.sundayDateISO || "").localeCompare(String(b.sundayDateISO || "")));
+};
 
-  if (currentStatus === "published" && isRaceDueInParis(currentSunday)) {
-    const next = await upsertWeeklyRace(seasonYear, 1);
-    return next.raceId;
+const resolveRaceIdReadOnly = async (seasonYear: number, mode: "current" | "next") => {
+  const races = await listSeasonRaces(seasonYear);
+  if (races.length === 0) {
+    // No seeded race yet: return deterministic weekly IDs so users can still save entries.
+    return mode === "next"
+      ? buildRaceIdFromWeekOffset(seasonYear, 1)
+      : buildRaceIdFromWeekOffset(seasonYear, 0);
   }
 
-  return current.raceId;
+  const todayIso = parisDateOnlyUtc().toISOString().slice(0, 10);
+  const upcoming = races.filter((race) => String(race.sundayDateISO || "") >= todayIso);
+  const notPublishedUpcoming = upcoming.filter((race) => String(race.status || "open") !== "published");
+
+  if (mode === "next") {
+    if (notPublishedUpcoming.length > 1) return String(notPublishedUpcoming[1].id);
+    if (notPublishedUpcoming.length > 0) return String(notPublishedUpcoming[0].id);
+    if (upcoming.length > 1) return String(upcoming[1].id);
+    if (upcoming.length > 0) return String(upcoming[0].id);
+    return String(races[races.length - 1].id);
+  }
+
+  if (notPublishedUpcoming.length > 0) return String(notPublishedUpcoming[0].id);
+  if (upcoming.length > 0) return String(upcoming[0].id);
+  return String(races[races.length - 1].id);
+};
+
+const entryDocId = (email: string) => email.replaceAll("/", "_").replaceAll(".", "_");
+
+const defaultCarSetup = (pilotName: string): SimuF1CarSetup => ({
+  pilotName,
+  bloc: 5,
+  grip: 5,
+  audace: 5,
+  defense: 5,
+  endurance: 5,
+  pneus: 5,
+  pitStops: 1,
+  pitLaps: [5],
+});
+
+const normalizeCarSetup = (car: Partial<SimuF1CarSetup> | undefined, fallbackPilotName: string): SimuF1CarSetup => {
+  const base = defaultCarSetup(fallbackPilotName);
+  const source = car || {};
+  const normalizedPitStops = Math.max(0, Math.min(3, Math.round(Number(source.pitStops ?? base.pitStops))));
+
+  const normalizedPitLapsRaw = Array.isArray(source.pitLaps) ? source.pitLaps : base.pitLaps;
+  const normalizedPitLaps: number[] = [];
+  for (let idx = 0; idx < normalizedPitStops; idx += 1) {
+    const raw = Number(normalizedPitLapsRaw[idx]);
+    const fallback = 3 + idx * 2;
+    const clamped = Number.isFinite(raw) ? Math.max(1, Math.min(9, Math.round(raw))) : fallback;
+    const prev = idx === 0 ? 0 : normalizedPitLaps[idx - 1];
+    normalizedPitLaps.push(Math.min(9, Math.max(clamped, prev + (idx === 0 ? 0 : 1))));
+  }
+
+  const statKeys: Array<keyof SimuF1CarSetup> = ["bloc", "grip", "audace", "defense", "endurance", "pneus"];
+  const stats = statKeys.map((key) => {
+    const raw = Number(source[key] ?? base[key]);
+    const n = Number.isFinite(raw) ? Math.round(raw) : Number(base[key]);
+    return Math.max(1, Math.min(10, n));
+  });
+
+  const targetStatSum = 31 - normalizedPitStops;
+  let delta = targetStatSum - stats.reduce((sum, n) => sum + n, 0);
+  while (delta !== 0) {
+    const dir = delta > 0 ? 1 : -1;
+    let moved = false;
+    for (let i = 0; i < stats.length; i += 1) {
+      const next = stats[i] + dir;
+      if (next < 1 || next > 10) continue;
+      stats[i] = next;
+      delta -= dir;
+      moved = true;
+      if (delta === 0) break;
+    }
+    if (!moved) break;
+  }
+
+  return {
+    pilotName: String(source.pilotName || "").trim() || fallbackPilotName,
+    bloc: stats[0],
+    grip: stats[1],
+    audace: stats[2],
+    defense: stats[3],
+    endurance: stats[4],
+    pneus: stats[5],
+    pitStops: normalizedPitStops,
+    pitLaps: normalizedPitLaps,
+  };
+};
+
+const normalizeEntryCars = (entry: SimuF1Entry): SimuF1Entry => {
+  const incoming = Array.isArray(entry.cars) ? entry.cars : [];
+  const car1 = normalizeCarSetup(incoming[0], "Pilote 1");
+  const car2 = normalizeCarSetup(incoming[1], "Pilote 2");
+  return {
+    ...entry,
+    cars: [car1, car2],
+  };
+};
+
+export const ensureCurrentWeeklyRace = async (seasonYear: number) => {
+  try {
+    const current = await upsertWeeklyRace(seasonYear, 0);
+    const currentData = current.snapshot.exists() ? (current.snapshot.data() as Partial<SimuF1Race>) : null;
+    const currentStatus = String(currentData?.status || "open");
+    const currentSunday = String(currentData?.sundayDateISO || current.sundayDateISO);
+
+    if (currentStatus === "published" && isRaceDueInParis(currentSunday)) {
+      const next = await upsertWeeklyRace(seasonYear, 1);
+      return next.raceId;
+    }
+
+    return current.raceId;
+  } catch (error: unknown) {
+    if (!isPermissionDeniedError(error)) throw error;
+    return resolveRaceIdReadOnly(seasonYear, "current");
+  }
 };
 
 export const ensureNextWeeklyRace = async (seasonYear: number) => {
-  const next = await upsertWeeklyRace(seasonYear, 1);
-  return next.raceId;
+  try {
+    const next = await upsertWeeklyRace(seasonYear, 1);
+    return next.raceId;
+  } catch (error: unknown) {
+    if (!isPermissionDeniedError(error)) throw error;
+    return resolveRaceIdReadOnly(seasonYear, "next");
+  }
 };
 
 export const subscribeRace = (raceId: string, cb: (race: SimuF1Race | null) => void) => {
@@ -184,14 +316,15 @@ export const saveEntry = async (raceId: string, entry: SimuF1Entry) => {
   const db = getFirestore();
   if (!db) throw new Error("Firestore indisponible");
   const ref = doc(db, "simuf1Races", raceId, "entries", entryDocId(entry.userEmail));
-  await setDoc(ref, { ...entry, updatedAt: serverTimestamp() }, { merge: true });
+  const safeEntry = normalizeEntryCars(entry);
+  await setDoc(ref, { ...safeEntry, updatedAt: serverTimestamp() }, { merge: true });
 };
 
 export const subscribeEntry = (raceId: string, userEmail: string, cb: (entry: SimuF1Entry | null) => void) => {
   const db = getFirestore();
   if (!db) return () => {};
   return onSnapshot(doc(db, "simuf1Races", raceId, "entries", entryDocId(userEmail)), (snap) => {
-    cb(snap.exists() ? (snap.data() as SimuF1Entry) : null);
+    cb(snap.exists() ? normalizeEntryCars(snap.data() as SimuF1Entry) : null);
   });
 };
 
@@ -200,7 +333,7 @@ export const subscribeEntries = (raceId: string, cb: (entries: SimuF1Entry[]) =>
   if (!db) return () => {};
   const q = query(collection(db, "simuf1Races", raceId, "entries"), orderBy("updatedAt", "desc"));
   return onSnapshot(q, (snapshot) => {
-    cb(snapshot.docs.map((d) => d.data() as SimuF1Entry));
+    cb(snapshot.docs.map((d) => normalizeEntryCars(d.data() as SimuF1Entry)));
   });
 };
 
@@ -247,18 +380,20 @@ export const subscribePilotProfile = (userEmail: string, cb: (profile: SimuF1Pil
   });
 };
 
-export const savePilotProfile = async (userEmail: string, pilot1Name: string, pilot2Name: string) => {
+export const savePilotProfile = async (userEmail: string, pilot1Name: string, pilot2Name: string, teamName?: string) => {
   const db = getFirestore();
   if (!db) throw new Error("Firestore indisponible");
   const id = entryDocId(userEmail);
+  const payload: Partial<SimuF1PilotProfile> & { userEmail: string; pilot1Name: string; pilot2Name: string; updatedAt: any } = {
+    userEmail,
+    pilot1Name,
+    pilot2Name,
+    updatedAt: serverTimestamp(),
+  };
+  if (teamName !== undefined) payload.teamName = teamName;
   await setDoc(
     doc(db, "simuf1Profiles", id),
-    {
-      userEmail,
-      pilot1Name,
-      pilot2Name,
-      updatedAt: serverTimestamp(),
-    } as SimuF1PilotProfile,
+    payload as SimuF1PilotProfile,
     { merge: true }
   );
 };
@@ -322,7 +457,11 @@ export const applyPilotNamesRetroactively = async (
       const cars = [...entry.cars] as [SimuF1Entry["cars"][number], SimuF1Entry["cars"][number]];
       cars[0] = { ...cars[0], pilotName: pilot1Name };
       cars[1] = { ...cars[1], pilotName: pilot2Name };
-      await setDoc(entryRef, { ...entry, cars, updatedAt: serverTimestamp() }, { merge: true });
+      try {
+        await setDoc(entryRef, { ...entry, cars, updatedAt: serverTimestamp() }, { merge: true });
+      } catch (error: unknown) {
+        if (!isPermissionDeniedError(error)) throw error;
+      }
     }
 
     const resultRef = doc(db, "simuf1Races", raceId, "results", "latest");
@@ -343,14 +482,25 @@ export const applyPilotNamesRetroactively = async (
         if (log.actorCarId.endsWith("__2") && log.actorCarId.startsWith(userEmail)) actorPilotName = pilot2Name;
         if (log.targetCarId?.endsWith("__1") && log.targetCarId?.startsWith(userEmail)) targetPilotName = pilot1Name;
         if (log.targetCarId?.endsWith("__2") && log.targetCarId?.startsWith(userEmail)) targetPilotName = pilot2Name;
-        return { ...log, actorPilotName, targetPilotName };
+        const updated: Record<string, unknown> = { ...log, actorPilotName };
+        if (targetPilotName !== undefined) updated.targetPilotName = targetPilotName;
+        else delete updated.targetPilotName;
+        return updated;
       });
 
-      await setDoc(resultRef, { ...result, cars, diceLogs, generatedAt: serverTimestamp() }, { merge: true });
+      try {
+        await setDoc(resultRef, { ...result, cars, diceLogs, generatedAt: serverTimestamp() }, { merge: true });
+      } catch (error: unknown) {
+        if (!isPermissionDeniedError(error)) throw error;
+      }
     }
   }
 
-  await recomputeSeasonStandings(seasonYear);
+  try {
+    await recomputeSeasonStandings(seasonYear);
+  } catch (error: unknown) {
+    if (!isPermissionDeniedError(error)) throw error;
+  }
 };
 
 export const applyTeamNameRetroactively = async (userEmail: string, nextTeamName: string) => {
@@ -374,7 +524,11 @@ export const applyTeamNameRetroactively = async (userEmail: string, nextTeamName
     if (entrySnap.exists()) {
       const entry = entrySnap.data() as SimuF1Entry;
       if (String(entry.teamName || "").trim() !== normalizedTeamName) {
-        await setDoc(entryRef, { ...entry, teamName: normalizedTeamName, updatedAt: serverTimestamp() }, { merge: true });
+        try {
+          await setDoc(entryRef, { ...entry, teamName: normalizedTeamName, updatedAt: serverTimestamp() }, { merge: true });
+        } catch (error: unknown) {
+          if (!isPermissionDeniedError(error)) throw error;
+        }
         if (Number.isFinite(seasonYear) && seasonYear > 0) impactedSeasonYears.add(seasonYear);
       }
     }
@@ -393,15 +547,45 @@ export const applyTeamNameRetroactively = async (userEmail: string, nextTeamName
       });
 
       if (changed) {
-        await setDoc(resultRef, { ...result, cars, generatedAt: serverTimestamp() }, { merge: true });
+        try {
+          await setDoc(resultRef, { ...result, cars, generatedAt: serverTimestamp() }, { merge: true });
+        } catch (error: unknown) {
+          if (!isPermissionDeniedError(error)) throw error;
+        }
         if (Number.isFinite(seasonYear) && seasonYear > 0) impactedSeasonYears.add(seasonYear);
       }
     }
   }
 
   for (const seasonYear of impactedSeasonYears) {
-    await recomputeSeasonStandings(seasonYear);
+    try {
+      await recomputeSeasonStandings(seasonYear);
+    } catch (error: unknown) {
+      if (!isPermissionDeniedError(error)) throw error;
+    }
   }
+};
+
+export const getAllSimuF1Profiles = async (): Promise<SimuF1PilotProfile[]> => {
+  const db = getFirestore();
+  if (!db) return [];
+  const snap = await getDocs(collection(db, "simuf1Profiles"));
+  return snap.docs.map((d) => d.data() as SimuF1PilotProfile);
+};
+
+export const repairPlayerData = async (
+  userEmail: string,
+  pilot1Name: string,
+  pilot2Name: string,
+  teamName: string,
+  seasonYear: number
+) => {
+  // 1. Persist in profile
+  await savePilotProfile(userEmail, pilot1Name, pilot2Name, teamName);
+  // 2. Propagate names retroactively to all entries + results
+  await applyPilotNamesRetroactively(userEmail, pilot1Name, pilot2Name, seasonYear);
+  // 3. Propagate team name retroactively
+  await applyTeamNameRetroactively(userEmail, teamName);
 };
 
 export const runRaceSimulationAndPersist = async (raceId: string, seasonYear: number) => {
@@ -409,7 +593,17 @@ export const runRaceSimulationAndPersist = async (raceId: string, seasonYear: nu
   if (!db) throw new Error("Firestore indisponible");
 
   const entrySnap = await getDocs(collection(db, "simuf1Races", raceId, "entries"));
-  const entries = entrySnap.docs.map((d) => d.data() as SimuF1Entry);
+  const entries = await Promise.all(entrySnap.docs.map(async (d) => {
+    const rawEntry = d.data() as SimuF1Entry;
+    const normalized = normalizeEntryCars(rawEntry);
+    if (JSON.stringify(rawEntry.cars || []) !== JSON.stringify(normalized.cars || [])) {
+      await setDoc(doc(db, "simuf1Races", raceId, "entries", d.id), {
+        ...normalized,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
+    return normalized;
+  }));
 
   const raceSnap = await getDoc(doc(db, "simuf1Races", raceId));
   const weekKey = (raceSnap.exists() ? (raceSnap.data() as SimuF1Race).weekKey : "") || "";

@@ -87,6 +87,7 @@ export type SimuF1PilotProfile = {
   userEmail: string;
   pilot1Name: string;
   pilot2Name: string;
+  teamName?: string;
   updatedAt?: any;
 };
 

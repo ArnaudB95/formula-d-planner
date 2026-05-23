@@ -10,6 +10,14 @@ import { getAuth, getFirestore } from "@/lib/firebase";
 
 const releaseNotes = [
   {
+    version: "v2.7.0",
+    timestamp: "23/05/2026 · 10h50",
+    details: [
+      "SimuF1: correction critique de persistance des participations (plus de reset involontaire après mise en ligne/changement d'URL)",
+      "Avatars: stabilisation globale des URLs, disparition des images corrigée.",
+    ],
+  },
+  {
     version: "v2.6.0",
     timestamp: "12/05/2026 · 22h30",
     details: [

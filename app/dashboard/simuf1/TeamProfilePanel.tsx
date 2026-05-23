@@ -62,7 +62,7 @@ const getTeamAccentColor = (teamName: string) => {
   const compact = cleaned.replace(/[^a-z0-9]+/g, " ").trim();
 
   if (compact === "bears fury crew" || compact === "bear s fury crew" || compact === "bear fury crew") return "#e10600";
-  if (compact === "tigers fury crew" || compact === "tiger s fury crew") return "#ff8a00";
+  if (compact === "tigers fury crew" || compact === "tiger s fury crew" || compact === "tiger fury crew") return "#ff8a00";
   if (compact === "frx") return "#22cfd0";
 
   let hash = 0;
