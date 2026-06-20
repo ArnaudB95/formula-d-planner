@@ -23,6 +23,7 @@ import {
 } from "./firestore";
 import { carBudgetUsed } from "./simulator";
 import { getCircuitConfigForWeekKey, getStatModifier, getStatMultiplier, profileLabel, type SimuF1StatKey } from "./circuit-config";
+import { canonicalTeamName, normalizeTeamNameKey } from "./team-name";
 import type {
   SimuF1CarSetup,
   SimuF1Entry,
@@ -59,6 +60,18 @@ const PARIS_TZ = "Europe/Paris";
 const TIGER_FURY_TEAM_NAME = "Tiger Fury Crew";
 
 const normalizeName = (value: string) => String(value || "").trim().toLowerCase();
+const isPlaceholderPilotLabel = (value: string) => {
+  const normalized = String(value || "").trim().toLowerCase();
+  return /^pilote\s*[0-9]*$/i.test(normalized) || /^pilot\s*[0-9]*$/i.test(normalized);
+};
+
+const getDefaultPilotNamesByTeam = (teamName: string) => {
+  const teamKey = normalizeTeamNameKey(teamName);
+  if (teamKey.includes("medellin")) {
+    return ["Sebastián", "El Colombiano"] as const;
+  }
+  return ["Pilote1", "Pilote2"] as const;
+};
 
 const isTigerFuryPilot = (pilotName: string) => {
   const normalized = normalizeName(pilotName);
@@ -391,6 +404,7 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
   const searchParams = useSearchParams();
   const teamSlugFromQuery = String(searchParams.get("team") || "").trim();
   const fallbackTeamName = getDefaultTeamName(defaultTeamName, userPseudo, userEmail);
+  const fallbackPilotNames = getDefaultPilotNamesByTeam(fallbackTeamName);
   const [view, setView] = useState<SimuView>("home");
   const [raceId, setRaceId] = useState<string>("");
   const [race, setRace] = useState<SimuF1Race | null>(null);
@@ -403,6 +417,7 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
   const [selectedRaceResult, setSelectedRaceResult] = useState<SimuF1RaceResult | null>(null);
   const [selectedRaceEntries, setSelectedRaceEntries] = useState<SimuF1Entry[]>([]);
   const [lastGpResult, setLastGpResult] = useState<SimuF1RaceResult | null>(null);
+  const [publishedResultsByRace, setPublishedResultsByRace] = useState<Record<string, SimuF1RaceResult | null>>({});
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string>("");
   const [nowTick, setNowTick] = useState(Date.now());
@@ -453,7 +468,7 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
     userPseudo: userPseudo || userEmail,
     teamName: fallbackTeamName,
     participating: true,
-    cars: [defaultCar("Pilote1"), defaultCar("Pilote2")],
+    cars: [defaultCar(fallbackPilotNames[0]), defaultCar(fallbackPilotNames[1])],
   });
 
   useEffect(() => {
@@ -506,6 +521,25 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
   }, [userPseudo, fallbackTeamName]);
 
   useEffect(() => {
+    setDraft((prev) => {
+      const teamName = String(prev.teamName || "").trim() || fallbackTeamName;
+      const teamDefaults = getDefaultPilotNamesByTeam(teamName);
+      const forceTeamNames = normalizeTeamNameKey(teamName) === "medellin";
+      const current1 = String(prev.cars[0]?.pilotName || "").trim().toLowerCase();
+      const current2 = String(prev.cars[1]?.pilotName || "").trim().toLowerCase();
+      const isPlaceholder1 = !current1 || current1 === "pilote1" || current1 === "pilote 1";
+      const isPlaceholder2 = !current2 || current2 === "pilote2" || current2 === "pilote 2";
+      if (!forceTeamNames && !isPlaceholder1 && !isPlaceholder2) return prev;
+
+      const cars = [...prev.cars] as [SimuF1CarSetup, SimuF1CarSetup];
+      if (forceTeamNames || isPlaceholder1) cars[0] = { ...cars[0], pilotName: teamDefaults[0] };
+      if (forceTeamNames || isPlaceholder2) cars[1] = { ...cars[1], pilotName: teamDefaults[1] };
+      if (cars[0].pilotName === prev.cars[0].pilotName && cars[1].pilotName === prev.cars[1].pilotName) return prev;
+      return { ...prev, cars };
+    });
+  }, [fallbackTeamName, draft.teamName]);
+
+  useEffect(() => {
     if (teamSlugFromQuery) return;
 
     const requestedView = String(searchParams.get("simuView") || "").trim() as SimuView;
@@ -532,6 +566,11 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
       const savedTeamName = String(pilotProfile.teamName || "").trim();
       const currentTeamName = String(prev.teamName || "").trim();
       const newTeamName = savedTeamName || currentTeamName || fallbackTeamName;
+      if (normalizeTeamNameKey(newTeamName) === "medellin") {
+        const teamDefaults = getDefaultPilotNamesByTeam(newTeamName);
+        cars[0] = { ...cars[0], pilotName: teamDefaults[0] };
+        cars[1] = { ...cars[1], pilotName: teamDefaults[1] };
+      }
       return { ...prev, cars, teamName: newTeamName };
     });
   }, [pilotProfile, fallbackTeamName]);
@@ -549,7 +588,7 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
         if (entry.participating === false) return false;
         return Array.isArray(entry.cars) && entry.cars.length === 2;
       })
-      .map((entry) => String(entry.teamName || "").trim() || "Ecurie sans nom");
+      .map((entry) => canonicalTeamName(entry.teamName) || "Ecurie sans nom");
 
     return Array.from(new Set(names)).sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
   }, [entries]);
@@ -562,40 +601,76 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
   }, [participants]);
 
   const liveStandingRows = useMemo(() => {
-    const drivers = seasonStandings?.drivers || {};
-    return Object.entries(drivers)
+    // Fallback: compute driver standings from published results to avoid relying on possibly stale season documents
+    const computedDrivers: Record<string, number> = {};
+    Object.values(publishedResultsByRace).forEach((res) => {
+      if (!res) return;
+      res.cars.forEach((car) => {
+        computedDrivers[car.pilotName] = (computedDrivers[car.pilotName] || 0) + Number(car.points || 0);
+      });
+    });
+
+    const sourceDrivers = Object.keys(computedDrivers).length > 0 ? computedDrivers : (seasonStandings?.drivers || {});
+    return Object.entries(sourceDrivers)
       .filter(([pilot]) => participantsPilotNames.has(pilot))
       .sort((a, b) => b[1] - a[1])
       .map(([pilot, points]) => ({ pilot, points }));
   }, [seasonStandings, participantsPilotNames]);
 
   const liveTeamStandingRows = useMemo(() => {
-    const teams = seasonStandings?.teams || {};
-    return Object.entries(teams)
+    // Compute team standings from published results and recent results to ensure championship view matches team pages
+    const computedTeams: Record<string, number> = {};
+    const addFromResult = (res: SimuF1RaceResult | null | undefined) => {
+      if (!res) return;
+      res.cars.forEach((car) => {
+        const team = canonicalTeamName(car.teamName) || String(car.teamName || "").trim() || "Ecurie sans nom";
+        computedTeams[team] = (computedTeams[team] || 0) + Number(car.points || 0);
+      });
+    };
+    Object.values(publishedResultsByRace).forEach(addFromResult);
+
+    const sourceTeams = Object.keys(computedTeams).length > 0 ? computedTeams : (seasonStandings?.teams || {});
+    const grouped: Record<string, number> = {};
+    Object.entries(sourceTeams).forEach(([teamName, points]) => {
+      const canonical = canonicalTeamName(teamName) || String(teamName || "").trim() || "Ecurie sans nom";
+      grouped[canonical] = (grouped[canonical] || 0) + Number(points || 0);
+    });
+    return Object.entries(grouped)
       .sort((a, b) => b[1] - a[1])
       .map(([team, points]) => ({ team, points }));
-  }, [seasonStandings]);
+  }, [seasonStandings, publishedResultsByRace]);
 
   const pilotTeamMapping = useMemo(() => {
     const map = new Map<string, string>();
     // From current race participants
     participants.forEach((entry) => {
       entry.cars.forEach((car) => {
-        map.set(car.pilotName, entry.teamName);
+        map.set(car.pilotName, canonicalTeamName(entry.teamName) || String(entry.teamName || "").trim());
       });
     });
     // Supplement from lastGpResult (pilots from last published race)
     if (lastGpResult) {
       lastGpResult.cars.forEach((car) => {
-        if (!map.has(car.pilotName)) map.set(car.pilotName, car.teamName);
+        if (!map.has(car.pilotName)) map.set(car.pilotName, canonicalTeamName(car.teamName) || car.teamName);
       });
     }
     // Supplement from selectedRaceResult
     if (selectedRaceResult) {
       selectedRaceResult.cars.forEach((car) => {
-        if (!map.has(car.pilotName)) map.set(car.pilotName, car.teamName);
+        if (!map.has(car.pilotName)) map.set(car.pilotName, canonicalTeamName(car.teamName) || car.teamName);
       });
     }
+
+    raceHistory
+      .filter((raceItem) => raceItem.status === "published")
+      .sort((a, b) => String(b.sundayDateISO || "").localeCompare(String(a.sundayDateISO || "")))
+      .forEach((raceItem) => {
+        const seasonResult = publishedResultsByRace[raceItem.id];
+        if (!seasonResult) return;
+        seasonResult.cars.forEach((car) => {
+          if (!map.has(car.pilotName)) map.set(car.pilotName, canonicalTeamName(car.teamName) || car.teamName);
+        });
+      });
 
     // Keep Fast/Furious grouped in Tiger Fury Crew regardless of historical aliases.
     map.forEach((_, pilotName) => {
@@ -606,19 +681,37 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
     map.set("Furious", TIGER_FURY_TEAM_NAME);
 
     return map;
-  }, [participants, lastGpResult, selectedRaceResult]);
+  }, [participants, lastGpResult, selectedRaceResult, raceHistory, publishedResultsByRace]);
 
   const liveDriverStandingsWithTeams = useMemo(() => {
     const drivers = seasonStandings?.drivers || {};
+
+    const resolveDisplayPilotName = (pilot: string, teamName: string) => {
+      const teamKey = normalizeTeamNameKey(teamName);
+      if (!teamKey.includes("medellin")) return pilot;
+
+      const normalizedPilot = normalizeName(pilot);
+      if (normalizedPilot.includes("2")) return "El Colombiano";
+      if (normalizedPilot.includes("1")) return "Sebastián";
+      if (normalizedPilot === normalizeName("Sebastián")) return "Sebastián";
+      if (normalizedPilot === normalizeName("El Colombiano")) return "El Colombiano";
+      if (isPlaceholderPilotLabel(pilot)) return "Sebastián";
+      return pilot;
+    };
+
     return Object.entries(drivers)
       .sort((a, b) => b[1] - a[1])
-      .map(([pilot, points], idx) => ({
-        pilot,
-        points,
-        team: isTigerFuryPilot(pilot) ? TIGER_FURY_TEAM_NAME : pilotTeamMapping.get(pilot) || "—",
-        position: idx + 1,
-      }));
-  }, [seasonStandings, pilotTeamMapping]);
+      .map(([pilot, points], idx) => {
+        const team = isTigerFuryPilot(pilot) ? TIGER_FURY_TEAM_NAME : pilotTeamMapping.get(pilot) || "—";
+        return {
+          pilot,
+          displayPilot: resolveDisplayPilotName(pilot, team),
+          points,
+          team,
+          position: idx + 1,
+        };
+      });
+  }, [seasonStandings, pilotTeamMapping, publishedResultsByRace]);
 
   const latestPublishedRace = useMemo(() => {
     return raceHistory
@@ -635,6 +728,7 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
 
     if (compact === "bears fury crew" || compact === "bear s fury crew" || compact === "bear fury crew") return "#e10600";
     if (compact === "tigers fury crew" || compact === "tiger s fury crew" || compact === "tiger fury crew") return "#ff8a00";
+    if (compact.includes("medellin")) return "#000000";
     if (compact === "frx") return "#22cfd0";
 
     let hash = 0;
@@ -781,6 +875,37 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
   }, [latestPublishedRace?.id]);
 
   useEffect(() => {
+    const publishedRaceIds = raceHistory
+      .filter((raceItem) => raceItem.status === "published")
+      .map((raceItem) => String(raceItem.id || "").trim())
+      .filter(Boolean);
+
+    if (publishedRaceIds.length === 0) {
+      setPublishedResultsByRace({});
+      return;
+    }
+
+    const activeIds = new Set(publishedRaceIds);
+    setPublishedResultsByRace((prev) => {
+      const next: Record<string, SimuF1RaceResult | null> = {};
+      activeIds.forEach((id) => {
+        if (Object.prototype.hasOwnProperty.call(prev, id)) next[id] = prev[id];
+      });
+      return next;
+    });
+
+    const unsubs = publishedRaceIds.map((raceIdItem) =>
+      subscribeRaceResult(raceIdItem, (resultItem) => {
+        setPublishedResultsByRace((prev) => ({ ...prev, [raceIdItem]: resultItem }));
+      })
+    );
+
+    return () => {
+      unsubs.forEach((unsub) => unsub());
+    };
+  }, [raceHistory]);
+
+  useEffect(() => {
     const id = window.setInterval(() => setNowTick(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, []);
@@ -804,7 +929,7 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
       userPseudo: userPseudo || userEmail,
       teamName: fallbackTeamName,
       participating: false,
-      cars: [defaultCar("Pilote1"), defaultCar("Pilote2")],
+      cars: [defaultCar(fallbackPilotNames[0]), defaultCar(fallbackPilotNames[1])],
     };
 
     void saveEntry(raceId, resetEntry).then(() => {
@@ -814,7 +939,7 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
     }).catch(() => {
       // Ignore and let manual save flow handle retry.
     });
-  }, [raceId, race?.seasonYear, userEmail, userPseudo, fallbackTeamName]);
+  }, [raceId, race?.seasonYear, userEmail, userPseudo, fallbackTeamName, fallbackPilotNames]);
 
   useEffect(() => {
     if (!raceId || !race?.sundayDateISO) return;
@@ -882,9 +1007,11 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
     setSaving(true);
     setMessage("");
     try {
-      const pilot1Name = draft.cars[0].pilotName || "Pilote1";
-      const pilot2Name = draft.cars[1].pilotName || "Pilote2";
       const newTeamName = String(draft.teamName || "").trim() || fallbackTeamName;
+      const teamDefaults = getDefaultPilotNamesByTeam(newTeamName);
+      const forceTeamNames = normalizeTeamNameKey(newTeamName) === "medellin";
+      const pilot1Name = forceTeamNames ? teamDefaults[0] : String(draft.cars[0].pilotName || "").trim() || teamDefaults[0];
+      const pilot2Name = forceTeamNames ? teamDefaults[1] : String(draft.cars[1].pilotName || "").trim() || teamDefaults[1];
 
       await savePilotProfile(userEmail, pilot1Name, pilot2Name, newTeamName);
 
@@ -895,6 +1022,10 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
         userEmail,
         userPseudo: draft.userPseudo || userEmail,
         teamName: newTeamName,
+        cars: [
+          { ...draft.cars[0], pilotName: pilot1Name },
+          { ...draft.cars[1], pilotName: pilot2Name },
+        ],
       });
 
       const shouldApplyRetroactivePilots =
@@ -1115,7 +1246,7 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
                     <StandingsRow
                       key={row.pilot}
                       rank={row.position}
-                      title={row.pilot}
+                      title={row.displayPilot}
                       subtitle={row.team}
                       points={row.points}
                       accentColor={getTeamAccent(row.team)}
@@ -1235,7 +1366,7 @@ export default function SimuF1Panel({ userEmail, userPseudo, defaultTeamName, is
                       <StandingsRow
                         key={row.pilot}
                         rank={row.position}
-                        title={row.pilot}
+                        title={row.displayPilot}
                         subtitle={row.team}
                         points={row.points}
                         accentColor={getTeamAccent(row.team)}

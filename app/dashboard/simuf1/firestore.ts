@@ -14,6 +14,7 @@ import {
 } from "firebase/firestore";
 import { getCircuitConfigForWeekKey, profileLabel } from "./circuit-config";
 import { simulateRaceFromEntries } from "./simulator";
+import { canonicalTeamName, getFixedPilotNamesByTeam } from "./team-name";
 import type {
   SimuF1CarSetup,
   SimuF1Entry,
@@ -267,11 +268,16 @@ const normalizeCarSetup = (car: Partial<SimuF1CarSetup> | undefined, fallbackPil
 
 const normalizeEntryCars = (entry: SimuF1Entry): SimuF1Entry => {
   const incoming = Array.isArray(entry.cars) ? entry.cars : [];
-  const car1 = normalizeCarSetup(incoming[0], "Pilote 1");
-  const car2 = normalizeCarSetup(incoming[1], "Pilote 2");
+  const normalizedTeamName = canonicalTeamName(entry.teamName);
+  const fixedPilotNames = getFixedPilotNamesByTeam(normalizedTeamName || String(entry.teamName || "").trim());
+  const car1 = normalizeCarSetup(incoming[0], fixedPilotNames?.[0] || "Pilote 1");
+  const car2 = normalizeCarSetup(incoming[1], fixedPilotNames?.[1] || "Pilote 2");
+  const finalCar1 = fixedPilotNames ? { ...car1, pilotName: fixedPilotNames[0] } : car1;
+  const finalCar2 = fixedPilotNames ? { ...car2, pilotName: fixedPilotNames[1] } : car2;
   return {
     ...entry,
-    cars: [car1, car2],
+    teamName: normalizedTeamName || String(entry.teamName || "").trim(),
+    cars: [finalCar1, finalCar2],
   };
 };
 
@@ -390,7 +396,7 @@ export const savePilotProfile = async (userEmail: string, pilot1Name: string, pi
     pilot2Name,
     updatedAt: serverTimestamp(),
   };
-  if (teamName !== undefined) payload.teamName = teamName;
+  if (teamName !== undefined) payload.teamName = canonicalTeamName(teamName) || String(teamName || "").trim();
   await setDoc(
     doc(db, "simuf1Profiles", id),
     payload as SimuF1PilotProfile,
@@ -410,6 +416,15 @@ const recomputeSeasonStandings = async (seasonYear: number) => {
 
   const teams: Record<string, number> = {};
   const drivers: Record<string, number> = {};
+  // Keep a map from normalized pilot key -> { displayName, points }
+  const driversByNorm: Record<string, { displayName: string; points: number }> = {};
+
+  const normalizePilotKey = (value: string) =>
+    String(value || "")
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
 
   for (const raceId of raceIds) {
     const resultRef = doc(db, "simuf1Races", raceId, "results", "latest");
@@ -417,11 +432,21 @@ const recomputeSeasonStandings = async (seasonYear: number) => {
     if (!resultSnap.exists()) continue;
     const result = resultSnap.data() as SimuF1RaceResult;
     result.cars.forEach((car) => {
-      const teamName = String(car.teamName || "").trim() || "Ecurie sans nom";
-      teams[teamName] = (teams[teamName] || 0) + car.points;
-      drivers[car.pilotName] = (drivers[car.pilotName] || 0) + car.points;
+      const teamName = canonicalTeamName(car.teamName) || "Ecurie sans nom";
+      teams[teamName] = (teams[teamName] || 0) + Number(car.points || 0);
+
+      const pilotKey = normalizePilotKey(car.pilotName) || String(car.pilotName || "").trim();
+      const display = String(car.pilotName || "").trim();
+      if (!driversByNorm[pilotKey]) driversByNorm[pilotKey] = { displayName: display, points: 0 };
+      driversByNorm[pilotKey].points += Number(car.points || 0);
     });
   }
+
+  // Emit drivers as a map keyed by a chosen display name (first seen for each normalized key)
+  Object.values(driversByNorm).forEach((d) => {
+    const name = d.displayName || "Pilote";
+    drivers[name] = (drivers[name] || 0) + Number(d.points || 0);
+  });
 
   await setDoc(
     doc(db, "simuf1Seasons", String(seasonYear)),
@@ -508,7 +533,7 @@ export const applyTeamNameRetroactively = async (userEmail: string, nextTeamName
   if (!db) throw new Error("Firestore indisponible");
 
   const normalizedEmail = String(userEmail || "").trim();
-  const normalizedTeamName = String(nextTeamName || "").trim();
+  const normalizedTeamName = canonicalTeamName(nextTeamName) || String(nextTeamName || "").trim();
   if (!normalizedEmail || !normalizedTeamName) return;
 
   const raceSnap = await getDocs(collection(db, "simuf1Races"));
@@ -523,7 +548,8 @@ export const applyTeamNameRetroactively = async (userEmail: string, nextTeamName
     const entrySnap = await getDoc(entryRef);
     if (entrySnap.exists()) {
       const entry = entrySnap.data() as SimuF1Entry;
-      if (String(entry.teamName || "").trim() !== normalizedTeamName) {
+      const currentCanonical = canonicalTeamName(entry.teamName) || String(entry.teamName || "").trim();
+      if (currentCanonical !== normalizedTeamName) {
         try {
           await setDoc(entryRef, { ...entry, teamName: normalizedTeamName, updatedAt: serverTimestamp() }, { merge: true });
         } catch (error: unknown) {
@@ -541,7 +567,8 @@ export const applyTeamNameRetroactively = async (userEmail: string, nextTeamName
       const cars = result.cars.map((car) => {
         const ownerMatches = String(car.ownerEmail || "").trim() === normalizedEmail;
         if (!ownerMatches) return car;
-        if (String(car.teamName || "").trim() === normalizedTeamName) return car;
+        const currentCanonical = canonicalTeamName(car.teamName) || String(car.teamName || "").trim();
+        if (currentCanonical === normalizedTeamName) return car;
         changed = true;
         return { ...car, teamName: normalizedTeamName };
       });

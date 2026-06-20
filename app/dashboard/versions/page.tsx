@@ -10,6 +10,14 @@ import { getAuth, getFirestore } from "@/lib/firebase";
 
 const releaseNotes = [
   {
+    version: "v2.8.0",
+    timestamp: "20/06/2026 · 00h20",
+    details: [
+      "SimuF1: normalisation noms pilotes/écuries — évite doublons.",
+      "Championnat: affichage dynamique depuis résultats publiés, fix runtime.",
+    ],
+  },
+  {
     version: "v2.7.0",
     timestamp: "23/05/2026 · 10h50",
     details: [
@@ -367,7 +375,7 @@ export default function VersionsPage() {
           <div className="border border-white/10 bg-[#121419] p-4 sm:p-6">
             <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-[#e10600]">Notes de version</p>
             <p className="mt-3 text-xs sm:text-sm text-gray-300">
-              Version actuelle : <span className="text-white font-bold">v2.6.0</span>
+              Version actuelle : <span className="text-white font-bold">v2.8.0</span>
             </p>
 
           </div>
