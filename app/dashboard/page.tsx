@@ -1408,7 +1408,7 @@ export default function Dashboard() {
   }, [user?.email]);
 
   const postResultsAdminAction = async (payload: Record<string, unknown>) => {
-    const token = await user?.getIdToken?.();
+    const token = await user?.getIdToken?.(true);
     if (!token) {
       throw new Error("session-invalide");
     }
@@ -1429,8 +1429,7 @@ export default function Dashboard() {
     }
   };
 
-  const canManageResultsAsSuperAdmin =
-    userRole === "superAdmin" && normalizeEmail(user?.email) === "beaudouin.arnaud@gmail.com";
+  const canManageResultsAsSuperAdmin = normalizeEmail(user?.email) === "beaudouin.arnaud@gmail.com";
 
   const slugifyResultsKey = (value: string) =>
     String(value || "")
@@ -1442,7 +1441,10 @@ export default function Dashboard() {
       .replace(/^-+|-+$/g, "");
 
   const handleCreateChampionship = async () => {
-    if (!canManageResultsAsSuperAdmin) return;
+    if (!canManageResultsAsSuperAdmin) {
+      setResultsAdminMessage("Acces super admin requis.");
+      return;
+    }
 
     const title = String(newChampionshipTitle || "").trim();
     if (!title) {
@@ -1470,7 +1472,10 @@ export default function Dashboard() {
   };
 
   const handleUpdateSelectedChampionship = async () => {
-    if (!canManageResultsAsSuperAdmin) return;
+    if (!canManageResultsAsSuperAdmin) {
+      setResultsAdminMessage("Acces super admin requis.");
+      return;
+    }
 
     const key = String(selectedResultKey || "").trim();
     if (!key) {
@@ -1499,7 +1504,10 @@ export default function Dashboard() {
   };
 
   const handleCreateRace = async () => {
-    if (!canManageResultsAsSuperAdmin) return;
+    if (!canManageResultsAsSuperAdmin) {
+      setResultsAdminMessage("Acces super admin requis.");
+      return;
+    }
 
     const champ = resultsChampionships.find((c) => c.key === selectedResultKey);
     if (!champ) {
@@ -1535,7 +1543,10 @@ export default function Dashboard() {
   };
 
   const handleAddRaceResultRow = async () => {
-    if (!canManageResultsAsSuperAdmin) return;
+    if (!canManageResultsAsSuperAdmin) {
+      setResultsAdminMessage("Acces super admin requis.");
+      return;
+    }
 
     const champ = resultsChampionships.find((c) => c.key === selectedResultKey);
     if (!champ) {
@@ -1577,6 +1588,36 @@ export default function Dashboard() {
       setResultsAdminMessage("Ligne pilote/ecurie enregistree.");
     } catch (error) {
       setResultsAdminMessage(error instanceof Error ? error.message : "Erreur lors de l enregistrement ligne.");
+    }
+  };
+
+  const handleDeleteChampionship = async (championshipKey: string, championshipTitle: string) => {
+    if (!canManageResultsAsSuperAdmin) {
+      setResultsAdminMessage("Acces super admin requis.");
+      return;
+    }
+
+    const key = String(championshipKey || "").trim();
+    if (!key) {
+      setResultsAdminMessage("Selectionne un championnat.");
+      return;
+    }
+
+    const confirmDelete = window.confirm(`Supprimer le championnat \"${championshipTitle}\" ? Cette action est definitive.`);
+    if (!confirmDelete) return;
+
+    try {
+      await postResultsAdminAction({
+        action: "deleteChampionship",
+        championshipKey: key,
+      });
+      if (selectedResultKey === key) {
+        setSelectedResultKey("");
+        setSelectedResultRaceId("");
+      }
+      setResultsAdminMessage("Championnat supprime.");
+    } catch (error) {
+      setResultsAdminMessage(error instanceof Error ? error.message : "Erreur lors de la suppression.");
     }
   };
 
@@ -5603,19 +5644,26 @@ export default function Dashboard() {
       status: DEFAULT_RESULTS_CHAMPIONSHIP_STATUS,
       statusClass: "border-white/25 bg-black/74 text-[#ff4a52]",
       href: `/dashboard?tab=results&result=${DEFAULT_RESULTS_CHAMPIONSHIP_KEY}`,
+      isFallback: true,
     },
   ];
 
-  const resultsCategories =
-    resultsChampionships.length > 0
-      ? resultsChampionships.map((item) => ({
-          key: item.key,
-          title: item.title,
-          status: item.status || "Actif",
-          statusClass: "border-white/25 bg-black/74 text-[#ff4a52]",
-          href: `/dashboard?tab=results&result=${item.key}`,
-        }))
-      : fallbackResultsCategories;
+  const firestoreResultsCategories = resultsChampionships.map((item) => ({
+    key: item.key,
+    title: item.title,
+    status: item.status || "Actif",
+    statusClass: "border-white/25 bg-black/74 text-[#ff4a52]",
+    href: `/dashboard?tab=results&result=${item.key}`,
+    isFallback: false,
+  }));
+
+  const hasDefaultInFirestore = firestoreResultsCategories.some(
+    (item) => item.key === DEFAULT_RESULTS_CHAMPIONSHIP_KEY
+  );
+
+  const resultsCategories = hasDefaultInFirestore
+    ? firestoreResultsCategories
+    : [...fallbackResultsCategories, ...firestoreResultsCategories];
 
 
 
@@ -5634,6 +5682,30 @@ export default function Dashboard() {
     if (position === 7) return 2;
     if (position === 8) return 1;
     return 0;
+  };
+
+  const parseFrDateToIso = (frDate: string) => {
+    const raw = String(frDate || "").trim();
+    const match = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!match) return null;
+
+    const day = Number.parseInt(match[1] || "", 10);
+    const month = Number.parseInt(match[2] || "", 10);
+    const year = Number.parseInt(match[3] || "", 10);
+    if (!Number.isFinite(day) || !Number.isFinite(month) || !Number.isFinite(year)) return null;
+    if (month < 1 || month > 12) return null;
+    if (day < 1 || day > 31) return null;
+
+    const test = new Date(Date.UTC(year, month - 1, day));
+    if (
+      test.getUTCFullYear() !== year ||
+      test.getUTCMonth() !== month - 1 ||
+      test.getUTCDate() !== day
+    ) {
+      return null;
+    }
+
+    return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   };
 
   const DEFAULT_RESULTS_S1_RACES = [
@@ -5680,10 +5752,11 @@ export default function Dashboard() {
 
   const selectedResultsChampionship = resultsChampionships.find((c) => c.key === selectedResultKey) || null;
 
-  const RESULTS_S1_RACES: ResultsRace[] =
-    selectedResultsChampionship && Array.isArray(selectedResultsChampionship.races) && selectedResultsChampionship.races.length > 0
+  const RESULTS_S1_RACES: ResultsRace[] = selectedResultsChampionship
+    ? Array.isArray(selectedResultsChampionship.races)
       ? selectedResultsChampionship.races
-      : DEFAULT_RESULTS_S1_RACES;
+      : []
+    : DEFAULT_RESULTS_S1_RACES;
 
   const resultTeamColor = (teamName: string) => {
     if (teamName === "Tiger Fury Crew") return "#ff8a00";
@@ -9162,7 +9235,7 @@ export default function Dashboard() {
                           <input
                             value={newRaceDate}
                             onChange={(e) => setNewRaceDate(e.target.value)}
-                            placeholder="YYYY-MM-DD"
+                            placeholder="DD/MM/YYYY"
                             className="border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
                           />
                           <button
@@ -9294,21 +9367,35 @@ export default function Dashboard() {
 
                     <div className="space-y-2.5">
                       {resultsCategories.map((category) => (
-                        <button
-                          type="button"
+                        <div
                           key={category.key}
-                          onClick={() => setSelectedResultKey(category.key)}
                           className="group flex w-full items-center justify-between gap-3 border border-[#3a3034] bg-[#1f232b] p-3 sm:p-4 text-left transition hover:border-[#a13a42] hover:bg-[#2a171a]"
                         >
-                          <div className="min-w-0">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedResultKey(category.key)}
+                            className="min-w-0 flex-1 text-left"
+                          >
                             <p className="text-sm sm:text-base font-semibold uppercase tracking-[0.04em] text-white leading-tight break-words">
                               {category.title}
                             </p>
+                          </button>
+
+                          <div className="shrink-0 flex items-center gap-2">
+                            <span className="inline-flex items-center border border-white/25 bg-black/74 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-[#ff4a52]">
+                              {category.status}
+                            </span>
+                            {canManageResultsAsSuperAdmin && !category.isFallback && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteChampionship(category.key, category.title)}
+                                className="inline-flex items-center border border-[#d65a62]/45 bg-[#5b2024]/35 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-[#ffd3d0] hover:border-[#ff6f66]/55 hover:bg-[#692329]/45 hover:text-white"
+                              >
+                                Supprimer
+                              </button>
+                            )}
                           </div>
-                          <span className="shrink-0 inline-flex items-center border border-white/25 bg-black/74 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-[#ff4a52]">
-                            {category.status}
-                          </span>
-                        </button>
+                        </div>
                       ))}
                     </div>
                   </div>

@@ -48,6 +48,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, message: "missing-token" }, { status: 401 });
   }
 
+  // Ensure Firebase Admin app is initialized before token verification.
+  getServerFirestore();
+
   let decodedEmail = "";
   try {
     const decoded = await getAuth().verifyIdToken(token);
@@ -188,6 +191,22 @@ export async function POST(request: Request) {
       { merge: true }
     );
 
+    return NextResponse.json({ ok: true });
+  }
+
+  if (action === "deleteChampionship") {
+    const championshipKey = String(body?.championshipKey || "").trim();
+    if (!championshipKey) {
+      return NextResponse.json({ ok: false, message: "missing-fields" }, { status: 400 });
+    }
+
+    const ref = db.collection("resultsChampionships").doc(championshipKey);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      return NextResponse.json({ ok: false, message: "championship-not-found" }, { status: 404 });
+    }
+
+    await ref.delete();
     return NextResponse.json({ ok: true });
   }
 
