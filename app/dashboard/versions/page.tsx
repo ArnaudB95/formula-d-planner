@@ -5,16 +5,25 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { CalendarDays, ClipboardList, Gamepad2, MessageCircle, Route, Trophy, Users } from "lucide-react";
+import { CalendarDays, ClipboardList, MessageCircle, Route, Trophy, Users } from "lucide-react";
 import { getAuth, getFirestore } from "@/lib/firebase";
 
 const releaseNotes = [
   {
+    version: "v2.9.0",
+    timestamp: "26/06/2026 · 00h00",
+    details: [
+      "Resultats: nouvelle presentation integree directement dans le dashboard (menu + vue detaillee).",
+      "Navigation: clic Resultats conserve le shell dashboard (menu haut + navigation bas).",
+      "Stabilite: suppression de l ancien flux de presentation dans l onglet Resultats.",
+    ],
+  },
+  {
     version: "v2.8.0",
     timestamp: "20/06/2026 · 00h20",
     details: [
-      "SimuF1: normalisation noms pilotes/écuries — évite doublons.",
-      "Championnat: affichage dynamique depuis résultats publiés, fix runtime.",
+      "SimuF1: normalisation noms pilotes/ecuries - evite doublons.",
+      "Championnat: affichage dynamique depuis resultats publies, fix runtime.",
     ],
   },
   {
@@ -231,7 +240,6 @@ export default function VersionsPage() {
     { key: "chat", label: "Chat", icon: MessageCircle },
     { key: "members", label: "Pilotes", icon: Users },
     { key: "circuits", label: "Circuits", icon: Route },
-    { key: "simuf1", label: "SimuF1", icon: Gamepad2 },
   ];
 
   useEffect(() => {
@@ -375,7 +383,7 @@ export default function VersionsPage() {
           <div className="border border-white/10 bg-[#121419] p-4 sm:p-6">
             <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-[#e10600]">Notes de version</p>
             <p className="mt-3 text-xs sm:text-sm text-gray-300">
-              Version actuelle : <span className="text-white font-bold">v2.8.0</span>
+              Version actuelle : <span className="text-white font-bold">v2.9.0</span>
             </p>
 
           </div>
