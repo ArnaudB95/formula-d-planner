@@ -10,6 +10,15 @@ import { getAuth, getFirestore } from "@/lib/firebase";
 
 const releaseNotes = [
   {
+    version: "v2.9.1",
+    timestamp: "26/06/2026 · 21h45",
+    details: [
+      "Resultats: nouvelle fiche ecurie dediee (hors SimuF1) avec navigation integree depuis les classements.",
+      "UI Resultats: harmonisation des blocs detail championnat/course/ecurie et reprise du design podium SimuF1 pour les dernieres courses.",
+      "Barème points applique: 1er 10, 2e 8, 3e 6, 4e 5, 5e 4, 6e 3, 7e 2, 8e 1, 9e+ 0, DNF 0.",
+    ],
+  },
+  {
     version: "v2.9.0",
     timestamp: "26/06/2026 · 00h00",
     details: [

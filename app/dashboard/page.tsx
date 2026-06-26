@@ -61,7 +61,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 
-import { CalendarDays, ClipboardList, MessageCircle, Pencil, Reply, Trash2, Trophy, Users, Route } from "lucide-react";
+import { CalendarDays, CircleDot, ClipboardList, MessageCircle, Pencil, Reply, Trash2, Trophy, Users, Route } from "lucide-react";
 
 
 import SimuF1Panel from "./simuf1/SimuF1Panel";
@@ -776,6 +776,8 @@ export default function Dashboard() {
 
 
   const [selectedResultKey, setSelectedResultKey] = useState("");
+  const [selectedResultRaceId, setSelectedResultRaceId] = useState("");
+  const [selectedResultTeamName, setSelectedResultTeamName] = useState("");
 
 
 
@@ -5348,6 +5350,144 @@ export default function Dashboard() {
 
   const selectedResultsCategory = resultsCategories.find((category) => category.key === selectedResultKey) || null;
 
+  const racePointsByPosition = (position: number, status?: string) => {
+    if (String(status || "").trim().toUpperCase() === "DNF") return 0;
+    if (position === 1) return 10;
+    if (position === 2) return 8;
+    if (position === 3) return 6;
+    if (position === 4) return 5;
+    if (position === 5) return 4;
+    if (position === 6) return 3;
+    if (position === 7) return 2;
+    if (position === 8) return 1;
+    return 0;
+  };
+
+  const RESULTS_S1_RACES = [
+    {
+      id: "E10",
+      circuit: "Monza",
+      date: "2025-03-09",
+      results: [
+        { position: 1, pilot: "Fast", team: "Tiger Fury Crew" },
+        { position: 2, pilot: "Arnaud", team: "Bears Fury Crew" },
+        { position: 3, pilot: "Mumu", team: "FRX" },
+        { position: 4, pilot: "Furious", team: "Tiger Fury Crew" },
+        { position: 5, pilot: "Loris", team: "Bears Fury Crew" },
+        { position: 6, pilot: "Shadow", team: "FRX" },
+      ],
+    },
+    {
+      id: "E11",
+      circuit: "Suzuka",
+      date: "2025-03-16",
+      results: [
+        { position: 1, pilot: "Furious", team: "Tiger Fury Crew" },
+        { position: 2, pilot: "Loris", team: "Bears Fury Crew" },
+        { position: 3, pilot: "Shadow", team: "FRX" },
+        { position: 4, pilot: "Fast", team: "Tiger Fury Crew" },
+        { position: 5, pilot: "Arnaud", team: "Bears Fury Crew" },
+        { position: 6, pilot: "Mumu", team: "FRX" },
+      ],
+    },
+    {
+      id: "E12",
+      circuit: "Interlagos",
+      date: "2025-03-23",
+      results: [
+        { position: 1, pilot: "Arnaud", team: "Bears Fury Crew" },
+        { position: 2, pilot: "Fast", team: "Tiger Fury Crew" },
+        { position: 3, pilot: "Furious", team: "Tiger Fury Crew" },
+        { position: 4, pilot: "Loris", team: "Bears Fury Crew" },
+        { position: 5, pilot: "Mumu", team: "FRX" },
+        { position: 6, pilot: "Shadow", team: "FRX" },
+      ],
+    },
+  ] as const;
+
+  const resultTeamColor = (teamName: string) => {
+    if (teamName === "Tiger Fury Crew") return "#ff8a00";
+    if (teamName === "Bears Fury Crew") return "#e10600";
+    return "#22cfd0";
+  };
+
+  const RESULTS_S1_DRIVER_STANDINGS = Object.entries(
+    RESULTS_S1_RACES.reduce((acc, race) => {
+      race.results.forEach((row) => {
+        const key = row.pilot;
+        const existing = acc[key] || { name: row.pilot, team: row.team, points: 0 };
+        existing.points += racePointsByPosition(row.position, (row as { status?: string }).status);
+        existing.team = row.team;
+        acc[key] = existing;
+      });
+      return acc;
+    }, {} as Record<string, { name: string; team: string; points: number }>)
+  )
+    .map(([, value]) => value)
+    .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name))
+    .map((value, index) => ({ rank: index + 1, ...value }));
+
+  const RESULTS_S1_TEAM_STANDINGS = Object.entries(
+    RESULTS_S1_RACES.reduce((acc, race) => {
+      race.results.forEach((row) => {
+        const key = row.team;
+        const existing = acc[key] || 0;
+        acc[key] = existing + racePointsByPosition(row.position, (row as { status?: string }).status);
+      });
+      return acc;
+    }, {} as Record<string, number>)
+  )
+    .map(([team, points]) => ({ team, points, color: resultTeamColor(team) }))
+    .sort((a, b) => b.points - a.points || a.team.localeCompare(b.team))
+    .map((value, index) => ({ rank: index + 1, ...value }));
+
+  const selectedResultRace = RESULTS_S1_RACES.find((race) => race.id === selectedResultRaceId) || null;
+  const parseRaceNumber = (raceId: string) => Number(String(raceId || "").replace(/[^0-9]/g, "")) || 0;
+  const RESULTS_S1_RACES_DESC = [...RESULTS_S1_RACES].sort((a, b) => parseRaceNumber(b.id) - parseRaceNumber(a.id));
+  const formatRaceDateFr = (isoDate: string) => {
+    const parsed = new Date(`${isoDate}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) return isoDate;
+    return parsed.toLocaleDateString("fr-FR", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  };
+  const formatRacePositionFr = (position: number) => (position === 1 ? "1er" : `${position}e`);
+
+  const openResultsTeamProfile = (teamName: string) => {
+    const clean = String(teamName || "").trim();
+    if (!clean) return;
+    setSelectedResultTeamName(clean);
+  };
+
+  const selectedResultsTeam = String(selectedResultTeamName || "").trim();
+  const selectedResultsTeamAccent = selectedResultsTeam ? resultTeamColor(selectedResultsTeam) : "#94a3b8";
+  const selectedResultsTeamStanding = RESULTS_S1_TEAM_STANDINGS.find((team) => team.team === selectedResultsTeam) || null;
+  const selectedResultsTeamDrivers = RESULTS_S1_DRIVER_STANDINGS.filter((driver) => driver.team === selectedResultsTeam).sort(
+    (a, b) => a.rank - b.rank
+  );
+  const selectedResultsTeamRaceCards = RESULTS_S1_RACES_DESC.map((race) => {
+    const teamRows = race.results
+      .filter((row) => row.team === selectedResultsTeam)
+      .slice()
+      .sort((a, b) => a.position - b.position);
+    if (teamRows.length === 0) return null;
+
+    const points = teamRows.reduce((sum, row) => sum + racePointsByPosition(row.position, (row as { status?: string }).status), 0);
+    return {
+      race,
+      teamRows,
+      points,
+      bestPosition: teamRows[0]?.position ?? null,
+    };
+  }).filter(Boolean) as Array<{
+    race: (typeof RESULTS_S1_RACES)[number];
+    teamRows: Array<(typeof RESULTS_S1_RACES)[number]["results"][number]>;
+    points: number;
+    bestPosition: number | null;
+  }>;
+
 
 
 
@@ -5983,6 +6123,8 @@ export default function Dashboard() {
 
 
     setSelectedResultKey("");
+    setSelectedResultRaceId("");
+    setSelectedResultTeamName("");
 
 
 
@@ -8414,90 +8556,268 @@ export default function Dashboard() {
                   <div className="border border-[#2d303a] bg-[#161920] p-4 sm:p-6">
 
 
-                    <section className="border border-[#3a3034] bg-gradient-to-r from-[#171a22] via-[#1b1f29] to-[#161920] p-4 sm:p-6">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
+                    <section className="border border-[#3a3034] bg-gradient-to-r from-[#171a22] via-[#1b1f29] to-[#161920] p-2 sm:p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
-                          <p className="text-[10px] uppercase tracking-[0.2em] text-[#b8becd]">Championnat Écurie</p>
-                          <h3 className="f1-title mt-1 text-2xl sm:text-4xl font-black uppercase tracking-[0.08em] text-white">
-                            Saison 1 - 2024 / 2025
+                          <p className="text-[10px] uppercase tracking-[0.2em] text-[#b8becd]">Championnat</p>
+                          <h3 className="f1-title text-2xl sm:text-4xl font-black uppercase tracking-[0.08em] text-white leading-tight">
+                            <span className="text-[#ff4a52]">Ecurie</span> Saison <span className="text-[#ff4a52]">1</span> - 2024 / 2025
                           </h3>
                         </div>
                         <button
                           type="button"
-                          onClick={() => setSelectedResultKey("")}
+                          onClick={() => {
+                            if (selectedResultsTeam) {
+                              setSelectedResultTeamName("");
+                              return;
+                            }
+                            if (selectedResultRace) {
+                              setSelectedResultRaceId("");
+                              return;
+                            }
+                            setSelectedResultKey("");
+                          }}
                           className="inline-flex w-auto items-center justify-center border border-[#d65a62]/45 bg-[#5b2024]/35 px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#ffd3d0] transition hover:border-[#ff6f66]/55 hover:bg-[#692329]/45 hover:text-white"
                         >
-                          Retour menu
+                          Retour
                         </button>
                       </div>
                     </section>
 
-                    <section className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
-                      <article className="border border-[#313541] bg-[#151920]/88 p-4 sm:p-6">
-                        <div className="flex items-center justify-between gap-2">
-                          <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[#eef1f6]">Classement pilotes</h4>
-                          <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.14em] text-[#9aa1b0]">Pilotes</span>
-                        </div>
+                    {selectedResultsTeam ? (
+                      <>
+                        <section className="mt-1 border border-[#3a3034] bg-gradient-to-r from-[#171a22] via-[#1b1f29] to-[#161920] p-2 sm:p-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="leading-tight">
+                              <p className="text-[10px] uppercase tracking-[0.2em] text-[#b8becd]">Fiche ecurie</p>
+                              <h3 className="f1-title text-2xl sm:text-4xl font-black uppercase tracking-[0.08em] text-white leading-tight">
+                                {selectedResultsTeam}
+                              </h3>
+                            </div>
+                            <div className="flex items-center gap-4 sm:gap-6">
+                              <div className="text-right leading-tight">
+                                <p className="text-[10px] uppercase tracking-[0.16em] text-[#a7aebb]">Classement</p>
+                                <p className="text-4xl sm:text-6xl font-black leading-none text-white">#{selectedResultsTeamStanding?.rank ?? "-"}</p>
+                              </div>
+                              <div className="text-right leading-tight">
+                                <p className="text-[10px] uppercase tracking-[0.16em] text-[#a7aebb]">Points</p>
+                                <p className="text-4xl sm:text-6xl font-black leading-none" style={{ color: selectedResultsTeamAccent }}>
+                                  {selectedResultsTeamStanding?.points ?? 0}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </section>
 
-                        <div className="mt-4 space-y-2.5">
-                          {[
-                            { rank: 1, name: "Fast", team: "Tiger Fury Crew", points: 95 },
-                            { rank: 2, name: "Furious", team: "Tiger Fury Crew", points: 88 },
-                            { rank: 3, name: "Arnaud", team: "Bears Fury Crew", points: 82 },
-                            { rank: 4, name: "Loris", team: "Bears Fury Crew", points: 74 },
-                            { rank: 5, name: "Mumu", team: "FRX", points: 67 },
-                            { rank: 6, name: "Shadow", team: "FRX", points: 61 },
-                          ].map((driver) => {
-                            const teamColor =
-                              driver.team === "Tiger Fury Crew"
-                                ? "#ff8a00"
-                                : driver.team === "Bears Fury Crew"
-                                ? "#e10600"
-                                : "#22cfd0";
-                            return (
-                              <div key={driver.name} className="flex items-center justify-between rounded-[2px] border border-[#3a3034] bg-[#1f232b] px-3 py-2.5">
-                                <div className="flex min-w-0 items-center gap-2.5">
-                                  <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-[2px] bg-[#f7f8fb] px-1 text-sm font-black leading-none text-[#101834]">
-                                    {driver.rank}
-                                  </span>
-                                  <span className="h-7 w-[3px] rounded-full" style={{ backgroundColor: teamColor }} />
-                                  <div className="min-w-0">
-                                    <p className="truncate text-sm font-bold uppercase tracking-[0.02em] text-white">{driver.name}</p>
-                                    <p className="truncate text-[10px] uppercase tracking-[0.14em] text-[#a7aebb]">{driver.team}</p>
+                        <section className="mt-2 border border-[#313541] bg-[#151920]/88 p-2 sm:p-3">
+                          <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[#eef1f6]">Pilotes</h4>
+                          <div className="mt-1.5 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                            {selectedResultsTeamDrivers.map((driver) => (
+                              <article key={`team-profile-driver-${driver.name}`} className="border border-[#3a3034] bg-[#1f232b] p-2 sm:p-3">
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="leading-tight">
+                                    <p className="text-[10px] uppercase tracking-[0.15em] text-[#a7aebb]">Pilote</p>
+                                    <p className="text-lg sm:text-2xl font-bold uppercase text-white leading-tight">{driver.name}</p>
+                                  </div>
+                                  <div className="flex items-center gap-3 sm:gap-5">
+                                    <div className="text-right leading-tight">
+                                      <p className="text-[10px] uppercase tracking-[0.14em] text-[#a7aebb]">Classement</p>
+                                      <p className="text-3xl sm:text-5xl font-black leading-none text-white">#{driver.rank}</p>
+                                    </div>
+                                    <div className="text-right leading-tight">
+                                      <p className="text-[10px] uppercase tracking-[0.14em] text-[#a7aebb]">Points</p>
+                                      <p className="text-3xl sm:text-5xl font-black leading-none" style={{ color: selectedResultsTeamAccent }}>
+                                        {driver.points}
+                                      </p>
+                                    </div>
                                   </div>
                                 </div>
-                                <p className="ml-2 text-[30px] font-semibold leading-[0.9] text-[#f6f8fc]">{driver.points}</p>
-                              </div>
+                              </article>
+                            ))}
+                          </div>
+                        </section>
+
+                        <section className="mt-2 border border-[#313541] bg-[#151920]/88 p-2 sm:p-3">
+                          <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[#eef1f6]">Courses de l'ecurie</h4>
+
+                          <div className="mt-1.5 space-y-1.5">
+                            {selectedResultsTeamRaceCards.map((card) => (
+                              <article key={`team-profile-race-${card.race.id}`} className="border border-[#3a3034] bg-[#1f232b] p-2 sm:p-3">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <p className="text-[10px] uppercase tracking-[0.16em] text-[#a7aebb]">
+                                    {card.race.id} • {card.race.circuit} • {formatRaceDateFr(card.race.date)}
+                                  </p>
+                                  <span className="text-[10px] uppercase tracking-[0.14em]" style={{ color: selectedResultsTeamAccent }}>
+                                    {card.points} pts
+                                  </span>
+                                </div>
+
+                                <div className="mt-1.5 space-y-1">
+                                  {card.teamRows.map((row) => (
+                                    <div key={`team-profile-row-${card.race.id}-${row.pilot}`} className="flex items-center justify-between border border-[#343844] bg-[#1e222c] px-3 py-2">
+                                      <p className="text-sm text-gray-100">
+                                        {formatRacePositionFr(row.position)} - {row.pilot}
+                                      </p>
+                                      <span className="text-[10px] uppercase tracking-[0.12em] text-[#ffd3d0]">
+                                        {racePointsByPosition(row.position, (row as { status?: string }).status)} pts
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </article>
+                            ))}
+                          </div>
+                        </section>
+                      </>
+                    ) : selectedResultRace ? (
+                      <>
+                        <section className="mt-4 border border-[#3a3034] bg-gradient-to-r from-[#171a22] via-[#1b1f29] to-[#161920] p-4 sm:p-6">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                              <p className="text-[10px] uppercase tracking-[0.2em] text-[#b8becd]">Course</p>
+                              <h3 className="f1-title mt-1 text-2xl sm:text-4xl font-black uppercase tracking-[0.08em] text-white">
+                                {selectedResultRace.id} - <span className="text-[#ff4a52]">{selectedResultRace.circuit}</span> - {formatRaceDateFr(selectedResultRace.date)}
+                              </h3>
+                            </div>
+                          </div>
+                        </section>
+
+                        <section className="mt-4 grid grid-cols-1 gap-2 lg:grid-cols-2">
+                          <article className="border border-[#313541] bg-[#151920]/88 p-3 sm:p-4">
+                            <div className="flex items-center justify-between gap-2">
+                              <h4 className="text-base sm:text-lg font-black uppercase tracking-[0.2em] text-[#eef1f6]">Classement pilotes</h4>
+                            </div>
+
+                            <div className="mt-2.5 space-y-1.5">
+                              {selectedResultRace.results
+                                .slice()
+                                .sort((a, b) => a.position - b.position)
+                                .map((driver) => {
+                                  const teamColor = resultTeamColor(driver.team);
+                                  return (
+                                    <button
+                                      type="button"
+                                      key={`${selectedResultRace.id}-${driver.pilot}`}
+                                      onClick={() => openResultsTeamProfile(driver.team)}
+                                      className="w-full flex items-center justify-between rounded-[2px] border border-[#3a3034] bg-[#1f232b] px-3 py-1.5 sm:py-2 text-left hover:border-[#a13a42] hover:bg-[#2a171a] transition"
+                                    >
+                                      <div className="flex min-w-0 items-center gap-2">
+                                        <span className="inline-flex h-9 min-w-9 sm:h-11 sm:min-w-11 items-center justify-center rounded-[2px] bg-[#f7f8fb] px-1 text-lg sm:text-2xl font-black leading-none text-[#101834]">
+                                          {driver.position}
+                                        </span>
+                                        <span className="h-9 sm:h-11 w-[3px] rounded-full" style={{ backgroundColor: teamColor }} />
+                                        <div className="min-w-0 leading-none">
+                                          <p className="truncate text-lg sm:text-2xl font-bold uppercase tracking-[0.02em] text-white leading-[0.95]">{driver.pilot}</p>
+                                          <p className="mt-0.5 truncate text-xs sm:text-sm uppercase tracking-[0.14em] text-[#a7aebb] leading-[1]">{driver.team}</p>
+                                        </div>
+                                      </div>
+                                      <p className="ml-2 text-[42px] sm:text-[60px] font-semibold leading-[0.9] text-[#f6f8fc]">
+                                        {racePointsByPosition(driver.position, (driver as { status?: string }).status)}
+                                      </p>
+                                    </button>
+                                  );
+                                })}
+                            </div>
+                          </article>
+
+                          <article className="border border-[#313541] bg-[#151920]/88 p-3 sm:p-4">
+                            <div className="flex items-center justify-between gap-2">
+                              <h4 className="text-base sm:text-lg font-black uppercase tracking-[0.2em] text-[#eef1f6]">Classement ecuries</h4>
+                            </div>
+
+                            <div className="mt-2.5 space-y-1.5">
+                              {Object.entries(
+                                selectedResultRace.results.reduce((acc, row) => {
+                                  acc[row.team] = (acc[row.team] || 0) + racePointsByPosition(row.position, (row as { status?: string }).status);
+                                  return acc;
+                                }, {} as Record<string, number>)
+                              )
+                                .sort((a, b) => b[1] - a[1])
+                                .map(([teamName, teamPoints], index) => {
+                                  const teamColor = resultTeamColor(teamName);
+                                  return (
+                                    <button
+                                      type="button"
+                                      key={`${selectedResultRace.id}-${teamName}`}
+                                      onClick={() => openResultsTeamProfile(teamName)}
+                                      className="w-full flex items-center justify-between rounded-[2px] border border-[#3a3034] bg-[#1f232b] px-3 py-1.5 sm:py-2 text-left hover:border-[#a13a42] hover:bg-[#2a171a] transition"
+                                    >
+                                      <div className="flex min-w-0 items-center gap-2">
+                                        <span className="inline-flex h-9 min-w-9 sm:h-11 sm:min-w-11 items-center justify-center rounded-[2px] bg-[#f7f8fb] px-1 text-lg sm:text-2xl font-black leading-none text-[#101834]">
+                                          {index + 1}
+                                        </span>
+                                        <span className="h-9 sm:h-11 w-[3px] rounded-full" style={{ backgroundColor: teamColor }} />
+                                        <div className="min-w-0 leading-none">
+                                          <p className="truncate text-lg sm:text-2xl font-bold uppercase tracking-[0.02em] text-white leading-[0.95]">{teamName}</p>
+                                        </div>
+                                      </div>
+                                      <p className="ml-2 text-[42px] sm:text-[60px] font-semibold leading-[0.9] text-[#f6f8fc]">{teamPoints}</p>
+                                    </button>
+                                  );
+                                })}
+                            </div>
+                          </article>
+                        </section>
+                      </>
+                    ) : (
+                      <>
+                    <section className="mt-4 grid grid-cols-1 gap-2 lg:grid-cols-2">
+                      <article className="border border-[#313541] bg-[#151920]/88 p-3 sm:p-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <h4 className="text-base sm:text-lg font-black uppercase tracking-[0.2em] text-[#eef1f6]">Classement pilotes</h4>
+                        </div>
+
+                        <div className="mt-2.5 space-y-1.5">
+                          {RESULTS_S1_DRIVER_STANDINGS.map((driver) => {
+                            const teamColor = resultTeamColor(driver.team);
+                            return (
+                              <button
+                                type="button"
+                                key={driver.name}
+                                onClick={() => openResultsTeamProfile(driver.team)}
+                                className="w-full flex items-center justify-between rounded-[2px] border border-[#3a3034] bg-[#1f232b] px-3 py-1.5 sm:py-2 text-left hover:border-[#a13a42] hover:bg-[#2a171a] transition"
+                              >
+                                <div className="flex min-w-0 items-center gap-2">
+                                  <span className="inline-flex h-9 min-w-9 sm:h-11 sm:min-w-11 items-center justify-center rounded-[2px] bg-[#f7f8fb] px-1 text-lg sm:text-2xl font-black leading-none text-[#101834]">
+                                    {driver.rank}
+                                  </span>
+                                  <span className="h-9 sm:h-11 w-[3px] rounded-full" style={{ backgroundColor: teamColor }} />
+                                  <div className="min-w-0 leading-none">
+                                    <p className="truncate text-lg sm:text-2xl font-bold uppercase tracking-[0.02em] text-white leading-[0.95]">{driver.name}</p>
+                                    <p className="mt-0.5 truncate text-xs sm:text-sm uppercase tracking-[0.14em] text-[#a7aebb] leading-[1]">{driver.team}</p>
+                                  </div>
+                                </div>
+                                <p className="ml-2 text-[42px] sm:text-[60px] font-semibold leading-[0.9] text-[#f6f8fc]">{driver.points}</p>
+                              </button>
                             );
                           })}
                         </div>
                       </article>
 
-                      <article className="border border-[#313541] bg-[#151920]/88 p-4 sm:p-6">
+                      <article className="border border-[#313541] bg-[#151920]/88 p-3 sm:p-4">
                         <div className="flex items-center justify-between gap-2">
-                          <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[#eef1f6]">Classement ecuries</h4>
-                          <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.14em] text-[#9aa1b0]">Ecuries</span>
+                          <h4 className="text-base sm:text-lg font-black uppercase tracking-[0.2em] text-[#eef1f6]">Classement ecuries</h4>
                         </div>
 
-                        <div className="mt-4 space-y-2.5">
-                          {[
-                            { rank: 1, team: "Tiger Fury Crew", points: 183, color: "#ff8a00" },
-                            { rank: 2, team: "Bears Fury Crew", points: 156, color: "#e10600" },
-                            { rank: 3, team: "FRX", points: 128, color: "#22cfd0" },
-                          ].map((team) => (
-                            <div key={team.team} className="flex items-center justify-between rounded-[2px] border border-[#3a3034] bg-[#1f232b] px-3 py-2.5">
-                              <div className="flex min-w-0 items-center gap-2.5">
-                                <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-[2px] bg-[#f7f8fb] px-1 text-sm font-black leading-none text-[#101834]">
+                        <div className="mt-2.5 space-y-1.5">
+                          {RESULTS_S1_TEAM_STANDINGS.map((team) => (
+                            <button
+                              type="button"
+                              key={team.team}
+                              onClick={() => openResultsTeamProfile(team.team)}
+                              className="w-full flex items-center justify-between rounded-[2px] border border-[#3a3034] bg-[#1f232b] px-3 py-1.5 sm:py-2 text-left hover:border-[#a13a42] hover:bg-[#2a171a] transition"
+                            >
+                              <div className="flex min-w-0 items-center gap-2">
+                                <span className="inline-flex h-9 min-w-9 sm:h-11 sm:min-w-11 items-center justify-center rounded-[2px] bg-[#f7f8fb] px-1 text-lg sm:text-2xl font-black leading-none text-[#101834]">
                                   {team.rank}
                                 </span>
-                                <span className="h-7 w-[3px] rounded-full" style={{ backgroundColor: team.color }} />
-                                <div className="min-w-0">
-                                  <p className="truncate text-sm font-bold uppercase tracking-[0.02em] text-white">{team.team}</p>
-                                  <p className="truncate text-[10px] uppercase tracking-[0.14em] text-[#a7aebb]">#{team.rank}</p>
+                                <span className="h-9 sm:h-11 w-[3px] rounded-full" style={{ backgroundColor: team.color }} />
+                                <div className="min-w-0 leading-none">
+                                  <p className="truncate text-lg sm:text-2xl font-bold uppercase tracking-[0.02em] text-white leading-[0.95]">{team.team}</p>
                                 </div>
                               </div>
-                              <p className="ml-2 text-[30px] font-semibold leading-[0.9] text-[#f6f8fc]">{team.points}</p>
-                            </div>
+                              <p className="ml-2 text-[42px] sm:text-[60px] font-semibold leading-[0.9] text-[#f6f8fc]">{team.points}</p>
+                            </button>
                           ))}
                         </div>
                       </article>
@@ -8507,71 +8827,76 @@ export default function Dashboard() {
                       <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[#eef1f6]">Dernieres courses</h4>
 
                       <div className="mt-4 space-y-2.5">
-                        {[
-                          {
-                            id: "E10",
-                            circuit: "Monza",
-                            date: "2025-03-09",
-                            podium: [
-                              { position: 1, pilot: "Fast", team: "Tiger Fury Crew" },
-                              { position: 2, pilot: "Arnaud", team: "Bears Fury Crew" },
-                              { position: 3, pilot: "Mumu", team: "FRX" },
-                            ],
-                          },
-                          {
-                            id: "E11",
-                            circuit: "Suzuka",
-                            date: "2025-03-16",
-                            podium: [
-                              { position: 1, pilot: "Furious", team: "Tiger Fury Crew" },
-                              { position: 2, pilot: "Loris", team: "Bears Fury Crew" },
-                              { position: 3, pilot: "Shadow", team: "FRX" },
-                            ],
-                          },
-                          {
-                            id: "E12",
-                            circuit: "Interlagos",
-                            date: "2025-03-23",
-                            podium: [
-                              { position: 1, pilot: "Arnaud", team: "Bears Fury Crew" },
-                              { position: 2, pilot: "Fast", team: "Tiger Fury Crew" },
-                              { position: 3, pilot: "Furious", team: "Tiger Fury Crew" },
-                            ],
-                          },
-                        ].map((race) => (
-                          <article key={race.id} className="border border-[#3a3034] bg-[#1f232b] p-3 sm:p-4">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <p className="text-[10px] uppercase tracking-[0.16em] text-[#a7aebb]">
-                                {race.id} • {race.circuit} • {race.date}
-                              </p>
-                              <span className="text-[10px] uppercase tracking-[0.14em] text-gray-400">Podium</span>
-                            </div>
+                        {RESULTS_S1_RACES_DESC.map((race) => (
+                          <button
+                            type="button"
+                            key={race.id}
+                            onClick={() => setSelectedResultRaceId(race.id)}
+                            className="w-full border border-white/15 bg-[#121419] p-4 sm:p-5 text-left hover:border-white/30 transition"
+                          >
+                            <div className="space-y-2">
+                              <p className="text-xs uppercase tracking-[0.16em] text-gray-400">{race.id} • {race.circuit} • {formatRaceDateFr(race.date)}</p>
+                              <div className="border border-white/10 bg-[#0f1117] p-2 sm:p-2.5 overflow-hidden">
+                                <div className="flex items-end justify-center gap-1.5 sm:gap-4">
+                                  {[1, 0, 2].map((podiumIndex) => {
+                                    const row = race.results[podiumIndex];
+                                    if (!row) return null;
 
-                            <div className="mt-3 space-y-1.5">
-                              {race.podium.map((row) => {
-                                const teamColor =
-                                  row.team === "Tiger Fury Crew"
-                                    ? "#ff8a00"
-                                    : row.team === "Bears Fury Crew"
-                                    ? "#e10600"
-                                    : "#22cfd0";
-                                return (
-                                  <div key={`${race.id}-${row.position}-${row.pilot}`} className="flex items-center justify-between border border-[#343844] bg-[#1e222c] px-3 py-2">
-                                    <p className="text-sm text-gray-100">
-                                      P{row.position} • {row.pilot}
-                                    </p>
-                                    <span className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.12em] text-[#ffd3d0]">
-                                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: teamColor }} />
-                                      {row.team}
-                                    </span>
-                                  </div>
-                                );
-                              })}
+                                    const order = podiumIndex + 1;
+                                    const heightClass =
+                                      order === 1
+                                        ? "h-16 sm:h-20"
+                                        : order === 2
+                                        ? "h-14 sm:h-16"
+                                        : "h-12 sm:h-14";
+                                    const toneClass =
+                                      order === 1
+                                        ? "border-[#b8891e]/60 bg-[#c89b2b] text-[#15171d]"
+                                        : order === 2
+                                        ? "border-[#b7bdcc]/45 bg-[#b2b8c6] text-[#0e1118]"
+                                        : "border-[#9b6a4f]/45 bg-[#8a5d45] text-[#f5f6f8]";
+                                    const numberClass =
+                                      order === 1
+                                        ? "text-xl sm:text-2xl"
+                                        : order === 2
+                                        ? "text-lg sm:text-xl"
+                                        : "text-base sm:text-lg";
+                                    const pointsClass =
+                                      order === 1
+                                        ? "text-[9px] sm:text-[10px]"
+                                        : "text-[8px] sm:text-[9px]";
+
+                                    return (
+                                      <div key={`${race.id}-${row.position}-${row.pilot}`} className="flex w-[31%] max-w-[170px] min-w-0 flex-col items-center">
+                                        <div className="mb-1 flex flex-col items-center text-center">
+                                          <p className="text-[10px] sm:text-[11px] font-semibold text-white truncate w-full text-center px-1">{row.pilot}</p>
+                                          <p className="text-[9px] sm:text-[10px] font-normal text-gray-400 truncate w-full text-center px-1">{row.team}</p>
+                                        </div>
+                                        <div className={`w-full border ${toneClass} ${heightClass} flex flex-col items-center justify-end px-1.5 py-1.5 sm:px-2 sm:py-2`}>
+                                          {order === 1 && (
+                                            <span className="mb-0.5 inline-flex items-center" aria-label="Couronne première place" title="Couronne première place">
+                                              <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                                <path d="M4 18h16l-1.2-7-4.3 2.8L12 8.5l-2.5 5.3L5.2 11 4 18Zm1.8 2h12.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                                              </svg>
+                                            </span>
+                                          )}
+                                          <span className={`${numberClass} font-bold leading-none`}>{formatRacePositionFr(order)}</span>
+                                          <span className={`mt-0.5 ${pointsClass} font-medium uppercase tracking-[0.08em] leading-none`}>
+                                            {racePointsByPosition(row.position, (row as { status?: string }).status)} pts
+                                          </span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
                             </div>
-                          </article>
+                          </button>
                         ))}
                       </div>
                     </section>
+                      </>
+                    )}
 
 
                   </div>
@@ -8581,14 +8906,7 @@ export default function Dashboard() {
 
 
                   <div className="border border-[#2d303a] bg-[#161920] p-4 sm:p-6">
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#2e323b] pb-4">
-                      <div className="min-w-0">
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-[#b8becd]">Resultats</p>
-                        <h3 className="mt-1 text-2xl sm:text-4xl font-black uppercase tracking-[0.08em] text-white">Menu championnats</h3>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 space-y-2.5">
+                    <div className="space-y-2.5">
                       {resultsCategories.map((category) => (
                         <button
                           type="button"
@@ -8600,7 +8918,6 @@ export default function Dashboard() {
                             <p className="text-sm sm:text-base font-semibold uppercase tracking-[0.04em] text-white leading-tight break-words">
                               {category.title}
                             </p>
-                            <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-[#9aa1b0]">Cliquer pour ouvrir la vue detaillee</p>
                           </div>
                           <span className="shrink-0 inline-flex items-center border border-white/25 bg-black/74 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-[#ff4a52]">
                             {category.status}
