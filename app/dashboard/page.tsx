@@ -555,6 +555,31 @@ const TEAM_S1_HIGHLIGHTS = [
 
 ] as const;
 
+type ResultsRaceRow = {
+  pilot: string;
+  team: string;
+  position: number;
+  status?: string;
+};
+
+type ResultsRace = {
+  id: string;
+  circuit: string;
+  date: string;
+  results: ResultsRaceRow[];
+};
+
+type ResultsChampionship = {
+  key: string;
+  title: string;
+  status: string;
+  races: ResultsRace[];
+};
+
+const DEFAULT_RESULTS_CHAMPIONSHIP_KEY = "team-s1-2024-2025";
+const DEFAULT_RESULTS_CHAMPIONSHIP_TITLE = "Championnat Ecurie Saison 1 - 2024 / 2025";
+const DEFAULT_RESULTS_CHAMPIONSHIP_STATUS = "Terminé";
+
 
 
 
@@ -778,6 +803,17 @@ export default function Dashboard() {
   const [selectedResultKey, setSelectedResultKey] = useState("");
   const [selectedResultRaceId, setSelectedResultRaceId] = useState("");
   const [selectedResultTeamName, setSelectedResultTeamName] = useState("");
+  const [resultsChampionships, setResultsChampionships] = useState<ResultsChampionship[]>([]);
+  const [newChampionshipTitle, setNewChampionshipTitle] = useState("");
+  const [newChampionshipStatus, setNewChampionshipStatus] = useState("Terminé");
+  const [newRaceId, setNewRaceId] = useState("");
+  const [newRaceCircuit, setNewRaceCircuit] = useState("");
+  const [newRaceDate, setNewRaceDate] = useState("");
+  const [newRacePilot, setNewRacePilot] = useState("");
+  const [newRaceTeam, setNewRaceTeam] = useState("");
+  const [newRacePosition, setNewRacePosition] = useState("1");
+  const [newRaceStatus, setNewRaceStatus] = useState("");
+  const [resultsAdminMessage, setResultsAdminMessage] = useState<string | null>(null);
 
 
 
@@ -1360,6 +1396,200 @@ export default function Dashboard() {
 
 
   }, [router]);
+
+  useEffect(() => {
+    const firestore = getFirestore();
+    if (!firestore) return;
+
+    return onSnapshot(collection(firestore, "resultsChampionships"), (snapshot) => {
+      const items = snapshot.docs.map((d) => d.data() as ResultsChampionship);
+      const sorted = items
+        .filter((item) => item && item.key)
+        .sort((a, b) => String(a.title || "").localeCompare(String(b.title || "")));
+      setResultsChampionships(sorted);
+    });
+  }, []);
+
+  const postResultsAdminAction = async (payload: Record<string, unknown>) => {
+    const token = await user?.getIdToken?.();
+    if (!token) {
+      throw new Error("session-invalide");
+    }
+
+    const response = await fetch("/api/results-admin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json().catch(() => ({} as { message?: string }));
+    if (!response.ok) {
+      const message = String(data?.message || "Erreur admin");
+      throw new Error(message);
+    }
+  };
+
+  const canManageResultsAsSuperAdmin =
+    userRole === "superAdmin" && normalizeEmail(user?.email) === "beaudouin.arnaud@gmail.com";
+
+  const slugifyResultsKey = (value: string) =>
+    String(value || "")
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+
+  const handleCreateChampionship = async () => {
+    if (!canManageResultsAsSuperAdmin) return;
+
+    const title = String(newChampionshipTitle || "").trim();
+    if (!title) {
+      setResultsAdminMessage("Titre championnat requis.");
+      return;
+    }
+
+    const key = slugifyResultsKey(title);
+    if (!key) {
+      setResultsAdminMessage("Cle championnat invalide.");
+      return;
+    }
+
+    try {
+      await postResultsAdminAction({
+        action: "createOrUpdateChampionship",
+        title,
+        status: String(newChampionshipStatus || "Terminé").trim() || "Terminé",
+      });
+      setNewChampionshipTitle("");
+      setResultsAdminMessage("Championnat cree.");
+    } catch (error) {
+      setResultsAdminMessage(error instanceof Error ? error.message : "Erreur lors de la creation.");
+    }
+  };
+
+  const handleUpdateSelectedChampionship = async () => {
+    if (!canManageResultsAsSuperAdmin) return;
+
+    const key = String(selectedResultKey || "").trim();
+    if (!key) {
+      setResultsAdminMessage("Selectionne un championnat a modifier.");
+      return;
+    }
+
+    const title = String(newChampionshipTitle || "").trim();
+    const status = String(newChampionshipStatus || "").trim();
+    if (!title) {
+      setResultsAdminMessage("Titre championnat requis.");
+      return;
+    }
+
+    try {
+      await postResultsAdminAction({
+        action: "createOrUpdateChampionship",
+        selectedKey: key,
+        title,
+        status: status || "Actif",
+      });
+      setResultsAdminMessage("Championnat mis a jour.");
+    } catch (error) {
+      setResultsAdminMessage(error instanceof Error ? error.message : "Erreur lors de la mise a jour.");
+    }
+  };
+
+  const handleCreateRace = async () => {
+    if (!canManageResultsAsSuperAdmin) return;
+
+    const champ = resultsChampionships.find((c) => c.key === selectedResultKey);
+    if (!champ) {
+      setResultsAdminMessage("Selectionne un championnat.");
+      return;
+    }
+
+    const raceId = String(newRaceId || "").trim().toUpperCase();
+    const circuit = String(newRaceCircuit || "").trim();
+    const date = String(newRaceDate || "").trim();
+
+    if (!raceId || !circuit || !date) {
+      setResultsAdminMessage("Race ID, circuit et date sont requis.");
+      return;
+    }
+
+    const existingRace = champ.races.find((r) => String(r.id || "").toUpperCase() === raceId);
+    try {
+      await postResultsAdminAction({
+        action: "createOrUpdateRace",
+        championshipKey: champ.key,
+        raceId,
+        circuit,
+        date,
+      });
+      setNewRaceId("");
+      setNewRaceCircuit("");
+      setNewRaceDate("");
+      setResultsAdminMessage(existingRace ? "Course mise a jour." : "Course ajoutee.");
+    } catch (error) {
+      setResultsAdminMessage(error instanceof Error ? error.message : "Erreur lors de l enregistrement course.");
+    }
+  };
+
+  const handleAddRaceResultRow = async () => {
+    if (!canManageResultsAsSuperAdmin) return;
+
+    const champ = resultsChampionships.find((c) => c.key === selectedResultKey);
+    if (!champ) {
+      setResultsAdminMessage("Selectionne un championnat.");
+      return;
+    }
+
+    const raceId = String(selectedResultRaceId || "").trim();
+    if (!raceId) {
+      setResultsAdminMessage("Selectionne une course.");
+      return;
+    }
+
+    const pilot = String(newRacePilot || "").trim();
+    const team = String(newRaceTeam || "").trim();
+    const status = String(newRaceStatus || "").trim().toUpperCase();
+    const position = Number.parseInt(String(newRacePosition || "1"), 10);
+    const safePosition = Number.isFinite(position) && position > 0 ? position : 1;
+
+    if (!pilot || !team) {
+      setResultsAdminMessage("Pilote et ecurie sont requis.");
+      return;
+    }
+
+    try {
+      await postResultsAdminAction({
+        action: "upsertRaceRow",
+        championshipKey: champ.key,
+        raceId,
+        pilot,
+        team,
+        position: safePosition,
+        status,
+      });
+      setNewRacePilot("");
+      setNewRaceTeam("");
+      setNewRaceStatus("");
+      setNewRacePosition("1");
+      setResultsAdminMessage("Ligne pilote/ecurie enregistree.");
+    } catch (error) {
+      setResultsAdminMessage(error instanceof Error ? error.message : "Erreur lors de l enregistrement ligne.");
+    }
+  };
+
+  useEffect(() => {
+    if (!canManageResultsAsSuperAdmin) return;
+    const selected = resultsChampionships.find((item) => item.key === selectedResultKey);
+    if (!selected) return;
+    setNewChampionshipTitle(selected.title || "");
+    setNewChampionshipStatus(selected.status || "Actif");
+  }, [canManageResultsAsSuperAdmin, resultsChampionships, selectedResultKey]);
 
 
 
@@ -5318,31 +5548,26 @@ export default function Dashboard() {
 
 
 
-  const resultsCategories = [
-
-
+  const fallbackResultsCategories = [
     {
-
-
-      key: "team-s1-2024-2025",
-
-
-      title: "Championnat Écurie Saison 1 - 2024 / 2025",
-
-
-      status: "Terminé",
-
-
+      key: DEFAULT_RESULTS_CHAMPIONSHIP_KEY,
+      title: DEFAULT_RESULTS_CHAMPIONSHIP_TITLE,
+      status: DEFAULT_RESULTS_CHAMPIONSHIP_STATUS,
       statusClass: "border-white/25 bg-black/74 text-[#ff4a52]",
-
-
-      href: "/dashboard?tab=results&result=team-s1-2024-2025",
-
-
+      href: `/dashboard?tab=results&result=${DEFAULT_RESULTS_CHAMPIONSHIP_KEY}`,
     },
-
-
   ];
+
+  const resultsCategories =
+    resultsChampionships.length > 0
+      ? resultsChampionships.map((item) => ({
+          key: item.key,
+          title: item.title,
+          status: item.status || "Actif",
+          statusClass: "border-white/25 bg-black/74 text-[#ff4a52]",
+          href: `/dashboard?tab=results&result=${item.key}`,
+        }))
+      : fallbackResultsCategories;
 
 
 
@@ -5363,7 +5588,7 @@ export default function Dashboard() {
     return 0;
   };
 
-  const RESULTS_S1_RACES = [
+  const DEFAULT_RESULTS_S1_RACES = [
     {
       id: "E10",
       circuit: "Monza",
@@ -5403,7 +5628,14 @@ export default function Dashboard() {
         { position: 6, pilot: "Shadow", team: "FRX" },
       ],
     },
-  ] as const;
+  ];
+
+  const selectedResultsChampionship = resultsChampionships.find((c) => c.key === selectedResultKey) || null;
+
+  const RESULTS_S1_RACES: ResultsRace[] =
+    selectedResultsChampionship && Array.isArray(selectedResultsChampionship.races) && selectedResultsChampionship.races.length > 0
+      ? selectedResultsChampionship.races
+      : DEFAULT_RESULTS_S1_RACES;
 
   const resultTeamColor = (teamName: string) => {
     if (teamName === "Tiger Fury Crew") return "#ff8a00";
@@ -8561,7 +8793,7 @@ export default function Dashboard() {
                         <div>
                           <p className="text-[10px] uppercase tracking-[0.2em] text-[#b8becd]">Championnat</p>
                           <h3 className="f1-title text-2xl sm:text-4xl font-black uppercase tracking-[0.08em] text-white leading-tight">
-                            <span className="text-[#ff4a52]">Ecurie</span> Saison <span className="text-[#ff4a52]">1</span> - 2024 / 2025
+                            {selectedResultsCategory?.title || DEFAULT_RESULTS_CHAMPIONSHIP_TITLE}
                           </h3>
                         </div>
                         <button
@@ -8681,6 +8913,45 @@ export default function Dashboard() {
                             </div>
                           </div>
                         </section>
+
+                        {canManageResultsAsSuperAdmin && (
+                          <section className="mt-3 border border-[#3a3034] bg-[#1f232b] p-3">
+                            <p className="text-[10px] uppercase tracking-[0.16em] text-[#a7aebb]">Ajouter ecurie + pilote a la course</p>
+                            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-5">
+                              <input
+                                value={newRacePilot}
+                                onChange={(e) => setNewRacePilot(e.target.value)}
+                                placeholder="Pilote"
+                                className="border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
+                              />
+                              <input
+                                value={newRaceTeam}
+                                onChange={(e) => setNewRaceTeam(e.target.value)}
+                                placeholder="Ecurie"
+                                className="border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
+                              />
+                              <input
+                                value={newRacePosition}
+                                onChange={(e) => setNewRacePosition(e.target.value)}
+                                placeholder="Position"
+                                className="border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
+                              />
+                              <input
+                                value={newRaceStatus}
+                                onChange={(e) => setNewRaceStatus(e.target.value)}
+                                placeholder="Status (ex: DNF)"
+                                className="border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={handleAddRaceResultRow}
+                                className="border border-[#d65a62]/45 bg-[#5b2024]/35 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#ffd3d0] hover:border-[#ff6f66]/55 hover:bg-[#692329]/45 hover:text-white"
+                              >
+                                Ajouter ligne
+                              </button>
+                            </div>
+                          </section>
+                        )}
 
                         <section className="mt-4 grid grid-cols-1 gap-2 lg:grid-cols-2">
                           <article className="border border-[#313541] bg-[#151920]/88 p-3 sm:p-4">
@@ -8826,6 +9097,36 @@ export default function Dashboard() {
                     <section className="mt-4 border border-[#313541] bg-[#151920]/88 p-4 sm:p-6">
                       <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[#eef1f6]">Dernieres courses</h4>
 
+                      {canManageResultsAsSuperAdmin && !selectedResultRace && !selectedResultsTeam && (
+                        <div className="mt-3 grid grid-cols-1 gap-2 border border-[#3a3034] bg-[#1f232b] p-3 sm:grid-cols-4">
+                          <input
+                            value={newRaceId}
+                            onChange={(e) => setNewRaceId(e.target.value)}
+                            placeholder="Code course (ex: E13)"
+                            className="border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
+                          />
+                          <input
+                            value={newRaceCircuit}
+                            onChange={(e) => setNewRaceCircuit(e.target.value)}
+                            placeholder="Circuit"
+                            className="border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
+                          />
+                          <input
+                            value={newRaceDate}
+                            onChange={(e) => setNewRaceDate(e.target.value)}
+                            placeholder="YYYY-MM-DD"
+                            className="border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleCreateRace}
+                            className="border border-[#d65a62]/45 bg-[#5b2024]/35 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#ffd3d0] hover:border-[#ff6f66]/55 hover:bg-[#692329]/45 hover:text-white"
+                          >
+                            Creer course
+                          </button>
+                        </div>
+                      )}
+
                       <div className="mt-4 space-y-2.5">
                         {RESULTS_S1_RACES_DESC.map((race) => (
                           <button
@@ -8906,6 +9207,43 @@ export default function Dashboard() {
 
 
                   <div className="border border-[#2d303a] bg-[#161920] p-4 sm:p-6">
+                    {canManageResultsAsSuperAdmin && (
+                      <div className="mb-3 border border-[#3a3034] bg-[#1f232b] p-3">
+                        <p className="text-[10px] uppercase tracking-[0.16em] text-[#a7aebb]">Creer championnat (super admin)</p>
+                        <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                          <input
+                            value={newChampionshipTitle}
+                            onChange={(e) => setNewChampionshipTitle(e.target.value)}
+                            placeholder="Titre championnat"
+                            className="border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
+                          />
+                          <input
+                            value={newChampionshipStatus}
+                            onChange={(e) => setNewChampionshipStatus(e.target.value)}
+                            placeholder="Statut"
+                            className="border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
+                          />
+                          <div className="flex gap-2 sm:col-span-1">
+                            <button
+                              type="button"
+                              onClick={handleCreateChampionship}
+                              className="flex-1 border border-[#d65a62]/45 bg-[#5b2024]/35 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#ffd3d0] hover:border-[#ff6f66]/55 hover:bg-[#692329]/45 hover:text-white"
+                            >
+                              Creer
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleUpdateSelectedChampionship}
+                              className="flex-1 border border-white/25 bg-black/40 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-white hover:border-white/45"
+                            >
+                              Modifier
+                            </button>
+                          </div>
+                        </div>
+                        {resultsAdminMessage && <p className="mt-2 text-xs text-[#ffd3d0]">{resultsAdminMessage}</p>}
+                      </div>
+                    )}
+
                     <div className="space-y-2.5">
                       {resultsCategories.map((category) => (
                         <button
