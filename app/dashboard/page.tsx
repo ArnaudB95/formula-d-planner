@@ -251,10 +251,7 @@ const TEAM_S1_STANDINGS = [
 
 
   {
-
-
     rank: 1,
-
 
     player: "Arnaud",
 
@@ -275,10 +272,7 @@ const TEAM_S1_STANDINGS = [
 
 
   {
-
-
     rank: 2,
-
 
     player: "Sébastien",
 
@@ -294,13 +288,9 @@ const TEAM_S1_STANDINGS = [
 
     races: { E01: 11, E02: 10, E03: 14, E04: 3, E05: 13, E06: 16, E07: 2, E08: 10, E09: 11, E10: 8, E11: 14, E12: 0 },
 
-
   },
 
-
   {
-
-
     rank: 3,
 
 
@@ -321,10 +311,7 @@ const TEAM_S1_STANDINGS = [
 
   },
 
-
   {
-
-
     rank: 4,
 
 
@@ -1362,28 +1349,35 @@ export default function Dashboard() {
 
 
 
-      await setDoc(
+      try {
+        await setDoc(
 
 
-        doc(firestore, "members", normalizedEmail),
+          doc(firestore, "members", normalizedEmail),
 
 
-        {
+          {
 
 
-          email: normalizedEmail,
+            email: normalizedEmail,
 
 
-          role: isSuperAdmin ? "superAdmin" : "member",
+            uid: u.uid,
 
 
-        },
+            role: isSuperAdmin ? "superAdmin" : "member",
 
 
-        { merge: true }
+          },
 
 
-      );
+          { merge: true }
+
+
+        );
+      } catch (error) {
+        console.error("[firestore:members:upsert]", error);
+      }
 
 
     });
@@ -1398,6 +1392,7 @@ export default function Dashboard() {
   }, [router]);
 
   useEffect(() => {
+    if (!user?.email) return;
     const firestore = getFirestore();
     if (!firestore) return;
 
@@ -1407,8 +1402,10 @@ export default function Dashboard() {
         .filter((item) => item && item.key)
         .sort((a, b) => String(a.title || "").localeCompare(String(b.title || "")));
       setResultsChampionships(sorted);
+    }, (error) => {
+      console.error("[firestore:resultsChampionships]", error);
     });
-  }, []);
+  }, [user?.email]);
 
   const postResultsAdminAction = async (payload: Record<string, unknown>) => {
     const token = await user?.getIdToken?.();
@@ -1626,6 +1623,7 @@ export default function Dashboard() {
 
 
   useEffect(() => {
+    if (!user?.email) return;
 
 
     const firestore = getFirestore();
@@ -1664,10 +1662,12 @@ export default function Dashboard() {
       );
 
 
+    }, (error) => {
+      console.error("[firestore:events]", error);
     });
 
 
-  }, []);
+  }, [user?.email]);
 
 
 
@@ -1677,6 +1677,7 @@ export default function Dashboard() {
 
 
   useEffect(() => {
+    if (!user?.email) return;
 
 
     const firestore = getFirestore();
@@ -1802,9 +1803,13 @@ export default function Dashboard() {
         setSimuF1NextRace({ raceName, sundayDateISO: String(nextRace.sundayDateISO), participating });
 
 
+      }, (error) => {
+        console.error("[firestore:simuf1Races.entries]", error);
       });
 
 
+    }, (error) => {
+      console.error("[firestore:simuf1Races]", error);
     });
 
 
@@ -1833,6 +1838,7 @@ export default function Dashboard() {
 
 
   useEffect(() => {
+    if (!user?.email) return;
 
 
     const firestore = getFirestore();
@@ -2066,10 +2072,12 @@ export default function Dashboard() {
       }
 
 
+    }, (error) => {
+      console.error("[firestore:members]", error);
     });
 
 
-  }, [user]);
+  }, [user?.email]);
 
 
 
@@ -2079,6 +2087,7 @@ export default function Dashboard() {
 
 
   useEffect(() => {
+    if (!user?.email) return;
 
 
     const firestore = getFirestore();
@@ -2123,10 +2132,12 @@ export default function Dashboard() {
       setVotes(data);
 
 
+    }, (error) => {
+      console.error("[firestore:votes]", error);
     });
 
 
-  }, []);
+  }, [user?.email]);
 
 
 
@@ -2136,6 +2147,7 @@ export default function Dashboard() {
 
 
   useEffect(() => {
+    if (!user?.email) return;
 
 
     const firestore = getFirestore();
@@ -2174,10 +2186,12 @@ export default function Dashboard() {
       );
 
 
+    }, (error) => {
+      console.error("[firestore:chat]", error);
     });
 
 
-  }, []);
+  }, [user?.email]);
 
 
 
@@ -2267,6 +2281,8 @@ export default function Dashboard() {
       setOnlineMemberEmails(onlineEmails);
 
 
+    }, (error) => {
+      console.error("[firestore:chatTyping]", error);
     });
 
 
@@ -2294,31 +2310,38 @@ export default function Dashboard() {
     const heartbeat = async () => {
 
 
-      await setDoc(
+      try {
+        await setDoc(
 
 
-        doc(firestore, "chatTyping", user.email),
+          doc(firestore, "chatTyping", normalizeEmail(user.email)),
 
 
-        {
+          {
 
 
-          userEmail: user.email,
+            userEmail: normalizeEmail(user.email),
 
 
-          isTyping: false,
+            uid: user.uid,
 
 
-          updatedAt: serverTimestamp(),
+            isTyping: false,
 
 
-        },
+            updatedAt: serverTimestamp(),
 
 
-        { merge: true }
+          },
 
 
-      );
+          { merge: true }
+
+
+        );
+      } catch (error) {
+        console.error("[firestore:chatTyping:heartbeat]", error);
+      }
 
 
     };
@@ -2372,7 +2395,7 @@ export default function Dashboard() {
 
 
 
-    return onSnapshot(doc(firestore, "chatReads", user.email), (snap) => {
+    return onSnapshot(doc(firestore, "chatReads", normalizeEmail(user.email)), (snap) => {
 
 
       const data = snap.data();
@@ -2399,6 +2422,8 @@ export default function Dashboard() {
       setChatReadsLoaded(true);
 
 
+    }, (error) => {
+      console.error("[firestore:chatReads]", error);
     });
 
 
@@ -2435,7 +2460,7 @@ export default function Dashboard() {
 
 
 
-    return onSnapshot(doc(firestore, "evolutionReads", user.email), (snap) => {
+    return onSnapshot(doc(firestore, "evolutionReads", normalizeEmail(user.email)), (snap) => {
 
 
       const data = snap.data();
@@ -2483,6 +2508,8 @@ export default function Dashboard() {
       setEvolutionReadsLoaded(true);
 
 
+    }, (error) => {
+      console.error("[firestore:evolutionReads]", error);
     });
 
 
@@ -2778,6 +2805,7 @@ export default function Dashboard() {
 
 
   useEffect(() => {
+    if (!user?.email) return;
 
 
     const firestore = getFirestore();
@@ -2801,10 +2829,12 @@ export default function Dashboard() {
       setEvolutionRequests(data);
 
 
+    }, (error) => {
+      console.error("[firestore:evolutionRequests]", error);
     });
 
 
-  }, []);
+  }, [user?.email]);
 
 
 
@@ -2859,6 +2889,7 @@ export default function Dashboard() {
 
 
   useEffect(() => {
+    if (!user?.email) return;
 
 
     const firestore = getFirestore();
@@ -2879,10 +2910,12 @@ export default function Dashboard() {
       setEvolutionReplies(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
 
 
+    }, (error) => {
+      console.error("[firestore:evolutionReplies]", error);
     });
 
 
-  }, []);
+  }, [user?.email]);
 
 
 
@@ -3767,28 +3800,32 @@ export default function Dashboard() {
 
 
 
-    await setDoc(
+    try {
+      await setDoc(
 
 
-      doc(firestore, "chatReads", user.email),
+        doc(firestore, "chatReads", normalizeEmail(user.email)),
 
 
-      {
+        {
 
 
-        userEmail: user.email,
+          userEmail: normalizeEmail(user.email),
 
 
-        lastReadAt: serverTimestamp(),
+          lastReadAt: serverTimestamp(),
 
 
-      },
+        },
 
 
-      { merge: true }
+        { merge: true }
 
 
-    );
+      );
+    } catch (error) {
+      console.error("[firestore:chatReads:write]", error);
+    }
 
 
   };
@@ -3839,34 +3876,38 @@ export default function Dashboard() {
 
 
 
-    await setDoc(
+    try {
+      await setDoc(
 
 
-      doc(firestore, "evolutionReads", user.email),
+        doc(firestore, "evolutionReads", normalizeEmail(user.email)),
 
 
-      {
+        {
 
 
-        userEmail: user.email,
+          userEmail: normalizeEmail(user.email),
 
 
-        requestReadAt: {
+          requestReadAt: {
 
 
-          [requestId]: serverTimestamp(),
+            [requestId]: serverTimestamp(),
+
+
+          },
 
 
         },
 
 
-      },
+        { merge: true }
 
 
-      { merge: true }
-
-
-    );
+      );
+    } catch (error) {
+      console.error("[firestore:evolutionReads:write]", error);
+    }
 
 
   };
@@ -3890,31 +3931,38 @@ export default function Dashboard() {
 
 
 
-    await setDoc(
+    try {
+      await setDoc(
 
 
-      doc(firestore, "chatTyping", user.email),
+        doc(firestore, "chatTyping", normalizeEmail(user.email)),
 
 
-      {
+        {
 
 
-        userEmail: user.email,
+          userEmail: normalizeEmail(user.email),
 
 
-        isTyping,
+          uid: user.uid,
 
 
-        updatedAt: serverTimestamp(),
+          isTyping,
 
 
-      },
+          updatedAt: serverTimestamp(),
 
 
-      { merge: true }
+        },
 
 
-    );
+        { merge: true }
+
+
+      );
+    } catch (error) {
+      console.error("[firestore:chatTyping:write]", error);
+    }
 
 
   };

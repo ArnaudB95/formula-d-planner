@@ -26,11 +26,19 @@ service cloud.firestore {
       );
     }
 
+    match /resultsChampionships/{championship} {
+      allow read: if signedIn();
+      allow write: if isSuperAdmin();
+    }
+
     match /members/{memberId} {
       allow read: if signedIn();
 
       allow create: if signedIn()
-        && normalizeEmail(memberId) == userEmail()
+        && (
+          normalizeEmail(memberId) == userEmail()
+          || (request.resource.data.uid is string && request.resource.data.uid == request.auth.uid)
+        )
         && (
           !("role" in request.resource.data) ||
           request.resource.data.role == "member" ||
@@ -39,7 +47,11 @@ service cloud.firestore {
 
       allow update: if (
           signedIn()
-          && normalizeEmail(memberId) == userEmail()
+          && (
+            normalizeEmail(memberId) == userEmail()
+            || (resource.data.uid is string && resource.data.uid == request.auth.uid)
+            || (request.resource.data.uid is string && request.resource.data.uid == request.auth.uid)
+          )
           && (
             !("role" in request.resource.data) ||
             request.resource.data.role == resource.data.role
@@ -75,15 +87,23 @@ service cloud.firestore {
 
     match /chatTyping/{userId} {
       allow read: if signedIn();
-      allow create, update, delete: if signedIn() && normalizeEmail(userId) == userEmail();
+      allow create, update: if signedIn() && (
+        normalizeEmail(userId) == userEmail()
+        || (request.resource.data.uid is string && request.resource.data.uid == request.auth.uid)
+        || (resource.data.uid is string && resource.data.uid == request.auth.uid)
+      );
+      allow delete: if signedIn() && (
+        normalizeEmail(userId) == userEmail()
+        || (resource.data.uid is string && resource.data.uid == request.auth.uid)
+      );
     }
 
     match /chatReads/{userId} {
-      allow read, create, update, delete: if signedIn() && normalizeEmail(userId) == userEmail();
+      allow read, create, update, delete: if signedIn();
     }
 
     match /evolutionReads/{userId} {
-      allow read, create, update, delete: if signedIn() && normalizeEmail(userId) == userEmail();
+      allow read, create, update, delete: if signedIn();
     }
 
     match /evolutionRequests/{requestId} {
