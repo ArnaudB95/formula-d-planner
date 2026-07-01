@@ -1621,6 +1621,7 @@ export default function Dashboard() {
       championshipType: ResultsChampionshipType;
       seasonNumber: number;
       yearLabel: string;
+      championshipStatus: ResultsChampionshipStatus;
     };
 
     try {
@@ -1683,6 +1684,7 @@ export default function Dashboard() {
       championshipType: ResultsChampionshipType;
       seasonNumber: number;
       yearLabel: string;
+      championshipStatus: ResultsChampionshipStatus;
     };
 
     try {
