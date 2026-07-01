@@ -6743,7 +6743,6 @@ export default function Dashboard() {
           className="h-3.5 w-3.5 shrink-0"
           viewBox="0 0 12 12"
           aria-label="Championnat en cours"
-          title="Championnat en cours"
         >
           <circle cx="6" cy="6" r="4.5" fill="#45a36b" />
         </svg>
@@ -6756,7 +6755,6 @@ export default function Dashboard() {
           className="h-3.5 w-3.5 shrink-0"
           viewBox="0 0 12 12"
           aria-label="Championnat termine"
-          title="Championnat termine"
         >
           <circle cx="6" cy="6" r="4.5" fill="#c85a63" />
         </svg>
