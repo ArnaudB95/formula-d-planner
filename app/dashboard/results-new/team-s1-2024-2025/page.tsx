@@ -81,6 +81,34 @@ const BACK_BUTTON_CLASS =
 
 const rankLabel = (rank: number) => `#${rank}`;
 
+const formatRaceDateFr = (value: string) => {
+  const raw = String(value || "").trim();
+  if (!raw) return "-";
+
+  const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!isoMatch) return raw;
+
+  const year = Number.parseInt(isoMatch[1] || "", 10);
+  const month = Number.parseInt(isoMatch[2] || "", 10);
+  const day = Number.parseInt(isoMatch[3] || "", 10);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return raw;
+
+  const test = new Date(Date.UTC(year, month - 1, day));
+  if (
+    test.getUTCFullYear() !== year ||
+    test.getUTCMonth() !== month - 1 ||
+    test.getUTCDate() !== day
+  ) {
+    return raw;
+  }
+
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(test);
+};
+
 function HelmetBadge({ color }: { color: string }) {
   return (
     <span
@@ -190,7 +218,7 @@ export default function TeamS1DetailedPage() {
               <article key={race.id} className="border border-[#3a3034] bg-[#1f232b] p-3 sm:p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-[10px] uppercase tracking-[0.16em] text-[#a7aebb]">
-                    {race.label} • {race.circuit} • {race.date}
+                    {race.label} • {race.circuit} • {formatRaceDateFr(race.date)}
                   </p>
                   <span className="text-[10px] uppercase tracking-[0.14em] text-gray-400">Podium</span>
                 </div>

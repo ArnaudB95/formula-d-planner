@@ -3,14 +3,38 @@
 import Link from "next/link";
 import { Trophy } from "lucide-react";
 
-const championships = [
-  {
-    key: "team-s1-2024-2025",
-    title: "Championnat Écurie Saison 1 - 2024 / 2025",
-    href: "/dashboard/results-new/team-s1-2024-2025",
-    status: "Terminé",
-  },
-] as const;
+type ChampionshipMenuItem = {
+  key: string;
+  title: string;
+  href: string;
+  status: string;
+};
+
+const championships: ChampionshipMenuItem[] = [];
+
+const renderSimpleChampionshipTitle = (title: string) => {
+  const segments = title.split(/(Ecurie|Écurie|Équipe|Individuel|Saison\s+\d+)/g).filter(Boolean);
+
+  return segments.map((segment, index) => {
+    if (/^(Ecurie|Écurie|Équipe|Individuel)$/i.test(segment)) {
+      return <span key={`${segment}-${index}`} className="text-[#ff4a52]">{segment}</span>;
+    }
+
+    if (/^Saison\s+\d+$/i.test(segment)) {
+      const match = segment.match(/^(Saison\s+)(\d+)$/i);
+      if (!match) return <span key={`${segment}-${index}`} className="text-white">{segment}</span>;
+
+      return (
+        <span key={`${segment}-${index}`} className="text-white">
+          {match[1]}
+          <span className="text-[#ff4a52]">{match[2]}</span>
+        </span>
+      );
+    }
+
+    return <span key={`${segment}-${index}`} className="text-white">{segment}</span>;
+  });
+};
 
 export default function ResultsNewMenuPage() {
   return (
@@ -32,7 +56,13 @@ export default function ResultsNewMenuPage() {
           </div>
 
           <div className="mt-4 space-y-2.5">
-            {championships.map((championship) => (
+            {championships.length === 0 ? (
+              <div className="border border-[#3a3034] bg-[#1f232b] p-3 sm:p-4">
+                <p className="text-sm sm:text-base font-semibold uppercase tracking-[0.04em] text-white leading-tight break-words">
+                  Aucun championnat disponible
+                </p>
+              </div>
+            ) : championships.map((championship) => (
               <Link
                 key={championship.key}
                 href={championship.href}
@@ -44,7 +74,7 @@ export default function ResultsNewMenuPage() {
                   </span>
                   <div className="min-w-0">
                     <p className="text-sm sm:text-base font-semibold uppercase tracking-[0.04em] text-white leading-tight break-words">
-                      {championship.title}
+                      {renderSimpleChampionshipTitle(championship.title)}
                     </p>
                     <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-[#9aa1b0]">Cliquer pour ouvrir la vue detaillee</p>
                   </div>

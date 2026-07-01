@@ -10,6 +10,16 @@ import { getAuth, getFirestore } from "@/lib/firebase";
 
 const releaseNotes = [
   {
+    version: "v3.0.0",
+    timestamp: "01/07/2026 · 00h00",
+    details: [
+      "Nombreux correctifs et optimisations globales (synthese).",
+      "Suppression de la page SimuF1, dont l usage n etait plus pertinent.",
+      "Creation d un systeme admin complet pour saisir les resultats directement sur le site (super admin uniquement), inspire du visuel de classement.",
+      "Nouveau rendu Resultats avec une presentation repensee.",
+    ],
+  },
+  {
     version: "v2.9.1",
     timestamp: "26/06/2026 · 21h45",
     details: [
@@ -392,7 +402,7 @@ export default function VersionsPage() {
           <div className="border border-white/10 bg-[#121419] p-4 sm:p-6">
             <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.18em] text-[#e10600]">Notes de version</p>
             <p className="mt-3 text-xs sm:text-sm text-gray-300">
-              Version actuelle : <span className="text-white font-bold">v2.9.0</span>
+              Version actuelle : <span className="text-white font-bold">v3.0.0</span>
             </p>
 
           </div>
@@ -488,7 +498,7 @@ export default function VersionsPage() {
               </a>
               <span className="text-white/20">|</span>
               <span className="normal-case text-[8px] sm:text-[9px] font-medium tracking-[0.28em] text-white/28 whitespace-normal break-words">
-                AB 2026 v2
+                AB 2026 v3
               </span>
             </div>
           </div>

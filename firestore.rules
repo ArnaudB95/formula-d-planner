@@ -80,7 +80,10 @@ service cloud.firestore {
 
     match /chat/{messageId} {
       allow read: if signedIn();
-      allow create: if signedIn() && normalizeEmail(request.resource.data.user) == userEmail();
+      allow create: if signedIn() && (
+        normalizeEmail(request.resource.data.user) == userEmail()
+        || (request.resource.data.uid is string && request.resource.data.uid == request.auth.uid)
+      );
       allow update: if isAdmin();
       allow delete: if isAdmin() || (signedIn() && normalizeEmail(resource.data.user) == userEmail());
     }

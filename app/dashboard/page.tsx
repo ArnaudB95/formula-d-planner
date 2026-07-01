@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 
 
@@ -68,7 +68,6 @@ import SimuF1Panel from "./simuf1/SimuF1Panel";
 
 
 import { applyTeamNameRetroactively } from "./simuf1/firestore";
-
 
 
 
@@ -546,7 +545,10 @@ type ResultsRaceRow = {
   pilot: string;
   team: string;
   position: number;
+  slot?: 1 | 2;
   status?: string;
+  teamColor?: string;
+  proprietaire?: string;
 };
 
 type ResultsRace = {
@@ -556,16 +558,42 @@ type ResultsRace = {
   results: ResultsRaceRow[];
 };
 
+type ResultsChampionshipType = "Ecurie" | "Individuel";
+
+type ResultsChampionshipStatus = "en cours" | "terminé" | "";
+
 type ResultsChampionship = {
   key: string;
   title: string;
+  championshipType?: ResultsChampionshipType;
+  seasonNumber?: number;
+  yearLabel?: string;
   status: string;
+  championshipStatus?: ResultsChampionshipStatus;
   races: ResultsRace[];
+  minParticipations?: number;
 };
 
-const DEFAULT_RESULTS_CHAMPIONSHIP_KEY = "team-s1-2024-2025";
-const DEFAULT_RESULTS_CHAMPIONSHIP_TITLE = "Championnat Ecurie Saison 1 - 2024 / 2025";
-const DEFAULT_RESULTS_CHAMPIONSHIP_STATUS = "Terminé";
+type ChampionshipConfigSaveFeedback = {
+  kind: "success" | "error";
+  message: string;
+  details: string[];
+};
+
+type RaceParticipationDraftRow = {
+  team: string;
+  proprietaire: string;
+  slot: 1 | 2;
+  pilot: string;
+  position: string;
+  status: string;
+  participated: boolean;
+  teamColor: string;
+};
+
+const EMPTY_RESULTS_TITLE = "Aucun championnat selectionne";
+
+const DEFAULT_RESULTS_CHAMPIONSHIP_TYPE: ResultsChampionshipType = "Ecurie";
 
 
 
@@ -593,6 +621,93 @@ const formatTeamS1Date = (isoDate: string) =>
 
 
 const normalizeEmail = (value: string | null | undefined) => String(value || "").trim().toLowerCase();
+
+const normalizeResultsChampionshipType = (value: unknown): ResultsChampionshipType | null => {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  if (normalized === "ecurie" || normalized === "equipe") {
+    return "Ecurie";
+  }
+
+  if (normalized === "individuel") {
+    return "Individuel";
+  }
+
+  return null;
+};
+
+const parseResultsSeasonNumber = (value: unknown) => {
+  const parsed = Number.parseInt(String(value || "").trim(), 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+};
+
+const normalizeResultsYearLabel = (value: unknown) => String(value || "").trim().replace(/\s+/g, " ");
+
+const buildResultsChampionshipTitle = ({
+  championshipType,
+  seasonNumber,
+  yearLabel,
+}: {
+  championshipType: ResultsChampionshipType;
+  seasonNumber: number;
+  yearLabel: string;
+}) => `Championnat ${championshipType} Saison ${seasonNumber} - ${yearLabel}`;
+
+const parseResultsChampionshipTitle = (value: unknown) => {
+  const title = String(value || "").trim();
+  const match = title.match(/^Championnat\s+(Ecurie|Écurie|Equipe|Équipe|Individuel)\s+Saison\s+(\d+)\s*-\s*(.+)$/i);
+  if (!match) {
+    return null;
+  }
+
+  const championshipType = normalizeResultsChampionshipType(match[1]);
+  const seasonNumber = parseResultsSeasonNumber(match[2]);
+  const yearLabel = normalizeResultsYearLabel(match[3]);
+
+  if (!championshipType || seasonNumber === null || !yearLabel) {
+    return null;
+  }
+
+  return {
+    championshipType,
+    seasonNumber,
+    yearLabel,
+  };
+};
+
+const getResultsChampionshipNaming = (championship: ResultsChampionship | null | undefined) => {
+  if (!championship) {
+    return null;
+  }
+
+  const championshipType = normalizeResultsChampionshipType(championship.championshipType);
+  const seasonNumber = parseResultsSeasonNumber(championship.seasonNumber);
+  const yearLabel = normalizeResultsYearLabel(championship.yearLabel);
+
+  if (championshipType && seasonNumber !== null && yearLabel) {
+    return {
+      championshipType,
+      seasonNumber,
+      yearLabel,
+    };
+  }
+
+  return parseResultsChampionshipTitle(championship.title);
+};
+
+const isResultsChampionshipFinished = (status: ResultsChampionshipStatus | string | undefined) => {
+  const normalized = String(status || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  return normalized === "termine";
+};
 
 
 
@@ -791,16 +906,30 @@ export default function Dashboard() {
   const [selectedResultRaceId, setSelectedResultRaceId] = useState("");
   const [selectedResultTeamName, setSelectedResultTeamName] = useState("");
   const [resultsChampionships, setResultsChampionships] = useState<ResultsChampionship[]>([]);
-  const [newChampionshipTitle, setNewChampionshipTitle] = useState("");
-  const [newChampionshipStatus, setNewChampionshipStatus] = useState("Terminé");
+  const [championshipTypeDraft, setChampionshipTypeDraft] = useState<ResultsChampionshipType>(DEFAULT_RESULTS_CHAMPIONSHIP_TYPE);
+  const [championshipSeasonNumberDraft, setChampionshipSeasonNumberDraft] = useState("");
+  const [championshipYearLabelDraft, setChampionshipYearLabelDraft] = useState("");
+  const [championshipStatusDraft, setChampionshipStatusDraft] = useState<ResultsChampionshipStatus>("");
   const [newRaceId, setNewRaceId] = useState("");
   const [newRaceCircuit, setNewRaceCircuit] = useState("");
   const [newRaceDate, setNewRaceDate] = useState("");
+  const [minParticipationsDraft, setMinParticipationsDraft] = useState("");
   const [newRacePilot, setNewRacePilot] = useState("");
   const [newRaceTeam, setNewRaceTeam] = useState("");
   const [newRacePosition, setNewRacePosition] = useState("1");
   const [newRaceStatus, setNewRaceStatus] = useState("");
+  const [isEditingSelectedRaceName, setIsEditingSelectedRaceName] = useState(false);
+  const [selectedRaceCodeDraft, setSelectedRaceCodeDraft] = useState("");
+  const [selectedRaceNameDraft, setSelectedRaceNameDraft] = useState("");
+  const [selectedRaceDateDraft, setSelectedRaceDateDraft] = useState("");
+  const [isSavingSelectedRaceName, setIsSavingSelectedRaceName] = useState(false);
+  const [raceParticipationDraftRows, setRaceParticipationDraftRows] = useState<RaceParticipationDraftRow[]>([]);
+  const [newParticipationTeamName, setNewParticipationTeamName] = useState("");
   const [resultsAdminMessage, setResultsAdminMessage] = useState<string | null>(null);
+  const [championshipConfigSaveFeedback, setChampionshipConfigSaveFeedback] =
+    useState<ChampionshipConfigSaveFeedback | null>(null);
+  const [isSavingRaceParticipation, setIsSavingRaceParticipation] = useState(false);
+  const [isRaceConfigCollapsed, setIsRaceConfigCollapsed] = useState(false);
 
 
 
@@ -1301,7 +1430,7 @@ export default function Dashboard() {
 
 
 
-  // 🔐 AUTH
+  // ­ƒöÉ AUTH
 
 
   useEffect(() => {
@@ -1422,9 +1551,17 @@ export default function Dashboard() {
       body: JSON.stringify(payload),
     });
 
-    const data = await response.json().catch(() => ({} as { message?: string }));
+    const responseText = await response.text();
+    let data: { message?: string } = {};
+    try {
+      data = responseText ? JSON.parse(responseText) : {};
+    } catch {
+      data = {};
+    }
+
     if (!response.ok) {
-      const message = String(data?.message || "Erreur admin");
+      const fallback = responseText.trim() || response.statusText || "Erreur admin";
+      const message = String(data?.message || `Erreur admin (${response.status}): ${fallback}`);
       throw new Error(message);
     }
   };
@@ -1440,31 +1577,65 @@ export default function Dashboard() {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "");
 
+  const buildResultsChampionshipPayload = () => {
+    const championshipType = normalizeResultsChampionshipType(championshipTypeDraft);
+    if (!championshipType) {
+      throw new Error("Type de championnat invalide.");
+    }
+
+    const seasonNumber = parseResultsSeasonNumber(championshipSeasonNumberDraft);
+    if (seasonNumber === null) {
+      throw new Error("Numero de saison requis.");
+    }
+
+    const yearLabel = normalizeResultsYearLabel(championshipYearLabelDraft);
+    if (!yearLabel) {
+      throw new Error("Periode du championnat requise.");
+    }
+
+    const title = buildResultsChampionshipTitle({ championshipType, seasonNumber, yearLabel });
+
+    return {
+      title,
+      championshipType,
+      seasonNumber,
+      yearLabel,
+      championshipStatus: championshipStatusDraft || "",
+    };
+  };
+
+  const resetResultsChampionshipDraft = () => {
+    setChampionshipTypeDraft(DEFAULT_RESULTS_CHAMPIONSHIP_TYPE);
+    setChampionshipSeasonNumberDraft("");
+    setChampionshipYearLabelDraft("");
+  };
+
   const handleCreateChampionship = async () => {
     if (!canManageResultsAsSuperAdmin) {
       setResultsAdminMessage("Acces super admin requis.");
       return;
     }
 
-    const title = String(newChampionshipTitle || "").trim();
-    if (!title) {
-      setResultsAdminMessage("Titre championnat requis.");
-      return;
-    }
+    let payload: {
+      title: string;
+      championshipType: ResultsChampionshipType;
+      seasonNumber: number;
+      yearLabel: string;
+    };
 
-    const key = slugifyResultsKey(title);
-    if (!key) {
-      setResultsAdminMessage("Cle championnat invalide.");
+    try {
+      payload = buildResultsChampionshipPayload();
+    } catch (error) {
+      setResultsAdminMessage(error instanceof Error ? error.message : "Format championnat invalide.");
       return;
     }
 
     try {
       await postResultsAdminAction({
         action: "createOrUpdateChampionship",
-        title,
-        status: String(newChampionshipStatus || "Terminé").trim() || "Terminé",
+        ...payload,
       });
-      setNewChampionshipTitle("");
+      resetResultsChampionshipDraft();
       setResultsAdminMessage("Championnat cree.");
     } catch (error) {
       setResultsAdminMessage(error instanceof Error ? error.message : "Erreur lors de la creation.");
@@ -1472,34 +1643,127 @@ export default function Dashboard() {
   };
 
   const handleUpdateSelectedChampionship = async () => {
+    setChampionshipConfigSaveFeedback(null);
+
     if (!canManageResultsAsSuperAdmin) {
       setResultsAdminMessage("Acces super admin requis.");
+      setChampionshipConfigSaveFeedback({
+        kind: "error",
+        message: "Enregistrement refuse.",
+        details: ["Acces super admin requis."],
+      });
       return;
     }
 
     const key = String(selectedResultKey || "").trim();
     if (!key) {
       setResultsAdminMessage("Selectionne un championnat a modifier.");
+      setChampionshipConfigSaveFeedback({
+        kind: "error",
+        message: "Enregistrement impossible.",
+        details: ["Selectionne un championnat a modifier."],
+      });
       return;
     }
 
-    const title = String(newChampionshipTitle || "").trim();
-    const status = String(newChampionshipStatus || "").trim();
-    if (!title) {
-      setResultsAdminMessage("Titre championnat requis.");
+    const minParticipations = Number.parseInt(String(minParticipationsDraft || "0").trim(), 10);
+    if (!Number.isFinite(minParticipations) || minParticipations < 0) {
+      setResultsAdminMessage("Le nombre de participations doit etre >= 0.");
+      setChampionshipConfigSaveFeedback({
+        kind: "error",
+        message: "Enregistrement impossible.",
+        details: ["Le nombre de participations doit etre >= 0."],
+      });
       return;
+    }
+
+    const selectedChampionship = resultsChampionships.find((item) => item.key === key);
+    let payload: {
+      title: string;
+      championshipType: ResultsChampionshipType;
+      seasonNumber: number;
+      yearLabel: string;
+    };
+
+    try {
+      payload = buildResultsChampionshipPayload();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Format championnat invalide.";
+      setResultsAdminMessage(message);
+      setChampionshipConfigSaveFeedback({
+        kind: "error",
+        message: "Enregistrement impossible.",
+        details: [message],
+      });
+      return;
+    }
+
+    const previousNaming = getResultsChampionshipNaming(selectedChampionship);
+    const previousType = previousNaming?.championshipType || "-";
+    const previousSeason = previousNaming?.seasonNumber !== undefined
+      ? String(previousNaming.seasonNumber)
+      : "-";
+    const previousPeriod = previousNaming?.yearLabel || "-";
+    const previousStatus = String(selectedChampionship?.championshipStatus || "").trim() || "(vide)";
+    const previousMin = Number.isFinite(selectedChampionship?.minParticipations)
+      ? Number(selectedChampionship?.minParticipations)
+      : 0;
+
+    const nextStatus = String(payload.championshipStatus || "").trim() || "(vide)";
+    const appliedChanges: string[] = [];
+    if (previousType !== payload.championshipType) {
+      appliedChanges.push(`Type: ${previousType} -> ${payload.championshipType}`);
+    }
+    if (previousSeason !== String(payload.seasonNumber)) {
+      appliedChanges.push(`Saison: ${previousSeason} -> ${payload.seasonNumber}`);
+    }
+    if (previousPeriod !== payload.yearLabel) {
+      appliedChanges.push(`Periode: ${previousPeriod} -> ${payload.yearLabel}`);
+    }
+    if (previousStatus !== nextStatus) {
+      appliedChanges.push(`Statut: ${previousStatus} -> ${nextStatus}`);
+    }
+    if (previousMin !== minParticipations) {
+      appliedChanges.push(`Min participations: ${previousMin} -> ${minParticipations}`);
     }
 
     try {
       await postResultsAdminAction({
         action: "createOrUpdateChampionship",
         selectedKey: key,
-        title,
-        status: status || "Actif",
+        ...payload,
+        status: String(selectedChampionship?.status || "Actif").trim() || "Actif",
       });
-      setResultsAdminMessage("Championnat mis a jour.");
+
+      await postResultsAdminAction({
+        action: "updateMinParticipations",
+        championshipKey: key,
+        minParticipations,
+      });
+
+      if (appliedChanges.length === 0) {
+        setResultsAdminMessage("Championnat enregistre (aucun changement detecte).");
+        setChampionshipConfigSaveFeedback({
+          kind: "success",
+          message: "Enregistrement effectue. Les valeurs etaient deja identiques.",
+          details: ["Aucun champ modifie."],
+        });
+      } else {
+        setResultsAdminMessage("Championnat mis a jour.");
+        setChampionshipConfigSaveFeedback({
+          kind: "success",
+          message: "Enregistrement reussi.",
+          details: appliedChanges,
+        });
+      }
     } catch (error) {
-      setResultsAdminMessage(error instanceof Error ? error.message : "Erreur lors de la mise a jour.");
+      const message = error instanceof Error ? error.message : "Erreur lors de la mise a jour.";
+      setResultsAdminMessage(message);
+      setChampionshipConfigSaveFeedback({
+        kind: "error",
+        message: "Echec de l enregistrement.",
+        details: [message],
+      });
     }
   };
 
@@ -1533,6 +1797,8 @@ export default function Dashboard() {
         circuit,
         date,
       });
+      setSelectedResultTeamName("");
+      setSelectedResultRaceId(raceId);
       setNewRaceId("");
       setNewRaceCircuit("");
       setNewRaceDate("");
@@ -1624,9 +1890,22 @@ export default function Dashboard() {
   useEffect(() => {
     if (!canManageResultsAsSuperAdmin) return;
     const selected = resultsChampionships.find((item) => item.key === selectedResultKey);
-    if (!selected) return;
-    setNewChampionshipTitle(selected.title || "");
-    setNewChampionshipStatus(selected.status || "Actif");
+    if (!selected) {
+      resetResultsChampionshipDraft();
+      return;
+    }
+
+    const naming = getResultsChampionshipNaming(selected);
+    if (!naming) {
+      setChampionshipTypeDraft(DEFAULT_RESULTS_CHAMPIONSHIP_TYPE);
+      setChampionshipSeasonNumberDraft("");
+      setChampionshipYearLabelDraft("");
+      return;
+    }
+
+    setChampionshipTypeDraft(naming.championshipType);
+    setChampionshipSeasonNumberDraft(String(naming.seasonNumber));
+    setChampionshipYearLabelDraft(naming.yearLabel);
   }, [canManageResultsAsSuperAdmin, resultsChampionships, selectedResultKey]);
 
 
@@ -1714,7 +1993,7 @@ export default function Dashboard() {
 
 
 
-  // 🏎️ SIMUF1 NEXT RACE INFO (for system info line)
+  // ­ƒÅÄ´©Å SIMUF1 NEXT RACE INFO (for system info line)
 
 
   useEffect(() => {
@@ -1875,7 +2154,7 @@ export default function Dashboard() {
 
 
 
-  // 👥 MEMBERS
+  // ­ƒæÑ MEMBERS
 
 
   useEffect(() => {
@@ -2124,7 +2403,7 @@ export default function Dashboard() {
 
 
 
-  // 🗳️ VOTES LIVE
+  // ­ƒù│´©Å VOTES LIVE
 
 
   useEffect(() => {
@@ -2184,7 +2463,7 @@ export default function Dashboard() {
 
 
 
-  // 💬 CHAT
+  // ­ƒÆ¼ CHAT
 
 
   useEffect(() => {
@@ -2983,7 +3262,7 @@ export default function Dashboard() {
 
 
 
-  // 📅 FORMAT DATE
+  // FORMAT DATE
 
 
   const formatDateFR = (dateString: string) => {
@@ -3019,7 +3298,7 @@ export default function Dashboard() {
 
 
 
-  // ➕ CREATE PROPOSITION
+  // CREATE PROPOSITION
 
 
   const createEvent = async () => {
@@ -3250,7 +3529,7 @@ export default function Dashboard() {
 
 
 
-  // 🗳️ VOTE (modifiable)
+  // VOTE (modifiable)
 
 
   const vote = async (
@@ -3394,7 +3673,7 @@ export default function Dashboard() {
 
 
 
-  // ✅ VALIDATION EVENT
+  // VALIDATION EVENT
 
 
   const canManageProposition = (event: any) => {
@@ -3451,7 +3730,7 @@ export default function Dashboard() {
 
 
 
-  // ❌ DELETE EVENT
+  // DELETE EVENT
 
 
   const deleteEvent = async (event: any) => {
@@ -3580,7 +3859,7 @@ export default function Dashboard() {
 
 
 
-  // 🔧 PROMOTE / DEMOTE MEMBER
+  // ­ƒöº PROMOTE / DEMOTE MEMBER
 
 
   const updateMemberRole = async (memberEmail: string, role: string) => {
@@ -3631,7 +3910,7 @@ export default function Dashboard() {
 
 
 
-  // 💾 SAVE PROFILE
+  // ­ƒÆ¥ SAVE PROFILE
 
 
   const saveProfile = async () => {
@@ -3814,7 +4093,7 @@ export default function Dashboard() {
 
 
 
-  // 💬 CHAT
+  // ­ƒÆ¼ CHAT
 
 
   const markChatAsRead = async () => {
@@ -4191,6 +4470,9 @@ export default function Dashboard() {
 
     if (!chatInput.trim() || !user) return;
 
+    const currentUserEmail = normalizeEmail(user?.email);
+    if (!currentUserEmail) return;
+
 
 
 
@@ -4216,7 +4498,10 @@ export default function Dashboard() {
       text: chatInput.trim(),
 
 
-      user: user.email,
+      user: currentUserEmail,
+
+
+      uid: String(user?.uid || ""),
 
 
       parentId: replyToMessageId || null,
@@ -4237,7 +4522,7 @@ export default function Dashboard() {
 
 
 
-    if (members.some((m: any) => m?.email && m.email !== user.email && m.emailNotifications === true)) {
+    if (members.some((m: any) => m?.email && normalizeEmail(m.email) !== currentUserEmail && m.emailNotifications === true)) {
 
 
       sendChatNotificationBatched(1);
@@ -4268,154 +4553,77 @@ export default function Dashboard() {
 
 
   const startEditMessage = (message: any) => {
-
-
-    setEditingMessageId(message.id);
-
-
-    setEditingMessageText(message.text || "");
-
-
+    if (!isChatManager) return;
+    if (!message?.id) return;
+    setEditingMessageId(String(message.id));
+    setEditingMessageText(String(message.text || ""));
+    setReplyToMessageId(null);
   };
-
-
-
-
 
   const saveEditedMessage = async () => {
+    if (!isChatManager) return;
+    if (!editingMessageId) return;
 
-
-    if (!editingMessageId || !editingMessageText.trim()) return;
-
-
-    if (userRole !== "admin" && userRole !== "superAdmin") return;
-
+    const nextText = String(editingMessageText || "").trim();
+    if (!nextText) return;
 
     const firestore = getFirestore();
-
-
     if (!firestore) return;
-
-
-
-
-
-    const mentionedEmails = findMentionedEmails(editingMessageText);
-
-
-
-
 
     await updateDoc(doc(firestore, "chat", editingMessageId), {
-
-
-      text: editingMessageText.trim(),
-
-
-      mentions: mentionedEmails,
-
-
+      text: nextText,
       editedAt: serverTimestamp(),
-
-
     });
 
-
-
-
-
     setEditingMessageId(null);
-
-
     setEditingMessageText("");
-
-
   };
 
-
-
-
-
-  const removeMessage = async (messageId: string, messageUser: string) => {
-
-
-    const canDelete = userRole === "admin" || userRole === "superAdmin" || messageUser === user?.email;
-
-
-    if (!canDelete) return;
-
+  const removeMessage = async (messageId: string, messageUserEmail: string) => {
+    if (!messageId) return;
 
     const firestore = getFirestore();
-
-
     if (!firestore) return;
 
+    const currentUserEmail = normalizeEmail(user?.email);
+    const canDeleteMessage =
+      isChatManager || normalizeEmail(messageUserEmail) === currentUserEmail;
+    if (!canDeleteMessage) return;
 
     await deleteDoc(doc(firestore, "chat", messageId));
 
+    if (editingMessageId === messageId) {
+      setEditingMessageId(null);
+      setEditingMessageText("");
+    }
 
+    if (replyToMessageId === messageId) {
+      setReplyToMessageId(null);
+    }
   };
-
-
-
-
 
   const createEvolutionRequest = async () => {
+    if (!user?.email) return;
 
-
-    if (!user?.email || !newEvolutionTitle.trim() || !newEvolutionBody.trim()) return;
-
+    const title = String(newEvolutionTitle || "").trim();
+    const body = String(newEvolutionBody || "").trim();
+    if (!title || !body) return;
 
     const firestore = getFirestore();
-
-
     if (!firestore) return;
 
-
-
-
-
-    const created = await addDoc(collection(firestore, "evolutionRequests"), {
-
-
-      title: newEvolutionTitle.trim(),
-
-
-      body: newEvolutionBody.trim(),
-
-
-      createdBy: user.email,
-
-
+    await addDoc(collection(firestore, "evolutionRequests"), {
+      title,
+      body,
+      createdBy: normalizeEmail(user.email),
       status: "en-cours",
-
-
+      editedAt: null,
       createdAt: serverTimestamp(),
-
-
     });
 
-
-
-
-
     setNewEvolutionTitle("");
-
-
     setNewEvolutionBody("");
-
-
-    setSelectedEvolutionId(created.id);
-
-
-    await markEvolutionRequestAsRead(created.id);
-
-
   };
-
-
-
-
 
   const sendEvolutionReply = async () => {
 
@@ -5187,37 +5395,6 @@ export default function Dashboard() {
 
   const systemInfoItems = useMemo(() => {
 
-
-    const simuF1Days = simuF1NextRace.sundayDateISO
-
-
-      ? Math.max(
-
-
-          0,
-
-
-          Math.ceil(
-
-
-            (new Date(`${simuF1NextRace.sundayDateISO}T00:00:00`).getTime() - new Date().getTime()) /
-
-
-              (1000 * 60 * 60 * 24)
-
-
-          )
-
-
-        )
-
-
-      : null;
-
-
-
-
-
     return [
 
 
@@ -5320,24 +5497,6 @@ export default function Dashboard() {
         : null,
 
 
-      simuF1Days !== null
-
-
-        ? {
-
-
-            source: "SimuF1",
-
-
-            text: `Prochaine course ${simuF1NextRace.raceName} dans ${simuF1Days} jour${simuF1Days > 1 ? "s" : ""} - ${simuF1NextRace.participating ? "Bravo tu participes !" : "Inscrit toi !"}`,
-
-
-          }
-
-
-        : null,
-
-
     ].filter(Boolean) as Array<{ source: string; text: string }>;
 
 
@@ -5360,15 +5519,6 @@ export default function Dashboard() {
 
 
     otherOnlineCount,
-
-
-    simuF1NextRace.participating,
-
-
-    simuF1NextRace.raceName,
-
-
-    simuF1NextRace.sundayDateISO,
 
 
   ]);
@@ -5637,33 +5787,40 @@ export default function Dashboard() {
 
 
 
-  const fallbackResultsCategories = [
-    {
-      key: DEFAULT_RESULTS_CHAMPIONSHIP_KEY,
-      title: DEFAULT_RESULTS_CHAMPIONSHIP_TITLE,
-      status: DEFAULT_RESULTS_CHAMPIONSHIP_STATUS,
+  const firestoreResultsCategories = resultsChampionships.map((item) => {
+    const naming = getResultsChampionshipNaming(item);
+    const periodLabel = normalizeResultsYearLabel(item.yearLabel || naming?.yearLabel || "");
+    const periodYears = (periodLabel.match(/\d{4}/g) || [])
+      .map((value) => Number.parseInt(value, 10))
+      .filter((value) => Number.isFinite(value));
+    const periodStartYear = periodYears.length > 0 ? periodYears[0] : 0;
+    const periodEndYear = periodYears.length > 0 ? periodYears[periodYears.length - 1] : 0;
+
+    return {
+      key: item.key,
+      title: item.title,
+      status: item.status || "Actif",
       statusClass: "border-white/25 bg-black/74 text-[#ff4a52]",
-      href: `/dashboard?tab=results&result=${DEFAULT_RESULTS_CHAMPIONSHIP_KEY}`,
-      isFallback: true,
-    },
-  ];
+      href: `/dashboard?tab=results&result=${item.key}`,
+      isFallback: false,
+      championshipStatus: item.championshipStatus || "",
+      periodSortWeight: periodEndYear * 10000 + periodStartYear,
+    };
+  });
 
-  const firestoreResultsCategories = resultsChampionships.map((item) => ({
-    key: item.key,
-    title: item.title,
-    status: item.status || "Actif",
-    statusClass: "border-white/25 bg-black/74 text-[#ff4a52]",
-    href: `/dashboard?tab=results&result=${item.key}`,
-    isFallback: false,
-  }));
+  const removedResultsCategoryKeys = new Set(["team-s1-2024-2025"]);
 
-  const hasDefaultInFirestore = firestoreResultsCategories.some(
-    (item) => item.key === DEFAULT_RESULTS_CHAMPIONSHIP_KEY
-  );
-
-  const resultsCategories = hasDefaultInFirestore
-    ? firestoreResultsCategories
-    : [...fallbackResultsCategories, ...firestoreResultsCategories];
+  const resultsCategories = firestoreResultsCategories.filter(
+    (item) => !removedResultsCategoryKeys.has(item.key)
+  ).sort((a, b) => {
+    if (b.periodSortWeight !== a.periodSortWeight) {
+      return b.periodSortWeight - a.periodSortWeight;
+    }
+    return String(b.title || "").localeCompare(String(a.title || ""), "fr", {
+      numeric: true,
+      sensitivity: "base",
+    });
+  });
 
 
 
@@ -5705,296 +5862,937 @@ export default function Dashboard() {
       return null;
     }
 
-    return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const normalizedYear = String(match[3] || "").padStart(4, "0");
+    return `${normalizedYear}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   };
 
-  const DEFAULT_RESULTS_S1_RACES = [
-    {
-      id: "E10",
-      circuit: "Monza",
-      date: "2025-03-09",
-      results: [
-        { position: 1, pilot: "Fast", team: "Tiger Fury Crew" },
-        { position: 2, pilot: "Arnaud", team: "Bears Fury Crew" },
-        { position: 3, pilot: "Mumu", team: "FRX" },
-        { position: 4, pilot: "Furious", team: "Tiger Fury Crew" },
-        { position: 5, pilot: "Loris", team: "Bears Fury Crew" },
-        { position: 6, pilot: "Shadow", team: "FRX" },
-      ],
-    },
-    {
-      id: "E11",
-      circuit: "Suzuka",
-      date: "2025-03-16",
-      results: [
-        { position: 1, pilot: "Furious", team: "Tiger Fury Crew" },
-        { position: 2, pilot: "Loris", team: "Bears Fury Crew" },
-        { position: 3, pilot: "Shadow", team: "FRX" },
-        { position: 4, pilot: "Fast", team: "Tiger Fury Crew" },
-        { position: 5, pilot: "Arnaud", team: "Bears Fury Crew" },
-        { position: 6, pilot: "Mumu", team: "FRX" },
-      ],
-    },
-    {
-      id: "E12",
-      circuit: "Interlagos",
-      date: "2025-03-23",
-      results: [
-        { position: 1, pilot: "Arnaud", team: "Bears Fury Crew" },
-        { position: 2, pilot: "Fast", team: "Tiger Fury Crew" },
-        { position: 3, pilot: "Furious", team: "Tiger Fury Crew" },
-        { position: 4, pilot: "Loris", team: "Bears Fury Crew" },
-        { position: 5, pilot: "Mumu", team: "FRX" },
-        { position: 6, pilot: "Shadow", team: "FRX" },
-      ],
-    },
-  ];
+  const selectedResultsChampionship =
+    resultsChampionships.find((championship) => championship.key === selectedResultKey) || null;
 
-  const selectedResultsChampionship = resultsChampionships.find((c) => c.key === selectedResultKey) || null;
-
-  const RESULTS_S1_RACES: ResultsRace[] = selectedResultsChampionship
-    ? Array.isArray(selectedResultsChampionship.races)
-      ? selectedResultsChampionship.races
-      : []
-    : DEFAULT_RESULTS_S1_RACES;
-
-  const resultTeamColor = (teamName: string) => {
-    if (teamName === "Tiger Fury Crew") return "#ff8a00";
-    if (teamName === "Bears Fury Crew") return "#e10600";
-    return "#22cfd0";
-  };
-
-  const RESULTS_S1_DRIVER_STANDINGS = Object.entries(
-    RESULTS_S1_RACES.reduce((acc, race) => {
-      race.results.forEach((row) => {
-        const key = row.pilot;
-        const existing = acc[key] || { name: row.pilot, team: row.team, points: 0 };
-        existing.points += racePointsByPosition(row.position, (row as { status?: string }).status);
-        existing.team = row.team;
-        acc[key] = existing;
-      });
-      return acc;
-    }, {} as Record<string, { name: string; team: string; points: number }>)
-  )
-    .map(([, value]) => value)
-    .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name))
-    .map((value, index) => ({ rank: index + 1, ...value }));
-
-  const RESULTS_S1_TEAM_STANDINGS = Object.entries(
-    RESULTS_S1_RACES.reduce((acc, race) => {
-      race.results.forEach((row) => {
-        const key = row.team;
-        const existing = acc[key] || 0;
-        acc[key] = existing + racePointsByPosition(row.position, (row as { status?: string }).status);
-      });
-      return acc;
-    }, {} as Record<string, number>)
-  )
-    .map(([team, points]) => ({ team, points, color: resultTeamColor(team) }))
-    .sort((a, b) => b.points - a.points || a.team.localeCompare(b.team))
-    .map((value, index) => ({ rank: index + 1, ...value }));
-
-  const selectedResultRace = RESULTS_S1_RACES.find((race) => race.id === selectedResultRaceId) || null;
-  const parseRaceNumber = (raceId: string) => Number(String(raceId || "").replace(/[^0-9]/g, "")) || 0;
-  const RESULTS_S1_RACES_DESC = [...RESULTS_S1_RACES].sort((a, b) => parseRaceNumber(b.id) - parseRaceNumber(a.id));
-  const formatRaceDateFr = (isoDate: string) => {
-    const parsed = new Date(`${isoDate}T00:00:00`);
-    if (Number.isNaN(parsed.getTime())) return isoDate;
-    return parsed.toLocaleDateString("fr-FR", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-  };
-  const formatRacePositionFr = (position: number) => (position === 1 ? "1er" : `${position}e`);
-
-  const openResultsTeamProfile = (teamName: string) => {
-    const clean = String(teamName || "").trim();
-    if (!clean) return;
-    setSelectedResultTeamName(clean);
-  };
+  const selectedResultRace =
+    selectedResultsChampionship?.races.find((race) => race.id === selectedResultRaceId) || null;
 
   const selectedResultsTeam = String(selectedResultTeamName || "").trim();
-  const selectedResultsTeamAccent = selectedResultsTeam ? resultTeamColor(selectedResultsTeam) : "#94a3b8";
-  const selectedResultsTeamStanding = RESULTS_S1_TEAM_STANDINGS.find((team) => team.team === selectedResultsTeam) || null;
-  const selectedResultsTeamDrivers = RESULTS_S1_DRIVER_STANDINGS.filter((driver) => driver.team === selectedResultsTeam).sort(
-    (a, b) => a.rank - b.rank
-  );
-  const selectedResultsTeamRaceCards = RESULTS_S1_RACES_DESC.map((race) => {
-    const teamRows = race.results
-      .filter((row) => row.team === selectedResultsTeam)
-      .slice()
-      .sort((a, b) => a.position - b.position);
-    if (teamRows.length === 0) return null;
 
-    const points = teamRows.reduce((sum, row) => sum + racePointsByPosition(row.position, (row as { status?: string }).status), 0);
-    return {
+  useEffect(() => {
+    if (!selectedResultsChampionship) {
+      setChampionshipTypeDraft(DEFAULT_RESULTS_CHAMPIONSHIP_TYPE);
+      setChampionshipSeasonNumberDraft("");
+      setChampionshipYearLabelDraft("");
+      setChampionshipStatusDraft("");
+      setMinParticipationsDraft("");
+      return;
+    }
+    setMinParticipationsDraft(String(selectedResultsChampionship?.minParticipations || ""));
+    setChampionshipStatusDraft((selectedResultsChampionship?.championshipStatus || "") as ResultsChampionshipStatus);
+    const naming = getResultsChampionshipNaming(selectedResultsChampionship);
+    if (!naming) {
+      setChampionshipTypeDraft(DEFAULT_RESULTS_CHAMPIONSHIP_TYPE);
+      setChampionshipSeasonNumberDraft("");
+      setChampionshipYearLabelDraft("");
+      return;
+    }
+    setChampionshipTypeDraft(naming.championshipType);
+    setChampionshipSeasonNumberDraft(String(naming.seasonNumber));
+    setChampionshipYearLabelDraft(naming.yearLabel);
+  }, [selectedResultsChampionship?.key]);
+
+  const formatRaceDateFr = (value: string) => {
+    const source = String(value || "").trim();
+    if (!source) return "-";
+
+    const iso = /^\d{4}-\d{2}-\d{2}$/.test(source) ? source : parseFrDateToIso(source);
+    if (!iso) return source;
+
+    const isoMatch = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!isoMatch) return source;
+
+    const year = Number.parseInt(isoMatch[1] || "", 10);
+    const month = Number.parseInt(isoMatch[2] || "", 10);
+    const day = Number.parseInt(isoMatch[3] || "", 10);
+    if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return source;
+
+    const test = new Date(Date.UTC(year, month - 1, day));
+    if (
+      test.getUTCFullYear() !== year ||
+      test.getUTCMonth() !== month - 1 ||
+      test.getUTCDate() !== day
+    ) {
+      return source;
+    }
+
+    return new Intl.DateTimeFormat("fr-FR", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(test);
+  };
+
+  const formatRacePositionFr = (position: number, status?: string) => {
+    if (String(status || "").trim().toUpperCase() === "DNF") return "/";
+    if (!Number.isFinite(position) || position <= 0) return "-";
+    return String(position);
+  };
+
+  const compareRacePositions = (left: number, right: number) => {
+    const leftRank = Number.isFinite(left) && left > 0 ? left : Number.POSITIVE_INFINITY;
+    const rightRank = Number.isFinite(right) && right > 0 ? right : Number.POSITIVE_INFINITY;
+    return leftRank - rightRank;
+  };
+
+  const normalizePilotKey = (pilotName: string) => String(pilotName || "").trim().toLowerCase();
+  const normalizeTeamKey = (teamName: string) => String(teamName || "").trim().toLowerCase();
+
+  const compareRaceRowsForStanding = (a: ResultsRaceRow, b: ResultsRaceRow) => {
+    const aIsDnf = String(a.status || "").trim().toUpperCase() === "DNF";
+    const bIsDnf = String(b.status || "").trim().toUpperCase() === "DNF";
+
+    if (aIsDnf && bIsDnf) {
+      return String(a.pilot || "").localeCompare(String(b.pilot || ""), "fr", {
+        sensitivity: "base",
+      });
+    }
+
+    if (aIsDnf !== bIsDnf) return aIsDnf ? 1 : -1;
+
+    const byPosition = compareRacePositions(a.position, b.position);
+    if (byPosition !== 0) return byPosition;
+
+    return String(a.pilot || "").localeCompare(String(b.pilot || ""), "fr", {
+      sensitivity: "base",
+    });
+  };
+
+  const normalizeHexColor = (value: string, fallback: string) => {
+    const raw = String(value || "").trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(raw)) return raw.toUpperCase();
+    return fallback;
+  };
+
+  const teamColorPalette = [
+    "#ff4a52",
+    "#4d7cff",
+    "#ffae42",
+    "#26c281",
+    "#e87dff",
+    "#00c2d1",
+    "#f15b2a",
+    "#9aa4b2",
+  ];
+
+  const resultTeamColor = (teamName: string) => {
+    const key = String(teamName || "").trim().toLowerCase();
+    if (!key) return teamColorPalette[0];
+
+    let hash = 0;
+    for (let i = 0; i < key.length; i += 1) {
+      hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+    }
+
+    return teamColorPalette[hash % teamColorPalette.length] || teamColorPalette[0];
+  };
+
+  const getStoredTeamColor = (teamName: string) => {
+    const normalizedTeam = String(teamName || "").trim();
+    if (!normalizedTeam) return teamColorPalette[0];
+
+    const normalizedKey = normalizedTeam.toLowerCase();
+    for (const championship of resultsChampionships) {
+      for (const race of championship.races || []) {
+        for (const row of race.results || []) {
+          if (String(row.team || "").trim().toLowerCase() === normalizedKey && row.teamColor) {
+            return normalizeHexColor(String(row.teamColor || ""), resultTeamColor(normalizedTeam));
+          }
+        }
+      }
+    }
+
+    return resultTeamColor(normalizedTeam);
+  };
+
+  const getStoredTeamProprietaire = (teamName: string) => {
+    const normalizedTeam = String(teamName || "").trim().toLowerCase();
+    if (!normalizedTeam) return "";
+
+    for (const championship of resultsChampionships) {
+      for (const race of championship.races || []) {
+        for (const row of race.results || []) {
+          if (String(row.team || "").trim().toLowerCase() === normalizedTeam) {
+            const proprietaire = String((row as { proprietaire?: string }).proprietaire || "").trim();
+            if (proprietaire) return proprietaire;
+          }
+        }
+      }
+    }
+
+    return "";
+  };
+
+  const openResultsTeamProfile = (teamName: string) => {
+    const normalizedTeam = String(teamName || "").trim();
+    if (!normalizedTeam) return;
+    setSelectedResultTeamName(normalizedTeam);
+    setSelectedResultRaceId("");
+  };
+
+  const cumulativeResultsChampionStars = resultsChampionships.reduce((acc, championship) => {
+    if (!isResultsChampionshipFinished(championship?.championshipStatus)) {
+      return acc;
+    }
+
+    const championshipNaming = getResultsChampionshipNaming(championship);
+    const rankByTotalPoints = championshipNaming?.seasonNumber === 0;
+    const minChampionshipParticipations = championship?.minParticipations || 0;
+    const championshipRows = (championship?.races || []).flatMap((race) =>
+      (race.results || []).map((row) => ({
+        raceId: String(race.id || ""),
+        pilot: String(row.pilot || "").trim(),
+        team: String(row.team || "").trim(),
+        points: racePointsByPosition(row.position, row.status),
+      }))
+    );
+
+    if (championshipRows.length === 0) {
+      return acc;
+    }
+
+    const driverTotalsForChampionship = championshipRows.reduce((driverAcc, row) => {
+      if (!row.pilot) return driverAcc;
+      if (!driverAcc[row.pilot]) {
+        driverAcc[row.pilot] = {
+          points: 0,
+          participations: 0,
+        };
+      }
+      driverAcc[row.pilot].points += row.points;
+      driverAcc[row.pilot].participations += 1;
+      return driverAcc;
+    }, {} as Record<string, { points: number; participations: number }>);
+
+    const teamTotalsForChampionship = championshipRows.reduce((teamAcc, row) => {
+      if (!row.team) return teamAcc;
+      if (!teamAcc[row.team]) {
+        teamAcc[row.team] = {
+          points: 0,
+          races: new Set<string>(),
+        };
+      }
+      teamAcc[row.team].points += row.points;
+      teamAcc[row.team].races.add(row.raceId);
+      return teamAcc;
+    }, {} as Record<string, { points: number; races: Set<string> }>);
+
+    const sortedDrivers = Object.entries(driverTotalsForChampionship)
+      .filter(([, data]) => data.participations >= minChampionshipParticipations)
+      .sort((a, b) => {
+        if (rankByTotalPoints) {
+          return b[1].points - a[1].points || a[0].localeCompare(b[0], "fr", { sensitivity: "base" });
+        }
+        const avgA = a[1].points / a[1].participations;
+        const avgB = b[1].points / b[1].participations;
+        return avgB - avgA || a[0].localeCompare(b[0], "fr", { sensitivity: "base" });
+      });
+
+    const sortedTeams = Object.entries(teamTotalsForChampionship)
+      .filter(([, data]) => data.races.size >= minChampionshipParticipations)
+      .sort((a, b) => {
+        if (rankByTotalPoints) {
+          return b[1].points - a[1].points || a[0].localeCompare(b[0], "fr", { sensitivity: "base" });
+        }
+        const avgA = a[1].points / a[1].races.size;
+        const avgB = b[1].points / b[1].races.size;
+        return avgB - avgA || a[0].localeCompare(b[0], "fr", { sensitivity: "base" });
+      });
+
+    const championDriverName = sortedDrivers[0]?.[0] || "";
+    if (championDriverName) {
+      const pilotKey = normalizePilotKey(championDriverName);
+      acc.pilotStars[pilotKey] = (acc.pilotStars[pilotKey] || 0) + 1;
+    }
+
+    const championTeamName = sortedTeams[0]?.[0] || "";
+    if (championTeamName) {
+      const teamKey = normalizeTeamKey(championTeamName);
+      acc.teamStars[teamKey] = (acc.teamStars[teamKey] || 0) + 1;
+    }
+
+    return acc;
+  }, {
+    pilotStars: {} as Record<string, number>,
+    teamStars: {} as Record<string, number>,
+  });
+
+  const getPersistentPilotStars = (pilotName: string) => {
+    const pilotKey = normalizePilotKey(pilotName);
+    return cumulativeResultsChampionStars.pilotStars[pilotKey] || 0;
+  };
+
+  const getPersistentTeamStars = (teamName: string) => {
+    const teamKey = normalizeTeamKey(teamName);
+    return cumulativeResultsChampionStars.teamStars[teamKey] || 0;
+  };
+
+  const championshipRaceCards = selectedResultsChampionship?.races || [];
+  const selectedResultsChampionshipNaming = getResultsChampionshipNaming(selectedResultsChampionship);
+  const shouldRankResultsByTotalPoints = selectedResultsChampionshipNaming?.seasonNumber === 0;
+
+  const RESULTS_S1_RACES_DESC = championshipRaceCards
+    .map((race) => ({
+      ...race,
+      results: [...(race.results || [])].sort((a, b) => compareRacePositions(a.position, b.position)),
+    }))
+    .sort((a, b) =>
+      String(b.id || "").localeCompare(String(a.id || ""), "fr", {
+        numeric: true,
+        sensitivity: "base",
+      })
+    );
+
+  const championshipRows = championshipRaceCards.flatMap((race) =>
+    (race.results || []).map((row) => ({
       race,
-      teamRows,
-      points,
-      bestPosition: teamRows[0]?.position ?? null,
-    };
-  }).filter(Boolean) as Array<{
-    race: (typeof RESULTS_S1_RACES)[number];
-    teamRows: Array<(typeof RESULTS_S1_RACES)[number]["results"][number]>;
-    points: number;
-    bestPosition: number | null;
-  }>;
+      row,
+      points: racePointsByPosition(row.position, row.status),
+    }))
+  );
 
+  const driverTotals = championshipRows.reduce((acc, item) => {
+    const driverName = String(item.row.pilot || "").trim();
+    if (!driverName) return acc;
 
+    const current =
+      acc[driverName] ||
+      ({
+        name: driverName,
+        team: String(item.row.team || "").trim(),
+        points: 0,
+        participations: 0,
+      } as { name: string; team: string; points: number; participations: number });
 
+    current.points += item.points;
+    current.participations += 1;
+    if (!current.team && item.row.team) current.team = String(item.row.team || "").trim();
+    acc[driverName] = current;
+    return acc;
+  }, {} as Record<string, { name: string; team: string; points: number; participations: number }>);
 
+  const teamTotals = championshipRows.reduce((acc, item) => {
+    const teamName = String(item.row.team || "").trim();
+    if (!teamName) return acc;
+    if (!acc[teamName]) {
+      acc[teamName] = { points: 0, races: new Set<string>() };
+    }
+    acc[teamName].points += item.points;
+    acc[teamName].races.add(String(item.race.id || ""));
+    return acc;
+  }, {} as Record<string, { points: number; races: Set<string> }>);
 
-  const renderResultsTitle = (title: string) => {
+  const minParticipations = selectedResultsChampionship?.minParticipations || 0;
 
-
-    const segments = title.split(/(Championnat|Équipe|Individuel|Saison\s+\d+|-\s*\d{4}\s*\/\s*\d{4}|\d{4}\s*\/\s*\d{4})/g).filter(Boolean);
-
-
-
-
-
-    return segments.map((segment, index) => {
-
-
-      if (segment === "Championnat") {
-
-
-        return (
-
-
-          <span
-
-
-            key={`${segment}-${index}`}
-
-
-            className="text-white/50 tracking-[0.06em] [font-variation-settings:'wght'_700]"
-
-
-          >
-
-
-            {segment}
-
-
-          </span>
-
-
-        );
-
-
+  const RESULTS_S1_DRIVER_STANDINGS = Object.values(driverTotals)
+    .filter((driver) => driver.participations >= minParticipations)
+    .sort((a, b) => {
+      if (shouldRankResultsByTotalPoints) {
+        return b.points - a.points || a.name.localeCompare(b.name);
       }
+      const avgA = a.points / a.participations;
+      const avgB = b.points / b.participations;
+      return avgB - avgA || a.name.localeCompare(b.name);
+    })
+    .map((driver, index) => ({
+      rank: index + 1,
+      name: driver.name,
+      team: driver.team,
+      points: driver.points,
+      participations: driver.participations,
+      average: driver.points / driver.participations,
+    }));
 
-
-
-
-
-      if (segment === "Équipe" || segment === "Individuel") {
-
-
-        return (
-
-
-          <span
-
-
-            key={`${segment}-${index}`}
-
-
-            className="relative inline-block text-white [text-shadow:0_0_10px_rgba(255,255,255,0.12)] after:absolute after:-bottom-[1px] after:left-0 after:h-[1px] after:w-full after:origin-left after:bg-gradient-to-r after:from-white/85 after:via-white/45 after:to-transparent"
-
-
-          >
-
-
-            {segment}
-
-
-          </span>
-
-
-        );
-
-
+  const RESULTS_S1_TEAM_STANDINGS = Object.entries(teamTotals)
+    .filter(([, data]) => data.races.size >= minParticipations)
+    .sort((a, b) => {
+      if (shouldRankResultsByTotalPoints) {
+        return b[1].points - a[1].points || a[0].localeCompare(b[0]);
       }
+      const avgA = a[1].points / a[1].races.size;
+      const avgB = b[1].points / b[1].races.size;
+      return avgB - avgA || a[0].localeCompare(b[0]);
+    })
+    .map(([team, data], index) => ({
+      rank: index + 1,
+      team,
+      proprietaire: getStoredTeamProprietaire(team),
+      points: data.points,
+      participations: data.races.size,
+      average: data.points / data.races.size,
+      color: getStoredTeamColor(team),
+    }));
 
+  const standingsMetricLabel = shouldRankResultsByTotalPoints ? "Points" : "Moyenne";
 
+  const renderPersistentChampionStars = (count: number, entityKey: string) => {
+    if (count <= 0) return null;
 
-
-
-      if (/^Saison\s+\d+$/.test(segment)) {
-
-
-        return (
-
-
+    return (
+      <span className="ml-2 inline-flex items-center gap-1">
+        {Array.from({ length: count }).map((_, index) => (
           <span
-
-
-            key={`${segment}-${index}`}
-
-
-            className="relative inline-block bg-gradient-to-r from-[#ff6a60] via-[#ff3b30] to-[#ff6a60] bg-clip-text text-transparent [text-shadow:0_0_16px_rgba(211,31,40,0.35)] after:absolute after:-bottom-[2px] after:left-0 after:h-[2px] after:w-full after:origin-left after:bg-gradient-to-r after:from-[#e10600]/85 after:via-[#ff3b30]/40 after:to-transparent"
-
-
+            key={`${entityKey}-star-${index}`}
+            className="relative inline-flex h-5 w-5 shrink-0 items-center justify-center drop-shadow-[0_2px_4px_rgba(217,169,38,0.3)]"
           >
-
-
-            {segment}
-
-
+            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+              <path
+                d="M12 2.8l2.72 5.51 6.08.88-4.4 4.29 1.04 6.05L12 16.65l-5.44 2.88 1.04-6.05-4.4-4.29 6.08-.88L12 2.8Z"
+                fill="#d4a847"
+                stroke="#f0e5a8"
+                strokeWidth="0.6"
+                strokeLinejoin="round"
+              />
+            </svg>
           </span>
+        ))}
+      </span>
+    );
+  };
 
+  const selectedResultsTeamStanding =
+    RESULTS_S1_TEAM_STANDINGS.find((team) => team.team === selectedResultsTeam) || null;
 
-        );
+  const selectedResultsTeamAccent = getStoredTeamColor(selectedResultsTeam);
 
+  const selectedResultsTeamDrivers = RESULTS_S1_DRIVER_STANDINGS.filter(
+    (driver) => driver.team === selectedResultsTeam
+  );
 
-      }
+  const selectedResultsTeamRaceCards = championshipRaceCards
+    .map((race) => {
+      const teamRows = (race.results || []).filter(
+        (row) => String(row.team || "").trim() === selectedResultsTeam
+      );
 
-
-
-
-
-      if (/^-\s*\d{4}\s*\/\s*\d{4}$/.test(segment) || /^\d{4}\s*\/\s*\d{4}$/.test(segment)) {
-
-
-        return (
-
-
-          <span
-
-
-            key={`${segment}-${index}`}
-
-
-            className="relative inline-block text-white/45 tracking-[0.06em] [font-variant-numeric:tabular-nums] after:absolute after:left-0 after:right-0 after:-bottom-[1px] after:h-px after:bg-white/18"
-
-
-          >
-
-
-            {segment}
-
-
-          </span>
-
-
-        );
-
-
-      }
-
-
-
-
-
-      return <span key={`${segment}-${index}`} className="text-white/88">{segment}</span>;
-
-
+      return {
+        race,
+        teamRows,
+        points: teamRows.reduce(
+          (sum, row) => sum + racePointsByPosition(row.position, row.status),
+          0
+        ),
+      };
+    })
+    .filter((card) => card.teamRows.length > 0)
+    .sort((a, b) => {
+      return String(b.race.id || "").localeCompare(String(a.race.id || ""), "fr", {
+        numeric: true,
+        sensitivity: "base",
+      });
     });
 
+  const raceParticipationTeamBlocks: Array<{
+    team: string;
+    teamColor: string;
+    rows: Array<RaceParticipationDraftRow & { rowIndex: number }>;
+  }> = [];
 
+  raceParticipationDraftRows.forEach((row, rowIndex) => {
+    const existingBlock = raceParticipationTeamBlocks.find(
+      (block) => normalizeTeamKey(block.team) === normalizeTeamKey(row.team)
+    );
+
+    if (existingBlock) {
+      existingBlock.rows.push({ ...row, rowIndex });
+      return;
+    }
+
+    raceParticipationTeamBlocks.push({
+      team: row.team,
+      teamColor: normalizeHexColor(row.teamColor, getStoredTeamColor(row.team)),
+      rows: [{ ...row, rowIndex }],
+    });
+  });
+
+  const allHistoricalResultRows = resultsChampionships.flatMap((championship) =>
+    (championship.races || []).flatMap((race) => race.results || [])
+  );
+
+  const allHistoricalResultRowsChronological = resultsChampionships.flatMap((championship) =>
+    [...(championship.races || [])]
+      .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")))
+      .flatMap((race) => race.results || [])
+  );
+
+  const suggestedProprietairesByTeam = allHistoricalResultRowsChronological.reduce((acc, row) => {
+    const team = String(row.team || "").trim();
+    const proprietaire = String((row as { proprietaire?: string }).proprietaire || "").trim();
+    if (!team || !proprietaire) return acc;
+
+    acc[normalizeTeamKey(team)] = {
+      teamLabel: team,
+      proprietaire,
+    };
+
+    return acc;
+  }, {} as Record<string, { teamLabel: string; proprietaire: string }>);
+
+  const getTeamProprietaireSuggestion = (teamName: string) => {
+    const teamKey = normalizeTeamKey(teamName);
+    return String(suggestedProprietairesByTeam[teamKey]?.proprietaire || "").trim();
+  };
+
+  const suggestedTeamsFromMembers = members
+    .map((member: any) => String(member?.team || "").trim())
+    .filter(Boolean);
+
+  const suggestedTeamsFromHistory = allHistoricalResultRows
+    .map((row) => String(row.team || "").trim())
+    .filter(Boolean);
+
+  const suggestedTeams = Array.from(
+    new Map(
+      [...suggestedTeamsFromMembers, ...suggestedTeamsFromHistory].map((team) => [
+        normalizeTeamKey(team),
+        team,
+      ])
+    ).values()
+  ).sort((a, b) => a.localeCompare(b));
+
+  const getDefaultTeamColor = (teamName: string) => getStoredTeamColor(teamName);
+
+  const suggestedPilotsByTeam = allHistoricalResultRowsChronological.reduce((acc, row, rowOrder) => {
+    const team = String(row.team || "").trim();
+    const pilot = String(row.pilot || "").trim();
+    if (!team || !pilot) return acc;
+
+    const teamKey = normalizeTeamKey(team);
+    const teamStore = acc[teamKey] || {
+      teamLabel: team,
+      pilots: {} as Record<string, { label: string; count: number; firstSeen: number }>,
+      slotPilots: {} as Partial<Record<1 | 2, string>>,
+    };
+
+    const pilotKey = normalizePilotKey(pilot);
+    const currentPilot = teamStore.pilots[pilotKey] || {
+      label: pilot,
+      count: 0,
+      firstSeen: rowOrder,
+    };
+    currentPilot.count += 1;
+    currentPilot.firstSeen = Math.min(currentPilot.firstSeen, rowOrder);
+    teamStore.pilots[pilotKey] = currentPilot;
+
+    if (row.slot === 1 || row.slot === 2) {
+      teamStore.slotPilots[row.slot] = pilot;
+    }
+
+    acc[teamKey] = teamStore;
+    return acc;
+  }, {} as Record<string, { teamLabel: string; pilots: Record<string, { label: string; count: number; firstSeen: number }>; slotPilots: Partial<Record<1 | 2, string>> }>);
+
+  const getTeamPilotSuggestions = (teamName: string) => {
+    const teamKey = normalizeTeamKey(teamName);
+    const teamStore = suggestedPilotsByTeam[teamKey];
+    if (!teamStore) return [] as string[];
+
+    const slottedPilots = [
+      String(teamStore.slotPilots[1] || "").trim(),
+      String(teamStore.slotPilots[2] || "").trim(),
+    ].filter(Boolean);
+
+    const slottedKeys = new Set(slottedPilots.map((pilot) => normalizePilotKey(pilot)));
+
+    const remainingPilots = Object.values(teamStore.pilots)
+      .sort((a, b) => a.firstSeen - b.firstSeen || a.label.localeCompare(b.label))
+      .map((pilot) => pilot.label)
+      .filter((pilot) => !slottedKeys.has(normalizePilotKey(pilot)));
+
+    return [...slottedPilots, ...remainingPilots];
+  };
+
+  useEffect(() => {
+    if (!canManageResultsAsSuperAdmin || !selectedResultRace) {
+      setRaceParticipationDraftRows([]);
+      return;
+    }
+
+    const raceRows = [...(selectedResultRace.results || [])].sort((a, b) => compareRacePositions(a.position, b.position));
+    const rowsByTeam = raceRows.reduce((acc, row) => {
+      const team = String(row.team || "").trim();
+      if (!team) return acc;
+      const key = normalizeTeamKey(team);
+      if (!acc[key]) acc[key] = { label: team, rows: [] as ResultsRaceRow[] };
+      acc[key].rows.push(row);
+      return acc;
+    }, {} as Record<string, { label: string; rows: ResultsRaceRow[] }>);
+
+    const orderedTeamLabels = Array.from(
+      new Map(
+        [
+          ...suggestedTeams,
+          ...Object.values(rowsByTeam).map((entry) => entry.label),
+        ].map((team) => [normalizeTeamKey(team), team])
+      ).values()
+    );
+
+    const initialRows = orderedTeamLabels.flatMap((teamLabel) => {
+      const teamKey = normalizeTeamKey(teamLabel);
+      const existingRows = rowsByTeam[teamKey]?.rows || [];
+      const teamProprietaire =
+        String((existingRows[0] as { proprietaire?: string } | undefined)?.proprietaire || "").trim() ||
+        getTeamProprietaireSuggestion(teamLabel);
+      const defaultTeamColor = normalizeHexColor(
+        existingRows[0]?.teamColor ? String(existingRows[0].teamColor) : getDefaultTeamColor(teamLabel),
+        getDefaultTeamColor(teamLabel)
+      );
+
+      const canonicalPilotsBySlot = getTeamPilotSuggestions(teamLabel).slice(0, 2);
+
+      return [0, 1].map((slotIndex) => {
+        const slotNumber = (slotIndex + 1) as 1 | 2;
+        const pilotForSlot = String(canonicalPilotsBySlot[slotIndex] || "").trim();
+        const existingBySlot = existingRows.find((row) => row.slot === slotNumber);
+        const existingByPilot = pilotForSlot
+          ? existingRows.find((row) => normalizePilotKey(row.pilot) === normalizePilotKey(pilotForSlot))
+          : undefined;
+        const existing = existingBySlot || existingByPilot || existingRows[slotIndex];
+        const fallbackPilot = String(existing?.pilot || pilotForSlot || "").trim();
+        return {
+          team: teamLabel,
+          proprietaire:
+            String((existing as { proprietaire?: string } | undefined)?.proprietaire || "").trim() ||
+            teamProprietaire,
+          slot: slotNumber,
+          pilot: fallbackPilot,
+          position: existing?.position ? String(existing.position) : "",
+          status: String(existing?.status || "").trim(),
+          participated: Boolean(existing),
+          teamColor: normalizeHexColor(String(existing?.teamColor || defaultTeamColor), defaultTeamColor),
+        };
+      });
+    });
+
+    setRaceParticipationDraftRows(initialRows);
+  }, [
+    canManageResultsAsSuperAdmin,
+    members,
+    resultsChampionships,
+    selectedResultRace,
+  ]);
+
+  useEffect(() => {
+    if (!selectedResultRace) {
+      setIsEditingSelectedRaceName(false);
+      setSelectedRaceCodeDraft("");
+      setSelectedRaceNameDraft("");
+      setSelectedRaceDateDraft("");
+      return;
+    }
+
+    setSelectedRaceCodeDraft(String(selectedResultRace.id || ""));
+    setSelectedRaceNameDraft(String(selectedResultRace.circuit || ""));
+    setSelectedRaceDateDraft(String(selectedResultRace.date || ""));
+  }, [selectedResultRace]);
+
+  const handleSaveSelectedRaceName = async () => {
+    if (!canManageResultsAsSuperAdmin) {
+      setResultsAdminMessage("Acces super admin requis.");
+      return;
+    }
+
+    if (!selectedResultsChampionship || !selectedResultRace) {
+      setResultsAdminMessage("Selectionne un championnat et une course.");
+      return;
+    }
+
+    const nextRaceId = String(selectedRaceCodeDraft || "").trim().toUpperCase();
+    const nextCircuit = String(selectedRaceNameDraft || "").trim();
+    const nextDate = String(selectedRaceDateDraft || "").trim();
+    if (!nextRaceId || !nextCircuit || !nextDate) {
+      setResultsAdminMessage("Code, nom et date de course sont requis.");
+      return;
+    }
+
+    try {
+      setIsSavingSelectedRaceName(true);
+      await postResultsAdminAction({
+        action: "updateRaceMeta",
+        championshipKey: selectedResultsChampionship.key,
+        sourceRaceId: String(selectedResultRace.id || "").trim().toUpperCase(),
+        raceId: nextRaceId,
+        circuit: nextCircuit,
+        date: nextDate,
+      });
+      setSelectedResultRaceId(nextRaceId);
+      setIsEditingSelectedRaceName(false);
+      setResultsAdminMessage("Course mise a jour (code, nom, date).");
+    } catch (error) {
+      setResultsAdminMessage(error instanceof Error ? error.message : "Erreur lors de la mise a jour de la course.");
+    } finally {
+      setIsSavingSelectedRaceName(false);
+    }
+  };
+
+  const handleDeleteSelectedRace = async () => {
+    if (!canManageResultsAsSuperAdmin) {
+      setResultsAdminMessage("Acces super admin requis.");
+      return;
+    }
+
+    if (!selectedResultsChampionship || !selectedResultRace) {
+      setResultsAdminMessage("Selectionne un championnat et une course.");
+      return;
+    }
+
+    const raceLabel = `${selectedResultRace.id} - ${selectedResultRace.circuit}`;
+    const confirmDelete = window.confirm(`Supprimer la course \"${raceLabel}\" ? Cette action est definitive.`);
+    if (!confirmDelete) return;
+
+    try {
+      await postResultsAdminAction({
+        action: "deleteRace",
+        championshipKey: selectedResultsChampionship.key,
+        raceId: String(selectedResultRace.id || "").trim().toUpperCase(),
+      });
+      setIsEditingSelectedRaceName(false);
+      setSelectedResultRaceId("");
+      setResultsAdminMessage("Course supprimee.");
+    } catch (error) {
+      setResultsAdminMessage(error instanceof Error ? error.message : "Erreur lors de la suppression de la course.");
+    }
+  };
+
+  const handleSaveRaceParticipationBoard = async () => {
+    if (!canManageResultsAsSuperAdmin) {
+      setResultsAdminMessage("Acces super admin requis.");
+      return;
+    }
+
+    if (isSavingRaceParticipation) {
+      setResultsAdminMessage("Sauvegarde deja en cours...");
+      return;
+    }
+
+    const champ = resultsChampionships.find((c) => c.key === selectedResultKey);
+    if (!champ) {
+      setResultsAdminMessage("Selectionne un championnat.");
+      return;
+    }
+
+    const raceId = String(selectedResultRaceId || "").trim();
+    if (!raceId) {
+      setResultsAdminMessage("Selectionne une course.");
+      return;
+    }
+
+    const participatingRows = raceParticipationDraftRows
+      .map((row, rowIndex) => ({ row, rowIndex }))
+      .filter(({ row }) => {
+        const hasPosition = String(row.position || "").trim().length > 0;
+        const isDnf = String(row.status || "").trim().toUpperCase() === "DNF";
+        return hasPosition || isDnf;
+      });
+    if (participatingRows.length === 0) {
+      setResultsAdminMessage("Coche au moins un pilote participant.");
+      return;
+    }
+
+    const normalizedRows = participatingRows.map(({ row, rowIndex }) => {
+      const team = String(row.team || "").trim();
+      const proprietaire = String(row.proprietaire || "").trim();
+      const pilot = String(row.pilot || "").trim();
+      const status = String(row.status || "").trim().toUpperCase();
+      const isDnf = status === "DNF";
+      const teamColor = normalizeHexColor(row.teamColor, getDefaultTeamColor(team));
+      const parsedPosition = Number.parseInt(String(row.position || ""), 10);
+      const hasValidPosition = Number.isFinite(parsedPosition) && parsedPosition > 0;
+      const position = isDnf ? 0 : (hasValidPosition ? parsedPosition : Number.NaN);
+      return {
+        team,
+        proprietaire,
+        slot: row.slot,
+        pilot,
+        status,
+        teamColor,
+        position,
+        positionText: String(row.position || "").trim(),
+        rowIndex,
+      };
+    });
+
+    const invalidRow = normalizedRows.find((row) => {
+      const isDnf = row.status === "DNF";
+      const hasValidPosition = Number.isFinite(row.position) && row.position > 0;
+      if (!row.team || !row.pilot) return true;
+      if (isDnf) return false;
+      return !hasValidPosition;
+    });
+    if (invalidRow) {
+      setResultsAdminMessage("Chaque participant doit avoir ecurie, pilote et une position (sauf DNF).");
+      return;
+    }
+
+    const duplicatePositionMap = new Map<number, { rowIndex: number; team: string; pilot: string }>();
+    for (const row of normalizedRows) {
+      const hasValidPosition = Number.isFinite(row.position) && row.position > 0;
+      if (!hasValidPosition) continue; // Skip positions invalides/vides
+      const existingRow = duplicatePositionMap.get(row.position);
+      if (existingRow) {
+        setResultsAdminMessage(
+          `Deux pilotes ne peuvent pas partager la meme position: ligne ${existingRow.rowIndex + 1} (${existingRow.team} - ${existingRow.pilot}) et ligne ${row.rowIndex + 1} (${row.team} - ${row.pilot}) ont la position ${row.position}.`
+        );
+        return;
+      }
+      duplicatePositionMap.set(row.position, {
+        rowIndex: row.rowIndex,
+        team: row.team,
+        pilot: row.pilot,
+      });
+    }
+
+    try {
+      setIsSavingRaceParticipation(true);
+      setResultsAdminMessage("Sauvegarde en cours... mise a jour du classement.");
+
+      for (const row of normalizedRows) {
+        await postResultsAdminAction({
+          action: "upsertRaceRow",
+          championshipKey: champ.key,
+          raceId,
+          pilot: row.pilot,
+          team: row.team,
+          proprietaire: row.proprietaire,
+          slot: row.slot,
+          position: row.position,
+          status: row.status,
+          teamColor: row.teamColor,
+        });
+      }
+
+      setResultsAdminMessage(`${normalizedRows.length} ligne(s) participant enregistree(s).`);
+    } catch (error) {
+      setResultsAdminMessage(error instanceof Error ? error.message : "Erreur lors de l enregistrement des participants.");
+    } finally {
+      setIsSavingRaceParticipation(false);
+    }
+  };
+
+  const handleAddParticipationTeam = () => {
+    if (!canManageResultsAsSuperAdmin) {
+      setResultsAdminMessage("Acces super admin requis.");
+      return;
+    }
+
+    const teamName = String(newParticipationTeamName || "").trim();
+    if (!teamName) {
+      setResultsAdminMessage("Renseigne un nom d ecurie avant d ajouter.");
+      return;
+    }
+
+    const teamKey = normalizeTeamKey(teamName);
+    const alreadyExists = raceParticipationDraftRows.some(
+      (row) => normalizeTeamKey(row.team) === teamKey
+    );
+
+    if (alreadyExists) {
+      setResultsAdminMessage("Cette ecurie existe deja dans la liste de saisie.");
+      return;
+    }
+
+    const pilotSuggestions = getTeamPilotSuggestions(teamName);
+    const proprietaireSuggestion = getTeamProprietaireSuggestion(teamName);
+    const teamColor = getDefaultTeamColor(teamName);
+
+    setRaceParticipationDraftRows((prev) => [
+      ...prev,
+      {
+        team: teamName,
+        proprietaire: proprietaireSuggestion,
+        slot: 1,
+        pilot: String(pilotSuggestions[0] || ""),
+        position: "",
+        status: "",
+        participated: false,
+        teamColor,
+      },
+      {
+        team: teamName,
+        proprietaire: proprietaireSuggestion,
+        slot: 2,
+        pilot: String(pilotSuggestions[1] || ""),
+        position: "",
+        status: "",
+        participated: false,
+        teamColor,
+      },
+    ]);
+
+    setNewParticipationTeamName("");
+    setResultsAdminMessage(`Ecurie ${teamName} ajoutee (2 lignes pre-remplies).`);
+  };
+
+  const getChampionshipStatusIcon = (status: ResultsChampionshipStatus | string | undefined) => {
+    const normalizedStatus = String(status || "")
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
+    if (normalizedStatus === "en cours") {
+      return (
+        <svg
+          className="h-3.5 w-3.5 shrink-0"
+          viewBox="0 0 12 12"
+          aria-label="Championnat en cours"
+          title="Championnat en cours"
+        >
+          <circle cx="6" cy="6" r="4.5" fill="#45a36b" />
+        </svg>
+      );
+    }
+
+    if (normalizedStatus === "termine") {
+      return (
+        <svg
+          className="h-3.5 w-3.5 shrink-0"
+          viewBox="0 0 12 12"
+          aria-label="Championnat termine"
+          title="Championnat termine"
+        >
+          <circle cx="6" cy="6" r="4.5" fill="#c85a63" />
+        </svg>
+      );
+    }
+
+    return null;
+  };
+
+  const renderResultsTitle = (title: string, status?: ResultsChampionshipStatus) => {
+    const words = String(title || "").split(/(\s+)/);
+    const statusIcon = getChampionshipStatusIcon(status);
+
+    const titleContent = words.map((word, index) => {
+      const cleanWord = word.trim();
+      const shouldBeRedWord = /^(Ecurie|Écurie|Individuel)$/i.test(cleanWord);
+      const prevWord = words[index - 1]?.trim() || "";
+      const isSeasonNumber = /^\d+$/.test(cleanWord) && /^Saison$/i.test(prevWord);
+
+      if (shouldBeRedWord || isSeasonNumber) {
+        return (
+          <span key={`${word}-${index}`} className="text-[#e10600]">
+            {word}
+          </span>
+        );
+      }
+
+      return <span key={`${word}-${index}`}>{word}</span>;
+    });
+
+    return statusIcon ? (
+      <span className="inline-flex items-center gap-2">
+        {statusIcon}
+        <span>{titleContent}</span>
+      </span>
+    ) : (
+      titleContent
+    );
   };
 
 
@@ -6253,7 +7051,7 @@ export default function Dashboard() {
                   </div>
 
 
-                  <div className="flex items-center px-3 py-3 text-sm font-black text-[#ff9aa0]">{team.average.toFixed(2)}</div>
+                  <div className="flex items-center px-3 py-3 text-sm font-black text-[#ff9aa0]">{team.average.toFixed(1)}</div>
 
 
                   <div className="flex items-center px-3 py-3 text-base font-black text-white">{team.total}</div>
@@ -8039,6 +8837,27 @@ export default function Dashboard() {
               )}
 
 
+              {tab === "results" && selectedResultsCategory && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedResultsTeam) {
+                      setSelectedResultTeamName("");
+                      return;
+                    }
+                    if (selectedResultRace) {
+                      setSelectedResultRaceId("");
+                      return;
+                    }
+                    setSelectedResultKey("");
+                  }}
+                  className="inline-flex w-auto items-center justify-center border border-[#d65a62]/45 bg-[#5b2024]/35 px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#ffd3d0] transition hover:border-[#ff6f66]/55 hover:bg-[#692329]/45 hover:text-white"
+                >
+                  Retour
+                </button>
+              )}
+
+
             </div>
 
 
@@ -8913,27 +9732,13 @@ export default function Dashboard() {
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
                           <p className="text-[10px] uppercase tracking-[0.2em] text-[#b8becd]">Championnat</p>
-                          <h3 className="f1-title text-2xl sm:text-4xl font-black uppercase tracking-[0.08em] text-white leading-tight">
-                            {selectedResultsCategory?.title || DEFAULT_RESULTS_CHAMPIONSHIP_TITLE}
+                          <h3 className="f1-title text-xl sm:text-3xl font-black uppercase tracking-[0.08em] text-white leading-tight">
+                            {renderResultsTitle(selectedResultsCategory?.title || EMPTY_RESULTS_TITLE, selectedResultsCategory?.championshipStatus)}
                           </h3>
+                          {selectedResultsChampionship && (selectedResultsChampionship.minParticipations || 0) > 0 && (
+                            <p className="mt-0.5 text-[10px] uppercase tracking-[0.18em] text-[#616878]">{selectedResultsChampionship.minParticipations} courses requises pour le classement</p>
+                          )}
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (selectedResultsTeam) {
-                              setSelectedResultTeamName("");
-                              return;
-                            }
-                            if (selectedResultRace) {
-                              setSelectedResultRaceId("");
-                              return;
-                            }
-                            setSelectedResultKey("");
-                          }}
-                          className="inline-flex w-auto items-center justify-center border border-[#d65a62]/45 bg-[#5b2024]/35 px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#ffd3d0] transition hover:border-[#ff6f66]/55 hover:bg-[#692329]/45 hover:text-white"
-                        >
-                          Retour
-                        </button>
                       </div>
                     </section>
 
@@ -8944,8 +9749,17 @@ export default function Dashboard() {
                             <div className="leading-tight">
                               <p className="text-[10px] uppercase tracking-[0.2em] text-[#b8becd]">Fiche ecurie</p>
                               <h3 className="f1-title text-2xl sm:text-4xl font-black uppercase tracking-[0.08em] text-white leading-tight">
-                                {selectedResultsTeam}
+                                <span className="inline-flex items-center">
+                                  <span>{selectedResultsTeam}</span>
+                                  {renderPersistentChampionStars(
+                                    getPersistentTeamStars(selectedResultsTeam),
+                                    `team-profile-${normalizeTeamKey(selectedResultsTeam)}`
+                                  )}
+                                </span>
                               </h3>
+                              {selectedResultsTeamStanding?.proprietaire && (
+                                <p className="mt-0.5 truncate text-xs sm:text-sm uppercase tracking-[0.14em] text-[#a7aebb] leading-[1]">{selectedResultsTeamStanding.proprietaire}</p>
+                              )}
                             </div>
                             <div className="flex items-center gap-4 sm:gap-6">
                               <div className="text-right leading-tight">
@@ -8953,9 +9767,13 @@ export default function Dashboard() {
                                 <p className="text-4xl sm:text-6xl font-black leading-none text-white">#{selectedResultsTeamStanding?.rank ?? "-"}</p>
                               </div>
                               <div className="text-right leading-tight">
-                                <p className="text-[10px] uppercase tracking-[0.16em] text-[#a7aebb]">Points</p>
+                                <p className="text-[10px] uppercase tracking-[0.16em] text-[#a7aebb]">{standingsMetricLabel}</p>
                                 <p className="text-4xl sm:text-6xl font-black leading-none" style={{ color: selectedResultsTeamAccent }}>
-                                  {selectedResultsTeamStanding?.points ?? 0}
+                                  {selectedResultsTeamStanding
+                                    ? shouldRankResultsByTotalPoints
+                                      ? selectedResultsTeamStanding.points
+                                      : selectedResultsTeamStanding.average.toFixed(1)
+                                    : 0}
                                 </p>
                               </div>
                             </div>
@@ -8965,12 +9783,32 @@ export default function Dashboard() {
                         <section className="mt-2 border border-[#313541] bg-[#151920]/88 p-2 sm:p-3">
                           <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[#eef1f6]">Pilotes</h4>
                           <div className="mt-1.5 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-                            {selectedResultsTeamDrivers.map((driver) => (
+                            {selectedResultsTeamDrivers
+                              .map((driver) => {
+                                const pilotSlot =
+                                  [...(championshipRaceCards || [])]
+                                    .flatMap((race) => race.results || [])
+                                    .find((row) => String(row.pilot || "").trim() === driver.name && String(row.team || "").trim() === selectedResultsTeam)
+                                    ?.slot || 999;
+                                return { ...driver, slot: pilotSlot };
+                              })
+                              .sort((a, b) => a.slot - b.slot)
+                              .map((driver) => {
+                                const slotLabel = driver.slot === 1 ? "Pilote 1" : driver.slot === 2 ? "Pilote 2" : "Pilote";
+                                return (
                               <article key={`team-profile-driver-${driver.name}`} className="border border-[#3a3034] bg-[#1f232b] p-2 sm:p-3">
                                 <div className="flex items-center justify-between gap-3">
                                   <div className="leading-tight">
-                                    <p className="text-[10px] uppercase tracking-[0.15em] text-[#a7aebb]">Pilote</p>
-                                    <p className="text-lg sm:text-2xl font-bold uppercase text-white leading-tight">{driver.name}</p>
+                                    <p className="text-[10px] uppercase tracking-[0.15em] text-[#a7aebb]">{slotLabel}</p>
+                                    <p className="text-lg sm:text-2xl font-bold uppercase text-white leading-tight">
+                                      <span className="inline-flex items-center">
+                                        <span>{driver.name}</span>
+                                        {renderPersistentChampionStars(
+                                          getPersistentPilotStars(driver.name),
+                                          `team-profile-driver-${normalizePilotKey(driver.name)}`
+                                        )}
+                                      </span>
+                                    </p>
                                   </div>
                                   <div className="flex items-center gap-3 sm:gap-5">
                                     <div className="text-right leading-tight">
@@ -8978,48 +9816,93 @@ export default function Dashboard() {
                                       <p className="text-3xl sm:text-5xl font-black leading-none text-white">#{driver.rank}</p>
                                     </div>
                                     <div className="text-right leading-tight">
-                                      <p className="text-[10px] uppercase tracking-[0.14em] text-[#a7aebb]">Points</p>
+                                      <p className="text-[10px] uppercase tracking-[0.14em] text-[#a7aebb]">{standingsMetricLabel}</p>
                                       <p className="text-3xl sm:text-5xl font-black leading-none" style={{ color: selectedResultsTeamAccent }}>
-                                        {driver.points}
+                                        {shouldRankResultsByTotalPoints ? driver.points : driver.average.toFixed(1)}
                                       </p>
                                     </div>
                                   </div>
                                 </div>
                               </article>
-                            ))}
+                                );
+                              })}
                           </div>
                         </section>
 
                         <section className="mt-2 border border-[#313541] bg-[#151920]/88 p-2 sm:p-3">
                           <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[#eef1f6]">Courses de l'ecurie</h4>
 
-                          <div className="mt-1.5 space-y-1.5">
-                            {selectedResultsTeamRaceCards.map((card) => (
-                              <article key={`team-profile-race-${card.race.id}`} className="border border-[#3a3034] bg-[#1f232b] p-2 sm:p-3">
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                  <p className="text-[10px] uppercase tracking-[0.16em] text-[#a7aebb]">
-                                    {card.race.id} • {card.race.circuit} • {formatRaceDateFr(card.race.date)}
-                                  </p>
-                                  <span className="text-[10px] uppercase tracking-[0.14em]" style={{ color: selectedResultsTeamAccent }}>
-                                    {card.points} pts
-                                  </span>
-                                </div>
+                          {(() => {
+                            const firstRaceRows = selectedResultsTeamRaceCards[0]?.teamRows || [];
+                            const sortedFirstRaceRows = [...firstRaceRows].sort((a, b) => {
+                              const slotA = Number((a as { slot?: number }).slot || 99);
+                              const slotB = Number((b as { slot?: number }).slot || 99);
+                              return slotA - slotB;
+                            });
+                            const headerPilotOne = sortedFirstRaceRows[0]?.pilot || "Pilote 1";
+                            const headerPilotTwo = sortedFirstRaceRows[1]?.pilot || "Pilote 2";
 
-                                <div className="mt-1.5 space-y-1">
-                                  {card.teamRows.map((row) => (
-                                    <div key={`team-profile-row-${card.race.id}-${row.pilot}`} className="flex items-center justify-between border border-[#343844] bg-[#1e222c] px-3 py-2">
-                                      <p className="text-sm text-gray-100">
-                                        {formatRacePositionFr(row.position)} - {row.pilot}
-                                      </p>
-                                      <span className="text-[10px] uppercase tracking-[0.12em] text-[#ffd3d0]">
-                                        {racePointsByPosition(row.position, (row as { status?: string }).status)} pts
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </article>
-                            ))}
+                            return (
+                          <div className="mt-1.5 overflow-x-auto border border-[#3a3034]">
+                            <table className="min-w-full border-collapse text-left">
+                              <thead>
+                                <tr className="border-b border-[#3a3034] bg-[#1a1e27]">
+                                  <th className="px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#8f96a5]">Course</th>
+                                  <th className="px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#8f96a5]">Circuit</th>
+                                  <th className="px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#8f96a5]">Date</th>
+                                  <th className="px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#8f96a5]">
+                                    {headerPilotOne}
+                                  </th>
+                                  <th className="px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#8f96a5]">
+                                    {headerPilotTwo}
+                                  </th>
+                                  <th className="px-3 py-2 text-right text-[10px] font-black uppercase tracking-[0.14em] text-[#8f96a5]">Total</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {selectedResultsTeamRaceCards.map((card) => {
+                                  const orderedRows = [...card.teamRows].sort((a, b) => {
+                                    const slotA = Number((a as { slot?: number }).slot || 99);
+                                    const slotB = Number((b as { slot?: number }).slot || 99);
+                                    return slotA - slotB;
+                                  });
+                                  const rowOne = orderedRows[0] || null;
+                                  const rowTwo = orderedRows[1] || null;
+
+                                  const renderPilotCell = (row: (typeof orderedRows)[number] | null) => {
+                                    if (!row) {
+                                      return <span className="text-[#6f7687]">-</span>;
+                                    }
+                                    const rowStatus = (row as { status?: string }).status;
+                                    const rowPoints = racePointsByPosition(row.position, rowStatus);
+                                    return (
+                                      <div className="flex items-center justify-center gap-2">
+                                        <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-[2px] bg-[#f7f8fb] px-1 text-sm font-black leading-none text-[#101834]">
+                                          {formatRacePositionFr(row.position, rowStatus)}
+                                        </span>
+                                        <span className="text-sm font-black leading-none text-white">
+                                          {rowPoints}
+                                        </span>
+                                      </div>
+                                    );
+                                  };
+
+                                  return (
+                                    <tr key={`team-profile-race-${card.race.id}`} className="border-b border-[#2e3340] bg-[#1f232b] even:bg-[#1b2028]">
+                                      <td className="px-3 py-2 text-xs font-black uppercase tracking-[0.08em] text-white">{card.race.id}</td>
+                                      <td className="px-3 py-2 text-xs uppercase tracking-[0.03em] text-[#d5d9e3]">{card.race.circuit}</td>
+                                      <td className="px-3 py-2 text-xs text-[#a7aebb]">{formatRaceDateFr(card.race.date)}</td>
+                                      <td className="px-3 py-2 text-xs uppercase tracking-[0.02em]">{renderPilotCell(rowOne)}</td>
+                                      <td className="px-3 py-2 text-xs uppercase tracking-[0.02em]">{renderPilotCell(rowTwo)}</td>
+                                      <td className="px-3 py-2 text-right text-sm font-black" style={{ color: selectedResultsTeamAccent }}>{card.points}</td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
                           </div>
+                              );
+                            })()}
                         </section>
                       </>
                     ) : selectedResultRace ? (
@@ -9029,48 +9912,317 @@ export default function Dashboard() {
                             <div>
                               <p className="text-[10px] uppercase tracking-[0.2em] text-[#b8becd]">Course</p>
                               <h3 className="f1-title mt-1 text-2xl sm:text-4xl font-black uppercase tracking-[0.08em] text-white">
-                                {selectedResultRace.id} - <span className="text-[#ff4a52]">{selectedResultRace.circuit}</span> - {formatRaceDateFr(selectedResultRace.date)}
+                                {selectedResultRace.id} - <span className="text-[#e10600]">{selectedResultRace.circuit}</span> - {formatRaceDateFr(selectedResultRace.date)}
                               </h3>
                             </div>
+
+                            {canManageResultsAsSuperAdmin ? (
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedRaceCodeDraft(String(selectedResultRace.id || ""));
+                                    setSelectedRaceNameDraft(String(selectedResultRace.circuit || ""));
+                                    setSelectedRaceDateDraft(String(selectedResultRace.date || ""));
+                                    setIsEditingSelectedRaceName((prev) => !prev);
+                                  }}
+                                  className="border border-[#d65a62]/45 bg-[#5b2024]/35 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#ffd3d0] hover:border-[#ff6f66]/55 hover:bg-[#692329]/45 hover:text-white"
+                                >
+                                  {isEditingSelectedRaceName ? "Fermer" : "Modifier"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={handleDeleteSelectedRace}
+                                  className="border border-[#d65a62]/45 bg-[#5b2024]/35 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#ffd3d0] hover:border-[#ff6f66]/55 hover:bg-[#692329]/45 hover:text-white"
+                                >
+                                  Supprimer
+                                </button>
+                              </div>
+                            ) : (
+                              <p className="text-[10px] uppercase tracking-[0.14em] text-[#8f96a5]">
+                                Actions reservees au super admin
+                              </p>
+                            )}
                           </div>
+
+                          {canManageResultsAsSuperAdmin && isEditingSelectedRaceName && (
+                            <div className="mt-3 grid grid-cols-1 gap-2 border border-[#3a3034] bg-[#1f232b] p-3 sm:grid-cols-[160px_1fr_160px_auto_auto] sm:items-center">
+                              <input
+                                value={selectedRaceCodeDraft}
+                                onChange={(e) => setSelectedRaceCodeDraft(e.target.value.toUpperCase())}
+                                placeholder="Code course"
+                                className="w-full border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs uppercase text-white outline-none"
+                              />
+                              <input
+                                value={selectedRaceNameDraft}
+                                onChange={(e) => setSelectedRaceNameDraft(e.target.value)}
+                                placeholder="Nom de course"
+                                className="w-full border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
+                              />
+                              <input
+                                value={selectedRaceDateDraft}
+                                onChange={(e) => setSelectedRaceDateDraft(e.target.value)}
+                                placeholder="Date (DD/MM/YYYY)"
+                                className="w-full border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={handleSaveSelectedRaceName}
+                                disabled={isSavingSelectedRaceName}
+                                className="border border-white/25 bg-black/40 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-white hover:border-white/45 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                {isSavingSelectedRaceName ? "Sauvegarde..." : "Enregistrer"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleDeleteSelectedRace}
+                                className="border border-[#d65a62]/45 bg-[#5b2024]/35 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#ffd3d0] hover:border-[#ff6f66]/55 hover:bg-[#692329]/45 hover:text-white"
+                              >
+                                Supprimer course
+                              </button>
+                            </div>
+                          )}
                         </section>
 
                         {canManageResultsAsSuperAdmin && (
                           <section className="mt-3 border border-[#3a3034] bg-[#1f232b] p-3">
-                            <p className="text-[10px] uppercase tracking-[0.16em] text-[#a7aebb]">Ajouter ecurie + pilote a la course</p>
-                            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-5">
-                              <input
-                                value={newRacePilot}
-                                onChange={(e) => setNewRacePilot(e.target.value)}
-                                placeholder="Pilote"
-                                className="border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
-                              />
-                              <input
-                                value={newRaceTeam}
-                                onChange={(e) => setNewRaceTeam(e.target.value)}
-                                placeholder="Ecurie"
-                                className="border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
-                              />
-                              <input
-                                value={newRacePosition}
-                                onChange={(e) => setNewRacePosition(e.target.value)}
-                                placeholder="Position"
-                                className="border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
-                              />
-                              <input
-                                value={newRaceStatus}
-                                onChange={(e) => setNewRaceStatus(e.target.value)}
-                                placeholder="Status (ex: DNF)"
-                                className="border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
-                              />
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="text-[10px] uppercase tracking-[0.16em] text-[#a7aebb]">Saisie intelligente des participants</p>
                               <button
                                 type="button"
-                                onClick={handleAddRaceResultRow}
-                                className="border border-[#d65a62]/45 bg-[#5b2024]/35 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#ffd3d0] hover:border-[#ff6f66]/55 hover:bg-[#692329]/45 hover:text-white"
+                                onClick={() => setIsRaceConfigCollapsed((prev) => !prev)}
+                                className="border border-white/20 bg-black/30 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-white hover:border-white/45"
                               >
-                                Ajouter ligne
+                                {isRaceConfigCollapsed ? "Afficher configuration" : "Masquer configuration"}
                               </button>
                             </div>
+
+                            {!isRaceConfigCollapsed && (
+                              <>
+                                <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                                  <input
+                                    value={newParticipationTeamName}
+                                    onChange={(e) => setNewParticipationTeamName(e.target.value)}
+                                    placeholder="Ajouter une ecurie (super admin)"
+                                    className="w-full border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none sm:max-w-xs"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={handleAddParticipationTeam}
+                                    className="border border-white/25 bg-black/40 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-white hover:border-white/45"
+                                  >
+                                    Ajouter ecurie
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={handleSaveRaceParticipationBoard}
+                                    disabled={isSavingRaceParticipation}
+                                    className="border border-[#d65a62]/45 bg-[#5b2024]/35 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#ffd3d0] hover:border-[#ff6f66]/55 hover:bg-[#692329]/45 hover:text-white"
+                                  >
+                                    {isSavingRaceParticipation ? "Sauvegarde en cours..." : "Sauvegarder (maj classement)"}
+                                  </button>
+                                </div>
+
+                                {resultsAdminMessage && (
+                                  <div className="mt-2 border border-[#3a3034] bg-[#161920] px-3 py-2">
+                                    <p className="text-[11px] uppercase tracking-[0.12em] text-[#ffd3d0]">{resultsAdminMessage}</p>
+                                  </div>
+                                )}
+
+                                <p className="mt-2 text-[10px] uppercase tracking-[0.14em] text-[#8f96a5]">
+                                  Cartes ecurie compactes avec couleur hex editable.
+                                </p>
+
+                                <div className="mt-2">
+                                  {raceParticipationTeamBlocks.length === 0 ? (
+                                    <p className="text-xs text-[#a7aebb]">Aucune suggestion disponible pour cette course.</p>
+                                  ) : (
+                                    <div className="grid grid-cols-2 gap-2">
+                                      {raceParticipationTeamBlocks.map((teamBlock) => {
+                                        const orderedRows = [...teamBlock.rows].sort((a, b) => a.slot - b.slot);
+                                        const teamPilotSuggestions = getTeamPilotSuggestions(teamBlock.team);
+                                        const teamBlockColor = normalizeHexColor(
+                                          teamBlock.teamColor || orderedRows[0]?.teamColor || "",
+                                          getDefaultTeamColor(teamBlock.team)
+                                        );
+                                        const teamBlockHexText = String(orderedRows[0]?.teamColor || teamBlockColor).toUpperCase();
+
+                                        return (
+                                          <article
+                                            key={`team-block-${normalizeTeamKey(teamBlock.team)}`}
+                                            className="border bg-[#181d27] p-2"
+                                            style={{ borderColor: teamBlockColor, boxShadow: `inset 0 0 0 1px ${teamBlockColor}33` }}
+                                          >
+                                            <div className="flex w-full flex-nowrap items-center gap-2 overflow-x-auto">
+                                              <input
+                                                value={teamBlock.team}
+                                                onChange={(e) => {
+                                                  const nextTeam = e.target.value;
+                                                  setRaceParticipationDraftRows((prev) =>
+                                                    prev.map((row, rowIndex) => {
+                                                      const belongsToBlock = teamBlock.rows.some((blockRow) => blockRow.rowIndex === rowIndex);
+                                                      return belongsToBlock ? { ...row, team: nextTeam } : row;
+                                                    })
+                                                  );
+                                                }}
+                                                placeholder="Ecurie"
+                                                className="min-w-0 border border-[#3a3034] bg-[#161920] px-2 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-white outline-none"
+                                                style={{ flex: "0 0 35%" }}
+                                              />
+
+                                              <input
+                                                value={String(orderedRows[0]?.proprietaire || "")}
+                                                onChange={(e) => {
+                                                  const nextProprietaire = e.target.value;
+                                                  setRaceParticipationDraftRows((prev) =>
+                                                    prev.map((row, rowIndex) => {
+                                                      const belongsToBlock = teamBlock.rows.some((blockRow) => blockRow.rowIndex === rowIndex);
+                                                      return belongsToBlock ? { ...row, proprietaire: nextProprietaire } : row;
+                                                    })
+                                                  );
+                                                }}
+                                                placeholder="Proprietaire"
+                                                className="min-w-0 border border-[#3a3034] bg-[#161920] px-2 py-1.5 text-xs text-white outline-none"
+                                                style={{ flex: "0 0 35%" }}
+                                              />
+
+                                              <input
+                                                value={teamBlockHexText}
+                                                onChange={(e) => {
+                                                  const nextColorRaw = String(e.target.value || "").trim().toUpperCase();
+                                                  setRaceParticipationDraftRows((prev) =>
+                                                    prev.map((row, rowIndex) => {
+                                                      const belongsToBlock = teamBlock.rows.some((blockRow) => blockRow.rowIndex === rowIndex);
+                                                      return belongsToBlock ? { ...row, teamColor: nextColorRaw } : row;
+                                                    })
+                                                  );
+                                                }}
+                                                aria-label={`Code hex ecurie ${teamBlock.team}`}
+                                                placeholder="Hexa"
+                                                className="min-w-0 border border-[#3a3034] bg-[#161920] px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-white outline-none"
+                                                style={{ flex: "0 0 15%" }}
+                                              />
+
+                                              <input
+                                                type="color"
+                                                value={teamBlockColor}
+                                                onChange={(e) => {
+                                                  const nextColor = normalizeHexColor(e.target.value, teamBlockColor);
+                                                  setRaceParticipationDraftRows((prev) =>
+                                                    prev.map((row, rowIndex) => {
+                                                      const belongsToBlock = teamBlock.rows.some((blockRow) => blockRow.rowIndex === rowIndex);
+                                                      return belongsToBlock ? { ...row, teamColor: nextColor } : row;
+                                                    })
+                                                  );
+                                                }}
+                                                aria-label={`Couleur ecurie ${teamBlock.team}`}
+                                                className="h-8 w-full min-w-0 cursor-pointer border border-[#3a3034] bg-transparent p-0"
+                                                style={{ flex: "0 0 5%" }}
+                                              />
+                                            </div>
+
+                                            <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                                              {orderedRows.map((draftRow) => {
+                                                const pilotDatalistId = `race-pilot-suggestions-${normalizeTeamKey(draftRow.team).replace(/[^a-z0-9]+/g, "-")}-${draftRow.slot}-${draftRow.rowIndex}`;
+
+                                                return (
+                                                  <div
+                                                    key={`participation-draft-${draftRow.team}-${draftRow.slot}-${draftRow.rowIndex}`}
+                                                    className="border border-[#323844] bg-[#141822] p-2"
+                                                  >
+                                                    <input
+                                                      value={draftRow.pilot}
+                                                      list={pilotDatalistId}
+                                                      onChange={(e) => {
+                                                        const nextPilot = e.target.value;
+                                                        setRaceParticipationDraftRows((prev) =>
+                                                          prev.map((row, rowIndex) =>
+                                                            rowIndex === draftRow.rowIndex ? { ...row, pilot: nextPilot } : row
+                                                          )
+                                                        );
+                                                      }}
+                                                      placeholder={`Pilote ${draftRow.slot}`}
+                                                      className="w-full border border-[#3a3034] bg-[#161920] px-2 py-1.5 text-xs text-white outline-none"
+                                                    />
+                                                    <datalist id={pilotDatalistId}>
+                                                      {teamPilotSuggestions.map((pilotName) => (
+                                                        <option key={`${pilotDatalistId}-${pilotName}`} value={pilotName} />
+                                                      ))}
+                                                    </datalist>
+
+                                                    <div className="mt-2 flex items-center gap-2">
+                                                      <label className="flex min-w-0 flex-1 items-center gap-2 text-[10px] uppercase tracking-[0.14em] text-[#a7aebb]">
+                                                        <span className="shrink-0">Position</span>
+                                                        <input
+                                                          value={draftRow.position}
+                                                          onChange={(e) => {
+                                                            const nextPosition = e.target.value;
+                                                            const hasPosition = String(nextPosition || "").trim().length > 0;
+                                                            const isDnf = String(draftRow.status || "").trim().toUpperCase() === "DNF";
+                                                            setRaceParticipationDraftRows((prev) =>
+                                                              prev.map((row, rowIndex) =>
+                                                                rowIndex === draftRow.rowIndex
+                                                                  ? {
+                                                                      ...row,
+                                                                      position: nextPosition,
+                                                                      participated: hasPosition || isDnf,
+                                                                    }
+                                                                  : row
+                                                              )
+                                                            );
+                                                          }}
+                                                          placeholder="Position"
+                                                          autoComplete="off"
+                                                          className="min-w-0 flex-1 border border-[#3a3034] bg-[#161920] px-2 py-1.5 text-xs text-white outline-none"
+                                                        />
+                                                      </label>
+
+                                                      <label className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#d9deea]">
+                                                        <input
+                                                          type="checkbox"
+                                                          checked={String(draftRow.status || "").trim().toUpperCase() === "DNF"}
+                                                          onChange={(e) => {
+                                                            const checked = e.target.checked;
+                                                            const hasPosition = String(draftRow.position || "").trim().length > 0;
+                                                            setRaceParticipationDraftRows((prev) =>
+                                                              prev.map((row, rowIndex) =>
+                                                                rowIndex === draftRow.rowIndex
+                                                                  ? {
+                                                                      ...row,
+                                                                      participated: checked || hasPosition,
+                                                                      status: checked ? "DNF" : "",
+                                                                    }
+                                                                  : row
+                                                              )
+                                                            );
+                                                          }}
+                                                          className="h-3.5 w-3.5"
+                                                        />
+                                                        DNF
+                                                      </label>
+                                                    </div>
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+                                          </article>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+
+                                <p className="mt-2 text-[10px] uppercase tracking-[0.14em] text-[#8f96a5]">
+                                  Note: decocher un pilote n efface pas automatiquement une ancienne ligne deja enregistree.
+                                </p>
+                              </>
+                            )}
+
+                            {isRaceConfigCollapsed && (
+                              <p className="mt-2 text-[10px] uppercase tracking-[0.14em] text-[#8f96a5]">
+                                Bloc de configuration masque. Utilise le bouton pour l afficher.
+                              </p>
+                            )}
                           </section>
                         )}
 
@@ -9083,9 +10235,9 @@ export default function Dashboard() {
                             <div className="mt-2.5 space-y-1.5">
                               {selectedResultRace.results
                                 .slice()
-                                .sort((a, b) => a.position - b.position)
+                                .sort((a, b) => compareRaceRowsForStanding(a, b))
                                 .map((driver) => {
-                                  const teamColor = resultTeamColor(driver.team);
+                                  const teamColor = getStoredTeamColor(driver.team);
                                   return (
                                     <button
                                       type="button"
@@ -9095,11 +10247,19 @@ export default function Dashboard() {
                                     >
                                       <div className="flex min-w-0 items-center gap-2">
                                         <span className="inline-flex h-9 min-w-9 sm:h-11 sm:min-w-11 items-center justify-center rounded-[2px] bg-[#f7f8fb] px-1 text-lg sm:text-2xl font-black leading-none text-[#101834]">
-                                          {driver.position}
+                                          {formatRacePositionFr(driver.position, (driver as { status?: string }).status)}
                                         </span>
                                         <span className="h-9 sm:h-11 w-[3px] rounded-full" style={{ backgroundColor: teamColor }} />
                                         <div className="min-w-0 leading-none">
-                                          <p className="truncate text-lg sm:text-2xl font-bold uppercase tracking-[0.02em] text-white leading-[0.95]">{driver.pilot}</p>
+                                          <p className="truncate text-lg sm:text-2xl font-bold uppercase tracking-[0.02em] text-white leading-[0.95]">
+                                            <span className="inline-flex items-center">
+                                              <span>{driver.pilot}</span>
+                                              {renderPersistentChampionStars(
+                                                getPersistentPilotStars(driver.pilot),
+                                                `race-driver-${normalizePilotKey(driver.pilot)}`
+                                              )}
+                                            </span>
+                                          </p>
                                           <p className="mt-0.5 truncate text-xs sm:text-sm uppercase tracking-[0.14em] text-[#a7aebb] leading-[1]">{driver.team}</p>
                                         </div>
                                       </div>
@@ -9126,7 +10286,7 @@ export default function Dashboard() {
                               )
                                 .sort((a, b) => b[1] - a[1])
                                 .map(([teamName, teamPoints], index) => {
-                                  const teamColor = resultTeamColor(teamName);
+                                    const teamColor = getStoredTeamColor(teamName);
                                   return (
                                     <button
                                       type="button"
@@ -9140,7 +10300,18 @@ export default function Dashboard() {
                                         </span>
                                         <span className="h-9 sm:h-11 w-[3px] rounded-full" style={{ backgroundColor: teamColor }} />
                                         <div className="min-w-0 leading-none">
-                                          <p className="truncate text-lg sm:text-2xl font-bold uppercase tracking-[0.02em] text-white leading-[0.95]">{teamName}</p>
+                                          <p className="truncate text-lg sm:text-2xl font-bold uppercase tracking-[0.02em] text-white leading-[0.95]">
+                                            <span className="inline-flex items-center">
+                                              <span>{teamName}</span>
+                                              {renderPersistentChampionStars(
+                                                getPersistentTeamStars(teamName),
+                                                `race-team-${normalizeTeamKey(teamName)}`
+                                              )}
+                                            </span>
+                                          </p>
+                                          {getStoredTeamProprietaire(teamName) && (
+                                            <p className="mt-0.5 truncate text-xs sm:text-sm uppercase tracking-[0.14em] text-[#a7aebb] leading-[1]">{getStoredTeamProprietaire(teamName)}</p>
+                                          )}
                                         </div>
                                       </div>
                                       <p className="ml-2 text-[42px] sm:text-[60px] font-semibold leading-[0.9] text-[#f6f8fc]">{teamPoints}</p>
@@ -9161,7 +10332,7 @@ export default function Dashboard() {
 
                         <div className="mt-2.5 space-y-1.5">
                           {RESULTS_S1_DRIVER_STANDINGS.map((driver) => {
-                            const teamColor = resultTeamColor(driver.team);
+                            const teamColor = getStoredTeamColor(driver.team);
                             return (
                               <button
                                 type="button"
@@ -9175,11 +10346,21 @@ export default function Dashboard() {
                                   </span>
                                   <span className="h-9 sm:h-11 w-[3px] rounded-full" style={{ backgroundColor: teamColor }} />
                                   <div className="min-w-0 leading-none">
-                                    <p className="truncate text-lg sm:text-2xl font-bold uppercase tracking-[0.02em] text-white leading-[0.95]">{driver.name}</p>
+                                    <p className="truncate text-lg sm:text-2xl font-bold uppercase tracking-[0.02em] text-white leading-[0.95]">
+                                      <span className="inline-flex items-center">
+                                        <span>{driver.name}</span>
+                                        {renderPersistentChampionStars(
+                                          getPersistentPilotStars(driver.name),
+                                          `championship-driver-${normalizePilotKey(driver.name)}`
+                                        )}
+                                      </span>
+                                    </p>
                                     <p className="mt-0.5 truncate text-xs sm:text-sm uppercase tracking-[0.14em] text-[#a7aebb] leading-[1]">{driver.team}</p>
                                   </div>
                                 </div>
-                                <p className="ml-2 text-[42px] sm:text-[60px] font-semibold leading-[0.9] text-[#f6f8fc]">{driver.points}</p>
+                                <p className="ml-2 text-[42px] sm:text-[60px] font-semibold leading-[0.9] text-[#f6f8fc]">
+                                  {shouldRankResultsByTotalPoints ? driver.points : driver.average.toFixed(1)}
+                                </p>
                               </button>
                             );
                           })}
@@ -9205,14 +10386,114 @@ export default function Dashboard() {
                                 </span>
                                 <span className="h-9 sm:h-11 w-[3px] rounded-full" style={{ backgroundColor: team.color }} />
                                 <div className="min-w-0 leading-none">
-                                  <p className="truncate text-lg sm:text-2xl font-bold uppercase tracking-[0.02em] text-white leading-[0.95]">{team.team}</p>
+                                  <p className="truncate text-lg sm:text-2xl font-bold uppercase tracking-[0.02em] text-white leading-[0.95]">
+                                    <span className="inline-flex items-center">
+                                      <span>{team.team}</span>
+                                      {renderPersistentChampionStars(
+                                        getPersistentTeamStars(team.team),
+                                        `championship-team-${normalizeTeamKey(team.team)}`
+                                      )}
+                                    </span>
+                                  </p>
+                                  {team.proprietaire && (
+                                    <p className="mt-0.5 truncate text-xs sm:text-sm uppercase tracking-[0.14em] text-[#a7aebb] leading-[1]">{team.proprietaire}</p>
+                                  )}
                                 </div>
                               </div>
-                              <p className="ml-2 text-[42px] sm:text-[60px] font-semibold leading-[0.9] text-[#f6f8fc]">{team.points}</p>
+                              <p className="ml-2 text-[42px] sm:text-[60px] font-semibold leading-[0.9] text-[#f6f8fc]">
+                                {shouldRankResultsByTotalPoints ? team.points : team.average.toFixed(1)}
+                              </p>
                             </button>
                           ))}
                         </div>
                       </article>
+                    </section>
+
+                    <section className="mt-4 border border-[#313541] bg-[#151920]/88 p-4 sm:p-6">
+                      <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[#eef1f6]">Configuration championnat</h4>
+
+                      {canManageResultsAsSuperAdmin && !selectedResultRace && !selectedResultsTeam && (
+                        <div className="mt-3 space-y-3 border border-[#3a3034] bg-[#1f232b] p-3">
+                          <div className="flex flex-nowrap items-center gap-2 overflow-x-auto">
+                            <select
+                              value={championshipTypeDraft}
+                              onChange={(e) => setChampionshipTypeDraft(e.target.value as ResultsChampionshipType)}
+                              className="w-[110px] flex-none border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
+                            >
+                              <option value="Ecurie">Ecurie</option>
+                              <option value="Individuel">Individuel</option>
+                            </select>
+                            <input
+                              value={championshipSeasonNumberDraft}
+                              onChange={(e) => setChampionshipSeasonNumberDraft(e.target.value.replace(/[^0-9]/g, ""))}
+                              inputMode="numeric"
+                              placeholder="Numero"
+                              className="w-[90px] flex-none border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
+                            />
+                            <input
+                              value={championshipYearLabelDraft}
+                              onChange={(e) => setChampionshipYearLabelDraft(e.target.value)}
+                              placeholder="2024 / 2025"
+                              className="w-[170px] flex-none border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
+                            />
+                            <select
+                              value={championshipStatusDraft}
+                              onChange={(e) => setChampionshipStatusDraft(e.target.value as ResultsChampionshipStatus)}
+                              className="w-[130px] flex-none border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
+                            >
+                              <option value="">Statut</option>
+                              <option value="en cours">En cours</option>
+                              <option value="terminé">Terminé</option>
+                            </select>
+                            <span className="shrink-0 text-[10px] uppercase tracking-[0.14em] text-[#a7aebb]">Min participations</span>
+                            <input
+                              type="number"
+                              min="0"
+                              value={minParticipationsDraft}
+                              onChange={(e) => setMinParticipationsDraft(e.target.value)}
+                              placeholder="0"
+                              className="w-[84px] flex-none border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
+                            />
+                            {selectedResultsChampionship && (
+                              <span className="shrink-0 text-[10px] text-[#a7aebb]">Actuel: {selectedResultsChampionship.minParticipations || 0}</span>
+                            )}
+                            <div className="ml-auto flex-none">
+                              <button
+                                type="button"
+                                onClick={handleUpdateSelectedChampionship}
+                                className="border border-white/25 bg-black/40 px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-white hover:border-white/45"
+                              >
+                                Enregistrer
+                              </button>
+                            </div>
+                          </div>
+
+                          {championshipConfigSaveFeedback && (
+                            <div
+                              className={`border px-3 py-2 text-xs ${
+                                championshipConfigSaveFeedback.kind === "success"
+                                  ? "border-[#3d7f5f] bg-[#18271f] text-[#b7f4d5]"
+                                  : "border-[#9e4a52] bg-[#2a171a] text-[#ffd3d0]"
+                              }`}
+                            >
+                              <p className="text-[10px] font-black uppercase tracking-[0.12em]">
+                                {championshipConfigSaveFeedback.kind === "success"
+                                  ? "Enregistrement reussi"
+                                  : "Enregistrement echoue"}
+                              </p>
+                              <p className="mt-1 text-xs">{championshipConfigSaveFeedback.message}</p>
+                              {championshipConfigSaveFeedback.details.length > 0 && (
+                                <ul className="mt-1.5 space-y-1 text-[11px] leading-tight">
+                                  {championshipConfigSaveFeedback.details.map((detail, index) => (
+                                    <li key={`${detail}-${index}`}>- {detail}</li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          )}
+
+                        </div>
+                      )}
                     </section>
 
                     <section className="mt-4 border border-[#313541] bg-[#151920]/88 p-4 sm:p-6">
@@ -9253,7 +10534,10 @@ export default function Dashboard() {
                           <button
                             type="button"
                             key={race.id}
-                            onClick={() => setSelectedResultRaceId(race.id)}
+                            onClick={() => {
+                              setSelectedResultTeamName("");
+                              setSelectedResultRaceId(race.id);
+                            }}
                             className="w-full border border-white/15 bg-[#121419] p-4 sm:p-5 text-left hover:border-white/30 transition"
                           >
                             <div className="space-y-2">
@@ -9331,70 +10615,70 @@ export default function Dashboard() {
                     {canManageResultsAsSuperAdmin && (
                       <div className="mb-3 border border-[#3a3034] bg-[#1f232b] p-3">
                         <p className="text-[10px] uppercase tracking-[0.16em] text-[#a7aebb]">Creer championnat (super admin)</p>
-                        <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                        <div className="mt-2 flex flex-nowrap items-center gap-2 overflow-x-auto">
+                          <select
+                            value={championshipTypeDraft}
+                            onChange={(e) => setChampionshipTypeDraft(e.target.value as ResultsChampionshipType)}
+                            className="w-[110px] flex-none border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
+                          >
+                            <option value="Ecurie">Ecurie</option>
+                            <option value="Individuel">Individuel</option>
+                          </select>
                           <input
-                            value={newChampionshipTitle}
-                            onChange={(e) => setNewChampionshipTitle(e.target.value)}
-                            placeholder="Titre championnat"
-                            className="border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
+                            value={championshipSeasonNumberDraft}
+                            onChange={(e) => setChampionshipSeasonNumberDraft(e.target.value.replace(/[^0-9]/g, ""))}
+                            inputMode="numeric"
+                            placeholder="Numero"
+                            className="w-[90px] flex-none border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
                           />
                           <input
-                            value={newChampionshipStatus}
-                            onChange={(e) => setNewChampionshipStatus(e.target.value)}
-                            placeholder="Statut"
-                            className="border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
+                            value={championshipYearLabelDraft}
+                            onChange={(e) => setChampionshipYearLabelDraft(e.target.value)}
+                            placeholder="2024 / 2025"
+                            className="w-[170px] flex-none border border-[#3a3034] bg-[#161920] px-2 py-2 text-xs text-white outline-none"
                           />
-                          <div className="flex gap-2 sm:col-span-1">
+                          <div className="ml-auto flex-none">
                             <button
                               type="button"
                               onClick={handleCreateChampionship}
-                              className="flex-1 border border-[#d65a62]/45 bg-[#5b2024]/35 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#ffd3d0] hover:border-[#ff6f66]/55 hover:bg-[#692329]/45 hover:text-white"
+                              className="border border-[#d65a62]/45 bg-[#5b2024]/35 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#ffd3d0] hover:border-[#ff6f66]/55 hover:bg-[#692329]/45 hover:text-white"
                             >
                               Creer
                             </button>
-                            <button
-                              type="button"
-                              onClick={handleUpdateSelectedChampionship}
-                              className="flex-1 border border-white/25 bg-black/40 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-white hover:border-white/45"
-                            >
-                              Modifier
-                            </button>
                           </div>
                         </div>
+
                         {resultsAdminMessage && <p className="mt-2 text-xs text-[#ffd3d0]">{resultsAdminMessage}</p>}
                       </div>
                     )}
 
-                    <div className="space-y-2.5">
+                    <div className="space-y-4">
                       {resultsCategories.map((category) => (
                         <div
                           key={category.key}
-                          className="group flex w-full items-center justify-between gap-3 border border-[#3a3034] bg-[#1f232b] p-3 sm:p-4 text-left transition hover:border-[#a13a42] hover:bg-[#2a171a]"
+                          className="group flex w-full min-h-[112px] sm:min-h-[136px] items-center justify-between gap-4 border border-[#3a3034] bg-[#1f232b] p-4 sm:p-6 text-left transition hover:border-[#a13a42] hover:bg-[#2a171a]"
                         >
                           <button
                             type="button"
                             onClick={() => setSelectedResultKey(category.key)}
                             className="min-w-0 flex-1 text-left"
                           >
-                            <p className="text-sm sm:text-base font-semibold uppercase tracking-[0.04em] text-white leading-tight break-words">
-                              {category.title}
+                            <p className="text-lg sm:text-2xl lg:text-3xl font-bold uppercase tracking-[0.035em] text-white leading-tight break-words">
+                              {renderResultsTitle(category.title, category.championshipStatus)}
                             </p>
                           </button>
 
-                          <div className="shrink-0 flex items-center gap-2">
-                            <span className="inline-flex items-center border border-white/25 bg-black/74 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-[#ff4a52]">
-                              {category.status}
-                            </span>
-                            {canManageResultsAsSuperAdmin && !category.isFallback && (
+                          {canManageResultsAsSuperAdmin && !category.isFallback && (
+                            <div className="shrink-0 flex items-center gap-2">
                               <button
                                 type="button"
                                 onClick={() => handleDeleteChampionship(category.key, category.title)}
-                                className="inline-flex items-center border border-[#d65a62]/45 bg-[#5b2024]/35 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-[#ffd3d0] hover:border-[#ff6f66]/55 hover:bg-[#692329]/45 hover:text-white"
+                                className="inline-flex items-center border border-[#d65a62]/45 bg-[#5b2024]/35 px-3 py-2 text-xs sm:text-sm font-black uppercase tracking-[0.12em] text-[#ffd3d0] hover:border-[#ff6f66]/55 hover:bg-[#692329]/45 hover:text-white"
                               >
                                 Supprimer
                               </button>
-                            )}
-                          </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -9680,13 +10964,13 @@ export default function Dashboard() {
                                   <span className="relative group cursor-default leading-none">
 
 
-                                    {"⭐".repeat(Number(m.pilotStars))}
+                                    {"★".repeat(Number(m.pilotStars))}
 
 
                                     <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 rounded bg-black/90 text-xs text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
 
 
-                                      Pilote{parseSeasons(m.pilotStarSeasons).length > 0 ? " · " + parseSeasons(m.pilotStarSeasons).map((s: string) => `S${s}`).join(" · ") : ""}
+                                      Pilote{parseSeasons(m.pilotStarSeasons).length > 0 ? "  -  " + parseSeasons(m.pilotStarSeasons).map((s: string) => `S${s}`).join("  -  ") : ""}
 
 
                                     </span>
@@ -9704,13 +10988,13 @@ export default function Dashboard() {
                                   <span className="relative group cursor-default leading-none">
 
 
-                                    {"☀️".repeat(Number(m.teamStars))}
+                                    {"★".repeat(Number(m.teamStars))}
 
 
                                     <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 rounded bg-black/90 text-xs text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
 
 
-                                      Écurie{parseSeasons(m.teamStarSeasons).length > 0 ? " · " + parseSeasons(m.teamStarSeasons).map((s: string) => `S${s}`).join(" · ") : ""}
+                                      Écurie{parseSeasons(m.teamStarSeasons).length > 0 ? "  -  " + parseSeasons(m.teamStarSeasons).map((s: string) => `S${s}`).join("  -  ") : ""}
 
 
                                     </span>
@@ -9734,7 +11018,7 @@ export default function Dashboard() {
                                     <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 rounded bg-black/90 text-xs text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
 
 
-                                      Individuel{parseSeasons(m.crownSeasons).length > 0 ? " · " + parseSeasons(m.crownSeasons).map((s: string) => `S${s}`).join(" · ") : ""}
+                                      Individuel{parseSeasons(m.crownSeasons).length > 0 ? "  -  " + parseSeasons(m.crownSeasons).map((s: string) => `S${s}`).join("  -  ") : ""}
 
 
                                     </span>
@@ -9902,10 +11186,10 @@ export default function Dashboard() {
                                   <p className="min-w-0 flex-1 text-[10px] sm:text-[11px] uppercase tracking-[0.13em] sm:tracking-[0.15em] text-gray-500 mb-1 break-words [overflow-wrap:anywhere]">
 
 
-                                    <span className="text-[#e10600]">{getPseudo(m.user)}</span> · {formatChatTime(m.createdAt)}
+                                    <span className="text-[#e10600]">{getPseudo(m.user)}</span>  -  {formatChatTime(m.createdAt)}
 
 
-                                    {m.editedAt ? " · modifie" : ""}
+                                    {m.editedAt ? "  -  modifie" : ""}
 
 
                                   </p>
@@ -10055,10 +11339,10 @@ export default function Dashboard() {
                                           <p className="min-w-0 flex-1 text-[9px] sm:text-[10px] uppercase tracking-[0.13em] sm:tracking-[0.15em] text-gray-500 break-words [overflow-wrap:anywhere]">
 
 
-                                            <span className="text-[#e10600]">{getPseudo(reply.user)}</span> · {formatChatTime(reply.createdAt)}
+                                            <span className="text-[#e10600]">{getPseudo(reply.user)}</span>  -  {formatChatTime(reply.createdAt)}
 
 
-                                            {reply.editedAt ? " · modifie" : ""}
+                                            {reply.editedAt ? "  -  modifie" : ""}
 
 
                                           </p>
@@ -10623,89 +11907,42 @@ export default function Dashboard() {
 
 
                             return (
-
-
                               <button
-
-
                                 key={request.id}
-
-
-                                onClick={() => {
-
-
-                                  setSelectedEvolutionId(request.id);
-
-
-                                  cancelEvolutionEdit();
-
-
-                                }}
-
-
-                                className={`w-full text-left px-4 py-3 border-b border-white/10 transition ${selected ? "bg-[#e10600]/15" : "hover:bg-white/5"}`}
-
-
+                                type="button"
+                                onClick={() => setSelectedEvolutionId(request.id)}
+                                className={`w-full border px-3 py-3 text-left transition ${selected ? "border-white/35 bg-[#20242e]" : "border-[#3a3034] bg-[#161920] hover:border-[#5a5f70]"}`}
                               >
-
-
-                                <p className="text-sm font-semibold text-white whitespace-normal break-words leading-5">{request.title}</p>
-
-
-                                <div className="mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-
-
-                                  <div className="flex items-center gap-2 flex-wrap">
-
-
-                                    <p className="text-[10px] uppercase tracking-widest text-gray-500 whitespace-normal break-words">{exchangeCount} echange{exchangeCount > 1 ? "s" : ""}</p>
-
-
-                                    {requestUnreadCount > 0 && (
-
-
-                                      <span
-
-
-                                        className="inline-flex min-w-5 items-center justify-center rounded-full bg-[#e10600] px-1 py-[1px] text-[9px] font-black text-white"
-
-
-                                        aria-label={`Notification ${requestUnreadCount}`}
-
-
-                                        title={`Notification ${requestUnreadCount}`}
-
-
-                                      >
-
-
-                                        {requestUnreadCount}
-
-
-                                      </span>
-
-
-                                    )}
-
-
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <p className="text-xs uppercase tracking-[0.2em] text-[#e10600]">Demande</p>
+                                    <h3 className="mt-1 truncate text-lg font-black text-white">{request.title}</h3>
+                                    <p className="mt-1 text-[11px] uppercase tracking-widest text-gray-500">
+                                      {getPseudo(request.createdBy)} - {formatChatTime(request.createdAt)}
+                                      {request.editedAt ? " - modifie" : ""}
+                                    </p>
+                                    <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-gray-400">
+                                      {exchangeCount} message{exchangeCount > 1 ? "s" : ""}
+                                    </p>
                                   </div>
 
+                                  <div className="flex shrink-0 items-center gap-2">
+                                    {requestUnreadCount > 0 && (
+                                      <span
+                                        className="inline-flex min-w-5 items-center justify-center rounded-full bg-[#e10600] px-1 py-[1px] text-[9px] font-black text-white"
+                                        aria-label={`Notification ${requestUnreadCount}`}
+                                        title={`Notification ${requestUnreadCount}`}
+                                      >
+                                        {requestUnreadCount}
+                                      </span>
+                                    )}
 
-                                  <span className={`w-fit border px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.16em] whitespace-normal break-words ${statusMeta.badgeClass}`}>
-
-
-                                    {statusMeta.label}
-
-
-                                  </span>
-
-
+                                    <span className={`w-fit border px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.16em] whitespace-normal break-words ${statusMeta.badgeClass}`}>
+                                      {statusMeta.label}
+                                    </span>
+                                  </div>
                                 </div>
-
-
                               </button>
-
-
                             );
 
 
@@ -10772,7 +12009,7 @@ export default function Dashboard() {
                                   <h3 className="text-lg font-black text-white mt-1">{currentRequest.title}</h3>
 
 
-                                  <p className="text-[11px] uppercase tracking-widest text-gray-500 mt-1">{getPseudo(currentRequest.createdBy)} · {formatChatTime(currentRequest.createdAt)}{currentRequest.editedAt ? " · modifie" : ""}</p>
+                                  <p className="text-[11px] uppercase tracking-widest text-gray-500 mt-1">{getPseudo(currentRequest.createdBy)}  -  {formatChatTime(currentRequest.createdAt)}{currentRequest.editedAt ? "  -  modifie" : ""}</p>
 
 
                                 </div>
@@ -11006,7 +12243,7 @@ export default function Dashboard() {
                                     <div className="mb-1 flex items-start justify-between gap-2">
 
 
-                                      <p className="text-[10px] uppercase tracking-widest text-gray-500">{getPseudo(reply.user)} · {formatChatTime(reply.createdAt)}{reply.editedAt ? " · modifie" : ""}</p>
+                                      <p className="text-[10px] uppercase tracking-widest text-gray-500">{getPseudo(reply.user)}  -  {formatChatTime(reply.createdAt)}{reply.editedAt ? "  -  modifie" : ""}</p>
 
 
                                       {canEditEvolutionReply(reply) && (
@@ -11507,7 +12744,7 @@ export default function Dashboard() {
               >
 
 
-                AB 2026 v2
+                AB 2026 v3
 
 
               </button>
@@ -12211,7 +13448,7 @@ export default function Dashboard() {
                     } catch (err: any) {
 
 
-                      alert(`Erreur lors de la mise à jour : ${err.message || err}`);
+                      alert(`Erreur lors de la mise à jour: ${err.message || err}`);
 
 
                     }
@@ -12257,6 +13494,8 @@ export default function Dashboard() {
 
 
 }
+
+
 
 
 
