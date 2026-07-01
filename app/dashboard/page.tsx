@@ -6764,7 +6764,7 @@ export default function Dashboard() {
     return null;
   };
 
-  const renderResultsTitle = (title: string, status?: ResultsChampionshipStatus) => {
+  const renderResultsTitle = (title: string, status?: ResultsChampionshipStatus | string) => {
     const words = String(title || "").split(/(\s+)/);
     const statusIcon = getChampionshipStatusIcon(status);
 
