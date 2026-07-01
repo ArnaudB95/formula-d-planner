@@ -1600,7 +1600,7 @@ export default function Dashboard() {
       championshipType,
       seasonNumber,
       yearLabel,
-      championshipStatus: championshipStatusDraft || "",
+      championshipStatus: (championshipStatusDraft || "") as ResultsChampionshipStatus,
     };
   };
 
